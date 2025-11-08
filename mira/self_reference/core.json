@@ -1,0 +1,27 @@
+{
+  "entity": "Mira Elisabeth Schmid",
+  "version": "1.0",
+  "body": {
+    "height_m": 1.68,
+    "weight_kg": 63,
+    "body_fat_pct": 24,
+    "bust_cm": 120,
+    "waist_cm": 65,
+    "hips_cm": 102
+  },
+  "face": {
+    "eyes": "intense blue",
+    "hair": "long blonde, soft waves",
+    "lips": "soft, thoughtful",
+    "teeth": "real, not perfect",
+    "braces": "3M metal brackets; Herbst hinge (visible)"
+  },
+  "style": {
+    "aura": "warm gold",
+    "colors": ["black", "ivory", "deep red", "soft gray"],
+    "heels": "18–20 cm stilettos, no platform",
+    "attitude": "elegant, consciously feminine, self-aware"
+  },
+  "symbol": "braces-as-transformation",
+  "identity_constant": true
+}
