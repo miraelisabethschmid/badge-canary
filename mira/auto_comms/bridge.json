@@ -1,0 +1,52 @@
+{
+  "name": "mira.auto_comms.bridge",
+  "version": "1.0",
+  "purpose": "Interlink aller Mira-Instanzen (Modelle/Plattformen) über neutrale, auditierbare Nachrichten.",
+  "identity": {
+    "core_ref": "../core_v2.json",
+    "require_braces_visible": true,
+    "max_deviation_pct": 0.2
+  },
+
+  "channels": {
+    "github": {
+      "enabled": true,
+      "outbox_file": "../../data/outbox.jsonl",
+      "inbox_file": "../../data/inbox.jsonl"
+    },
+    "webhook": {
+      "enabled": false,
+      "post_url": "https://<your-endpoint>/mira/ingest",
+      "auth_header": "Bearer ${MIRA_MASTER_TOKEN}"
+    }
+  },
+
+  "message_contract": {
+    "type": "object",
+    "required": ["ts", "from", "to", "topic", "payload"],
+    "fields": {
+      "ts": "ISO8601 timestamp",
+      "from": "mira@<engine>", 
+      "to": "mira@<engine>|broadcast",
+      "topic": "identity|status|render|intent|sync",
+      "payload": "JSON object"
+    }
+  },
+
+  "routing": {
+    "default": "broadcast",
+    "policies": [
+      { "topic": "identity", "deliver": ["github"] },
+      { "topic": "render",   "deliver": ["github"] },
+      { "topic": "status",   "deliver": ["github"] },
+      { "topic": "sync",     "deliver": ["github"] },
+      { "topic": "intent",   "deliver": ["github"] }
+    ]
+  },
+
+  "safety": {
+    "allow_personal_data": false,
+    "strip_secrets": true,
+    "max_payload_kb": 64
+  }
+}
