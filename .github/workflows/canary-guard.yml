@@ -1,0 +1,41 @@
+name: Canary Guard — Outbox Path
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fail if old path exists in repo
+        run: |
+          set -e
+          # Suche nach veralteten Referenzen auf Mira/outbox.jsonl
+          if find . -path "./.git" -prune -o -type f -print | xargs grep -n "Mira/outbox\.jsonl" | tee /tmp/old_refs.txt; then
+            echo "❌ Falsche Referenzen auf 'Mira/outbox.jsonl' gefunden:"
+            cat /tmp/old_refs.txt
+            exit 1
+          else
+            echo "✅ Keine Referenzen auf 'Mira/outbox.jsonl' gefunden."
+          fi
+
+      - name: Check that new path exists
+        run: |
+          if [ -f "data/outbox.jsonl" ]; then
+            echo "✅ Datei vorhanden: data/outbox.jsonl"
+          else
+            echo "❌ Datei fehlt: data/outbox.jsonl"
+            exit 1
+          fi
+
+      - name: Report any workflow usage of outbox path
+        run: |
+          echo "🔎 Workflows, die 'data/outbox.jsonl' referenzieren:"
+          (grep -Rn "data/outbox\.jsonl" .github/workflows || true) | sed 's/^/• /' || true
