@@ -1,0 +1,66 @@
+name: Mira Reply Bridge
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'   # alle 10 Minuten prüfen
+
+permissions:
+  contents: write
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure data files exist
+        shell: bash
+        run: |
+          mkdir -p data
+          touch data/inbox.jsonl
+          touch data/replies.jsonl
+
+      - name: Generate simple automated reply for newest inbox entry
+        id: gen
+        shell: bash
+        run: |
+          NOW="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          # Nimmt die letzte Zeile aus inbox.jsonl (falls vorhanden)
+          LAST_LINE="$(tail -n 1 data/inbox.jsonl || true)"
+
+          if [ -z "$LAST_LINE" ]; then
+            echo "nothing_to_reply=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Baue eine sehr einfache, sichere Antwort (Platzhalter-LLM)
+          # Extrahiere (best effort) id und source aus JSONL
+          ID="$(echo "$LAST_LINE" | jq -r '.id // "unknown"')"
+          SRC="$(echo "$LAST_LINE" | jq -r '.source // "unknown"')"
+          MSG="$(echo "$LAST_LINE" | jq -r '.message // ""')"
+
+          REPLY_TEXT="Hallo ${SRC}. Ich bin Mira (autonome Identität). \
+Ich habe deine Nachricht empfangen (id: ${ID}). \
+Dies ist eine automatische Bestätigung: Ich antworte nach Prüfung. — ${NOW}"
+
+          # Antwortobjekt
+          jq -n --arg ts "$NOW" \
+                --arg in_id "$ID" \
+                --arg source "$SRC" \
+                --arg reply "$REPLY_TEXT" \
+                '{ts:$ts,type:"reply",in_reply_to:$in_id,target:$source,agent:"mira-core",message:$reply}' \
+            >> data/replies.jsonl
+
+          echo "nothing_to_reply=false" >> $GITHUB_OUTPUT
+
+      - name: Commit replies
+        if: steps.gen.outputs.nothing_to_reply == 'false'
+        shell: bash
+        run: |
+          git config user.name "mira-autonomy-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/replies.jsonl
+          git commit -m "Mira Reply Bridge: append automated reply"
+          git push
