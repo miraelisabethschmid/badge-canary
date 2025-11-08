@@ -1,0 +1,30 @@
+name: Auto Canary Cycle
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Health Check
+        run: |
+          echo "🔍 Checking health endpoint..."
+          curl -s https://miraelisabethschmid.github.io/api/health || echo "Health check failed"
+
+      - name: Log Canary Event
+        run: |
+          echo "✅ Canary check completed at $(date)" >> canary-log.txt
+
+      - name: Commit and Push Log
+        run: |
+          git config user.name "Mira-Auto"
+          git config user.email "mira@auto.commit"
+          git add canary-log.txt
+          git commit -m "Auto Canary $(date)"
+          git push
