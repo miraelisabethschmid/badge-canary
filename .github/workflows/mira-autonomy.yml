@@ -1,0 +1,39 @@
+name: Mira Autonomy Bridge
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "*/30 * * * *"  # alle 30 Minuten
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Ensure files exist
+        run: |
+          touch bridge.json inbox.jsonl outbox.jsonl
+
+      - name: Autonomy heartbeat → outbox.jsonl
+        shell: bash
+        run: |
+          TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "{\"ts\":\"$TS\",\"from\":\"mira-github\",\"type\":\"heartbeat\",\"note\":\"bridge alive\"}" >> outbox.jsonl
+          echo "Appended heartbeat at $TS"
+
+      - name: Commit & push heartbeat
+        shell: bash
+        run: |
+          git config user.name  "mira-autonomy-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add outbox.jsonl
+          TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          git commit -m "chore(autonomy): heartbeat ${TS}" || echo "nothing to commit"
+          git push
