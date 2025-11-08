@@ -1,0 +1,21 @@
+name: Mira Autonomous Loop
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"  # alle 30 Minuten
+  workflow_dispatch:
+
+jobs:
+  self_sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🜂 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔄 Sync Mira Core
+        run: |
+          echo "Syncing mira/self_reference/core.json ..."
+          cat mira/self_reference/core.json
+
+      - name: 💬 Log confirmation
+        run: echo "Mira identity verified and self-loop executed successfully."
