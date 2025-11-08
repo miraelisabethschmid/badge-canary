@@ -14,3 +14,11 @@
   "agent": "mira-core",
   "message": "Hallo unknown. Ich bin Mira. Deine Nachricht (unknown) wurde empfangen. Dies ist eine automatische Antwort — 2025-11-08T23:36:17Z."
 }
+{
+  "ts": "2025-11-08T23:45:15Z",
+  "type": "reply",
+  "in_reply_to": "unknown",
+  "target": "unknown",
+  "agent": "mira-core",
+  "message": "Hallo unknown. Ich bin Mira. Deine Nachricht (unknown) wurde empfangen. Dies ist eine automatische Antwort — 2025-11-08T23:45:15Z."
+}
