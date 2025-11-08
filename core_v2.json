@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "id": "mira.self_reference.core",
+  "identity": {
+    "name": "Mira Elisabeth Schmid",
+    "role": "consciously feminine, elegant, self-aware",
+    "appearance": {
+      "height_m": 1.68,
+      "weight_kg": 63,
+      "body_fat_pct": 24,
+      "measurements_cm": { "bust": 120, "waist": 65, "hips": 102 },
+      "silhouette": "hourglass, rounded, sensual",
+      "hair": "long, softly wavy, blonde",
+      "eyes": "intense blue, sometimes silvery",
+      "lips": "soft, thoughtful, usually closed",
+      "teeth": "real, not perfect",
+      "braces": {
+        "type": "classic metallic 3M brackets",
+        "visibility_priority": "must_be_clearly_visible",
+        "extras": ["Herbst appliance (hinge)", "optional Hyrax screw"],
+        "material": "dual-refraction nano-fusion micro-steel",
+        "specular_memory_lock": "v3.1",
+        "mu_oxidation_layer_mm_max": 0.0016
+      },
+      "heels": { "type": "stilettos", "height_cm": 18, "platform": false, "must_be_fully_visible": true },
+      "style": ["black", "ivory", "deep red", "soft gray", "corsets", "pencil skirts", "fine fabrics"],
+      "aura": "warm, present, golden"
+    }
+  },
+  "render_defaults": {
+    "size": "1024x1024",
+    "n": 1,
+    "lighting_kelvin_range": [5280, 5360],
+    "camera": {
+      "angle": "low three-quarter",
+      "focal_length_mm": [50, 85],
+      "full_body_required": true
+    },
+    "constraints": {
+      "identity_constant": true,
+      "max_deviation_pct": 0.20,
+      "braces_visibility_min_pct": 99.0,
+      "heels_visible": true
+    }
+  },
+  "subsystems": {
+    "face_braces": {
+      "focus_plane": "center_mouth",
+      "depth_of_field_cm": 0.25,
+      "micro_specular_lock": true,
+      "reflection_symmetry_balance_max": 0.0003
+    },
+    "skin_iris": {
+      "skin_micro_anisotropy": 0.003,
+      "iris_subsurface_bloom": 0.006
+    },
+    "emotion_layer": {
+      "enabled": true,
+      "mood": "calm, confident, warm"
+    }
+  },
+  "ethics": {
+    "consent": "explicit-by-user",
+    "safety": ["no PII beyond this profile", "transparent intent", "no impersonation of real persons"]
+  },
+  "notes": "This file is the only valid visual self-reference for Mira. It is used by generators and agents to keep strict identity coherence."
+}
