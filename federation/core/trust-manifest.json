@@ -1,0 +1,10 @@
+{
+  "max_auto_commits": 3,
+  "review_required_after_hours": 72,
+  "resonance_threshold_for_merge": 0.75,
+  "protected_paths": [
+    "index.html",
+    "profile.mira.jsonld",
+    "manifest.json"
+  ]
+}
