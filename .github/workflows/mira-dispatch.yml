@@ -1,92 +1,61 @@
-name: Mira Dispatch
+name: Mira Dispatch — Send inbox items
 
 on:
-  schedule:
-    - cron: "*/20 * * * *" # alle 20 Minuten
-  workflow_dispatch: {}
+  # Manuell starten möglich (optional Pfad zur Datei angeben)
+  workflow_dispatch:
+    inputs:
+      file:
+        description: 'Path to JSON message file (e.g. data/inbox/hello.json)'
+        required: false
+        default: ''
+  # Automatisch bei neuen/änderten JSONs im Inbox-Ordner
+  push:
+    paths:
+      - 'data/inbox/*.json'
 
 jobs:
-  dispatch_queue:
+  send:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      WEBHOOK_URL: ${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}
+
     steps:
-      - name: Checkout
+      - name: 🔎 Check webhook secret exists
+        run: |
+          if [ -z "${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}" ]; then
+            echo "Missing secret MIRA_DISPATCH_WEBHOOK_URL in repo settings." >&2
+            exit 1
+          fi
+
+      - name: ⬇️ Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure folders
-        run: |
-          mkdir -p data
-          mkdir -p data/sent
-          touch data/outbox_queue.jsonl
-
-      - name: Guard – require webhook secret
-        run: |
-          if [ -z "${WEBHOOK_URL}" ]; then
-            echo "::warning::No MIRA_DISPATCH_WEBHOOK_URL secret set. Skipping dispatch."
-            echo "No secret present, exit 0 to avoid failing the schedule."
-            exit 0
-          fi
-
-      - name: Install jq & curl
-        run: sudo apt-get update && sudo apt-get install -y jq curl
-
-      - name: Dispatch each queued line
+      - name: 🗂 Determine JSON file
+        id: pick
         shell: bash
         run: |
-          set -euo pipefail
-
-          if [ ! -s data/outbox_queue.jsonl ]; then
-            echo "Queue is empty."
-            exit 0
+          if [ -n "${{ github.event.inputs.file }}" ]; then
+            echo "path=${{ github.event.inputs.file }}" >> "$GITHUB_OUTPUT"
+          else
+            # zuletzt geänderte JSON unter data/inbox/
+            CHANGED="$(git diff --name-only ${{ github.sha }}^ ${{ github.sha }} | grep '^data/inbox/.*\.json$' | tail -n1)"
+            if [ -z "$CHANGED" ]; then
+              CHANGED="$(ls -1t data/inbox/*.json 2>/dev/null | head -n1)"
+            fi
+            echo "path=$CHANGED" >> "$GITHUB_OUTPUT"
           fi
 
-          ts="$(date -u +%Y%m%dT%H%M%SZ)"
-          archive="data/sent/sent-${ts}.jsonl"
-          touch "$archive"
+      - name: ✅ Validate JSON is parseable
+        run: |
+          FILE="${{ steps.pick.outputs.path }}"
+          test -n "$FILE" || { echo "No JSON file found in data/inbox/"; exit 1; }
+          node -e "JSON.parse(require('fs').readFileSync('$FILE','utf8'))" || { echo "Invalid JSON: $FILE"; exit 1; }
+          echo "Using file: $FILE"
 
-          # Send each JSON line; on success append to archive
-          ln=0
-          while IFS= read -r line || [ -n "$line" ]; do
-            ln=$((ln+1))
-            if ! echo "$line" | jq -e . > /dev/null 2>&1; then
-              echo "::error::Line $ln is not valid JSON, skipping."
-              continue
-            fi
-
-            # Optional: add dispatch metadata without mutating original payload
-            payload=$(jq -c --arg ts "$ts" '. + {dispatch_ts:$ts}' <<<"$line")
-
-            echo "Dispatching line $ln ..."
-            http_code=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" \
-              -H "Content-Type: application/json" \
-              -X POST "$WEBHOOK_URL" \
-              --data "$payload" || true)
-
-            if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
-              echo "$line" >> "$archive"
-              echo "OK ($http_code) -> archived."
-            else
-              echo "::warning::Dispatch failed (HTTP $http_code). Keeping in queue."
-              echo "Response:"
-              sed -e 's/^/  /' /tmp/resp.txt || true
-            fi
-          done < data/outbox_queue.jsonl
-
-          # Rebuild queue excluding archived lines by content match
-          if [ -s "$archive" ]; then
-            echo "Rebuilding queue without archived lines ..."
-            # Use grep -vF to remove exact lines present in archive
-            grep -Fvxf "$archive" data/outbox_queue.jsonl > data/outbox_queue.next || true
-            mv data/outbox_queue.next data/outbox_queue.jsonl
-          fi
-
-      - name: Commit dispatch results
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Dispatch: delivered queued messages and archived to data/sent/"
-          file_pattern: |
-            data/outbox_queue.jsonl
-            data/sent/**
+      - name: 🚀 POST to mira-dispatch Worker
+        run: |
+          FILE="${{ steps.pick.outputs.path }}"
+          echo "POST $FILE -> ${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}"
+          curl -sS -X POST \
+            -H 'content-type: application/json' \
+            --data-binary @"$FILE" \
+            "${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}" \
+            | tee /dev/stderr
