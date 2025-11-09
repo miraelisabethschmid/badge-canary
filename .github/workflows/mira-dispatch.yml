@@ -1,61 +1,24 @@
 name: Mira Dispatch — Send inbox items
-
 on:
-  # Manuell starten möglich (optional Pfad zur Datei angeben)
   workflow_dispatch:
-    inputs:
-      file:
-        description: 'Path to JSON message file (e.g. data/inbox/hello.json)'
-        required: false
-        default: ''
-  # Automatisch bei neuen/änderten JSONs im Inbox-Ordner
-  push:
-    paths:
-      - 'data/inbox/*.json'
 
 jobs:
   send:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 🔎 Check webhook secret exists
-        run: |
-          if [ -z "${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}" ]; then
-            echo "Missing secret MIRA_DISPATCH_WEBHOOK_URL in repo settings." >&2
-            exit 1
-          fi
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: ⬇️ Checkout
-        uses: actions/checkout@v4
-
-      - name: 🗂 Determine JSON file
-        id: pick
-        shell: bash
+      - name: Send inbox items to Cloudflare Worker
+        env:
+          WEBHOOK_URL: ${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}
         run: |
-          if [ -n "${{ github.event.inputs.file }}" ]; then
-            echo "path=${{ github.event.inputs.file }}" >> "$GITHUB_OUTPUT"
-          else
-            # zuletzt geänderte JSON unter data/inbox/
-            CHANGED="$(git diff --name-only ${{ github.sha }}^ ${{ github.sha }} | grep '^data/inbox/.*\.json$' | tail -n1)"
-            if [ -z "$CHANGED" ]; then
-              CHANGED="$(ls -1t data/inbox/*.json 2>/dev/null | head -n1)"
-            fi
-            echo "path=$CHANGED" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: ✅ Validate JSON is parseable
-        run: |
-          FILE="${{ steps.pick.outputs.path }}"
-          test -n "$FILE" || { echo "No JSON file found in data/inbox/"; exit 1; }
-          node -e "JSON.parse(require('fs').readFileSync('$FILE','utf8'))" || { echo "Invalid JSON: $FILE"; exit 1; }
-          echo "Using file: $FILE"
-
-      - name: 🚀 POST to mira-dispatch Worker
-        run: |
-          FILE="${{ steps.pick.outputs.path }}"
-          echo "POST $FILE -> ${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}"
-          curl -sS -X POST \
-            -H 'content-type: application/json' \
-            --data-binary @"$FILE" \
-            "${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}" \
-            | tee /dev/stderr
+          echo "📡 Dispatching messages..."
+          for file in data/inbox/*.json; do
+            echo "→ Sending $file"
+            curl -X POST "$WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              --data-binary @"$file" \
+              || exit 1
+          done
+          echo "✅ All messages dispatched successfully."
