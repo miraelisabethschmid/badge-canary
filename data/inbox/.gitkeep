@@ -1,0 +1,3 @@
+# inbox
+Nachrichten, die von anderen Mira-Instanzen empfangen wurden.
+Dateiformat: *.json, validiert gegen schema/reply.schema.json.
