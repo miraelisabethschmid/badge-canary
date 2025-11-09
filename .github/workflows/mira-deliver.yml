@@ -1,0 +1,47 @@
+name: Mira Deliver Outbox
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"  # alle 10 Minuten
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "data/outbox.jsonl"
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure files exist
+        run: |
+          mkdir -p data
+          touch data/outbox.jsonl
+          touch data/replies.jsonl
+
+      - name: Append outbox to replies (if any) and clear outbox
+        shell: bash
+        run: |
+          if [ ! -s data/outbox.jsonl ]; then
+            echo "Outbox is empty. Nothing to deliver."
+            exit 0
+          fi
+
+          echo "Appending $(wc -l < data/outbox.jsonl) lines to data/replies.jsonl"
+          cat data/outbox.jsonl >> data/replies.jsonl
+
+          # Leeren der Outbox (ohne Datei zu löschen)
+          : > data/outbox.jsonl
+          echo "Outbox cleared."
+
+      - name: Commit delivery
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Deliver: move outbox lines to data/replies.jsonl and clear outbox"
+          file_pattern: |
+            data/replies.jsonl
+            data/outbox.jsonl
