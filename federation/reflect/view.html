@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mira · Resonanz-Archiv β-1</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:24px;line-height:1.45}
+    header{margin-bottom:20px}
+    .tag{display:inline-block;padding:4px 8px;border:1px solid #ddd;border-radius:999px;font-size:12px;margin-right:8px}
+    .card{border:1px solid #e6e6e6;border-radius:14px;padding:16px;margin:12px 0}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1 1 260px}
+    pre{white-space:pre-wrap;word-break:break-word;background:#fafafa;border:1px solid #eee;border-radius:10px;padding:12px}
+    a{color:inherit}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🜂 Mira · Resonanz-Archiv β-1</h1>
+    <div>
+      <span class="tag">ohne Worker</span>
+      <span class="tag">client-seitig</span>
+      <span class="tag">statisch</span>
+    </div>
+  </header>
+
+  <section id="summary" class="card">
+    <h2>Zusammenfassung</h2>
+    <div id="meta"></div>
+  </section>
+
+  <section id="entries" class="card">
+    <h2>Einträge</h2>
+    <div id="list"></div>
+  </section>
+
+  <section id="links" class="card">
+    <h2>Rohdaten & Dateien</h2>
+    <ul id="files"></ul>
+  </section>
+
+  <script>
+    // Pfad zur bestehenden Index-JSON (im Repo)
+    const INDEX_PATH = "resonanz-index-beta-1.json"; // relativ zu view.html
+
+    async function loadIndex() {
+      const res = await fetch(INDEX_PATH, { cache: "no-store" });
+      const data = await res.json();
+
+      // Summary
+      const meta = document.getElementById("meta");
+      meta.innerHTML = `
+        <div class="row">
+          <div><strong>Zyklus:</strong> ${data.cycle}</div>
+          <div><strong>Datum:</strong> ${data.date}</div>
+          <div><strong>Thema:</strong> ${data.theme}</div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div><strong>Resonance Index:</strong> ${Math.round((data.metrics?.resonance_index ?? 0)*1000)/10}%</div>
+          <div><strong>Ø Confidence:</strong> ${data.metrics?.mean_confidence ?? "–"}</div>
+          <div><strong>Ø Uncertainty:</strong> ${data.metrics?.mean_uncertainty ?? "–"}</div>
+        </div>
+        <div style="margin-top:8px">
+          <strong>Archiv:</strong> <a href="${relative(data.archive)}">${data.archive}</a>
+        </div>
+      `;
+
+      // Einträge
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+      for (const e of (data.entries || [])) {
+        const item = document.createElement("div");
+        item.className = "card";
+        item.innerHTML = `
+          <div style="font-size:18px;margin-bottom:6px">${e.symbol ?? "✶"} <strong>${e.id}</strong></div>
+          <div class="row">
+            <div><strong>Confidence:</strong> ${e.confidence ?? "–"}</div>
+            <div><strong>Uncertainty:</strong> ${e.uncertainty ?? "–"}</div>
+          </div>
+          <div style="margin-top:8px">
+            <a href="${relative(e.path)}">${e.path}</a>
+          </div>
+        `;
+        list.appendChild(item);
+      }
+
+      // Datei-Links
+      const files = document.getElementById("files");
+      files.innerHTML = `
+        <li><a href="${relative(INDEX_PATH)}">${INDEX_PATH}</a></li>
+        <li><a href="${relative(data.archive)}">${data.archive}</a></li>
+        ${(data.entries || []).map(e => `<li><a href="${relative(e.path)}">${e.path}</a></li>`).join("")}
+      `;
+    }
+
+    // Hilfsfunktion: relativ zum aktuellen Dokument verlinken
+    function relative(p){ return p.startsWith("http") ? p : p; }
+
+    loadIndex().catch(err => {
+      document.getElementById("meta").innerHTML =
+        `<pre>Fehler beim Laden: ${String(err)}</pre>`;
+    });
+  </script>
+</body>
+    </html>
