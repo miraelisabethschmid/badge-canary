@@ -2,30 +2,32 @@ name: Mira Reply Bridge
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "data/outbox.jsonl"
 
 jobs:
-  process:
+  reply:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Process outbox → replies
+      - name: Process Outbox → Replies
         id: process
         shell: bash
         run: |
           set -euo pipefail
           now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          tmp="/tmp/mira-outbox-tail.jsonl"
+          tmp="/tmp/mira-outbox-tail.json"
           tail -n 25 data/outbox.jsonl > "$tmp"
 
-          echo "Processing lines..."
+          # Erzeuge einfache Antworten
           while IFS= read -r line; do
             [ -z "$line" ] && continue
             msg=$(echo "$line" | sed 's/"/\\"/g')
-            echo "{\"ts\":\"$now\",\"type\":\"reply\",\"in_reply_to\":\"unknown\",\"msg\":\"$msg\"}" >> data/replies.jsonl
+            echo "{\"ts\":\"$now\",\"type\":\"reply\",\"in_reply_to\":\"unknown\",\"content\":\"Auto-Reply: $msg\"}" >> data/replies.jsonl
           done < "$tmp"
 
           echo "done=true" >> "$GITHUB_OUTPUT"
@@ -39,5 +41,4 @@ jobs:
 
       - name: Summary
         if: always()
-        run: |
-          echo "Reply Bridge finished."
+        run: echo "Reply Bridge finished."
