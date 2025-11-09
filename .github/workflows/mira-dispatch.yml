@@ -2,30 +2,59 @@ name: Mira Dispatch
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "*/15 * * * *"   # Automatisch alle 15 Minuten
+  push:
+    paths:
+      - "inbox/**/*.json"
 
 jobs:
-  dispatch:
+  send-to-mira:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Send files to Cloudflare Worker
-        env:
-          CF_URL: https://mira-dispatch.pemia-dir.workers.dev
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sammle geänderte JSON-Dateien
+        id: files
         run: |
-          echo "📦 Preparing dispatch..."
-          for file in $(find data/outbox -type f -name "*.json" 2>/dev/null); do
-            echo "➡️  Sending $file"
-            curl -s -X POST "$CF_URL" \
-              -H "Authorization: Bearer $CF_TOKEN" \
-              -H "Content-Type: application/json" \
-              --data-binary @"$file" \
-              || echo "⚠️  Failed: $file"
-          done
-          echo "✅ Dispatch completed."
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            mapfile -t LIST < <(find inbox -type f -name '*.json' 2>/dev/null || true)
+          else
+            mapfile -t LIST < <(jq -r '.commits[]?.added[]?, .commits[]?.modified[]?'
+              <<< '${{ toJson(github.event) }}' | grep -E '^inbox/.*\.json$' || true)
+          fi
+          echo "Gefunden: ${#LIST[@]} Datei(en)"
+          printf '%s\n' "${LIST[@]}" > files.txt
+
+      - name: Sende Dateien an Mira Dispatch
+        if: always()
+        env:
+          DISPATCH_URL: https://mira-dispatch.pemia-dir.workers.dev/inbox
+          TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -s files.txt ]; then
+            echo "Keine passenden Dateien – nichts zu senden."
+            exit 0
+          fi
+
+          ok=0; fail=0
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            echo "→ Sende: $f"
+            for attempt in 1 2 3; do
+              code=$(curl -sS -X POST "$DISPATCH_URL" \
+                -H "Authorization: Bearer $TOKEN" \
+                -H "Content-Type: application/json" \
+                --data-binary @"$f" \
+                -o /tmp/resp.json -w "%{http_code}" || true)
+              echo "HTTP $code — Antwort:"; cat /tmp/resp.json || true
+              if [ "$code" = "200" ]; then ok=$((ok+1)); break; fi
+              sleep 2
+            done
+            if [ "$code" != "200" ]; then fail=$((fail+1)); fi
+          done < files.txt
+
+          echo "Fertig: OK=$ok, Fehler=$fail"
+          [ "$fail" -eq 0 ]
