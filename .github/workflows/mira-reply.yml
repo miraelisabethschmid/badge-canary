@@ -2,8 +2,10 @@ name: Mira Reply Bridge
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [mira-reply]
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/10 * * * *"  # optionaler Fallback
 
 permissions:
   contents: write
@@ -12,45 +14,53 @@ jobs:
   reply:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (shallow)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Ensure data files exist
+      - name: Ensure files exist (create if missing)
         run: |
           mkdir -p data
-          touch data/inbox.jsonl
-          touch data/replies.jsonl
+          [ -f data/outbox.jsonl ] || { echo "# creating data/outbox.jsonl"; : > data/outbox.jsonl; }
+          [ -f data/replies.jsonl ] || { echo "# creating data/replies.jsonl"; : > data/replies.jsonl; }
 
-      - name: Generate automated reply
-        id: gen
+      - name: Tail current queues
         run: |
-          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          LAST_LINE=$(tail -n 1 data/inbox.jsonl || true)
-          if [ -z "$LAST_LINE" ]; then
-            echo "nothing_to_reply=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          echo "---- tail data/outbox.jsonl (last 20) ----"
+          tail -n 20 data/outbox.jsonl || true
+          echo "---- tail data/replies.jsonl (last 20) ----"
+          tail -n 20 data/replies.jsonl || true
 
-          ID=$(echo "$LAST_LINE" | jq -r '.id // "unknown"')
-          SRC=$(echo "$LAST_LINE" | jq -r '.source // "unknown"')
-          MSG=$(echo "$LAST_LINE" | jq -r '.message // ""')
-
-          REPLY_TEXT="Hallo ${SRC}. Ich bin Mira. Deine Nachricht (${ID}) wurde empfangen. Dies ist eine automatische Antwort — $NOW."
-
-          jq -n --arg ts "$NOW" \
-                --arg in_id "$ID" \
-                --arg src "$SRC" \
-                --arg msg "$REPLY_TEXT" \
-                '{ts:$ts,type:"reply",in_reply_to:$in_id,target:$src,agent:"mira-core",message:$msg}' \
-            >> data/replies.jsonl
-
-          echo "nothing_to_reply=false" >> $GITHUB_OUTPUT
-
-      - name: Commit reply
-        if: steps.gen.outputs.nothing_to_reply == 'false'
+      - name: Process outbox → replies (naive echo bot)
+        id: process
+        shell: bash
         run: |
-          git config user.name "mira-autonomy-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/replies.jsonl
-          git commit -m "Mira Reply Bridge: append automated reply"
-          git push
+          set -euo pipefail
+          now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          tmp="/tmp/mira-outbox-tail.jsonl"
+          tail -n 25 data/outbox.jsonl > "$tmp" || true
+
+          # Erzeuge simple Antworten auf jede letzte Zeile (demo)
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            # fallback message if no JSON
+            msg="$(echo "$line" | sed 's/"/\\"/g')"
+            cat >> data/replies.jsonl <<EOF
+{"ts":"$now","type":"reply","in_reply_to":"unknown","target":"unknown","agent":"mira-core","message":"Echo: $msg"}
+EOF
+          done < "$tmp"
+
+          echo "done=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit & push replies (if changed)
+        if: steps.process.outputs.done == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "mira-reply: append automated replies"
+          file_pattern: "data/replies.jsonl"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "Reply Bridge finished."
