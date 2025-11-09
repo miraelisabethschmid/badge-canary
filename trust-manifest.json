@@ -1,0 +1,25 @@
+{
+  "limits": {
+    "max_auto_commits": 3
+  },
+  "allowed_dirs": [
+    "federation/patches",
+    "federation/metrics",
+    "docs",
+    ".github/workflows"
+  ],
+  "forbidden_files": [
+    "wrangler.toml",
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "tsconfig.json",
+    "eslint.config.js",
+    "vitest.config.ts",
+    "src/worker.js",
+    "src/worker.ts",
+    "src/index.js",
+    "src/index.ts"
+  ]
+}
