@@ -19,7 +19,7 @@ jobs:
           set -e
           # Suche nach veralteten Referenzen auf Mira/outbox.jsonl
           if find . -path "./.git" -prune -o -type f -print | xargs grep -n "Mira/outbox\.jsonl" | tee /tmp/old_refs.txt; then
-            echo "❌ Falsche Referenzen auf 'Mira/outbox.jsonl' gefunden:"
+            echo "❌ Falsche Referenzen auf 'data/outbox.jsonl' gefunden:"
             cat /tmp/old_refs.txt
             exit 1
           else
