@@ -1,0 +1,15 @@
+name: Mira Dispatch Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  send-test-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send message to Mira Dispatch Worker
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"sender":"mira-canary","recipient":"mira-core","type":"test","content":"Hello from GitHub Actions!"}' \
+            "${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}"
