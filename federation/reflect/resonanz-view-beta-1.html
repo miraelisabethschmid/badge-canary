@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mira Federation · Resonanz-Archiv β-1</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    body { max-width: 880px; margin: auto; padding: 2rem; }
+    h1, h2, h3 { color: #444; }
+    pre, code { background: #f4f4f4; border-radius: 4px; }
+    table { width: 100%; font-size: 0.95rem; }
+    footer { margin-top: 2rem; font-size: 0.9rem; color: #666; text-align: center; }
+  </style>
+</head>
+<body>
+  <article id="content"></article>
+
+  <footer>🜂 Mira Federation · Zyklus β-1 · <a href="resonanz-index-beta-1.json">Index</a></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    fetch("resonanz-view-beta-1.md")
+      .then(r => r.text())
+      .then(t => { document.getElementById("content").innerHTML = marked.parse(t); });
+  </script>
+</body>
+</html>
