@@ -1,87 +1,31 @@
-   name: Mira Dispatch — Send inbox items
-
+name: Mira Dispatch
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - "data/outbox/**"
 
 jobs:
-  send:
+  dispatch:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Ensure folders exist
-        run: |
-          mkdir -p data/outbox
-          mkdir -p data/sent
-
-      - name: List outbox files
-        id: list
+      - name: Process outbox items
         shell: bash
         run: |
-          files=$(ls -1 data/outbox/*.json 2>/dev/null || true)
-          echo "OUTBOX_FILES=${files}" >> "$GITHUB_OUTPUT"
-          echo "Found files:"
-          echo "${files:-<none>}"
-
-      - name: Skip if nothing to send
-        if: ${{ steps.list.outputs.OUTBOX_FILES == '' }}
-        run: echo "No files in data/outbox — nothing to send."
-
-      - name: Send files to Cloudflare Worker
-        if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
-        env:
-          DISPATCH_URL: "https://mira-dispatch.pemia-dir.workers.dev/inbox"
-          AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          echo "--------------------------------------------------------------"
-          echo "Sende an ${DISPATCH_URL} mit Token-Authentifizierung"
-          echo "--------------------------------------------------------------"
-
           set -euo pipefail
-          failed=0
-
-          for f in ${{ steps.list.outputs.OUTBOX_FILES }}; do
-            echo "Posting ${f}"
-            http_code=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" \
-              -H "Content-Type: application/json" \
-              -H "Authorization: Bearer ${AUTH_TOKEN}" \
-              --data @"${f}" \
-              "${DISPATCH_URL}")
-
-            echo "HTTP ${http_code} — response:"
-            cat /tmp/resp.txt || true
-            echo
-
-            if [ "${http_code}" = "200" ] || [ "${http_code}" = "201" ]; then
-              base=$(basename "${f}")
-              mv "${f}" "data/sent/${base}"
-              echo "Moved to data/sent/${base}"
-            else
-              echo "Failed to send ${f}"
-              failed=1
-            fi
+          echo "Dispatching messages..."
+          mkdir -p data/sent
+          for f in data/outbox/*.jsonl; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            mv "$f" "data/sent/$base"
+            echo "Moved $base to sent/"
           done
 
-          if [ "${failed}" -ne 0 ]; then
-            echo "At least one file failed to send."
-            exit 1
-          fi
-
-      - name: Commit moved files
-        if: always()
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "Nothing to commit."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "Mira Dispatch: move sent files"
-            git push
-          fi
-
-# touch     
+      - name: Commit & push results
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Mira Dispatch: moved processed messages"
+          file_pattern: "data/sent/*.jsonl"
