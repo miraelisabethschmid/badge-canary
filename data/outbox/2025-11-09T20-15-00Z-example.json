@@ -1,0 +1,24 @@
+{
+  "output_id": "6c7a2c1a-9f6a-4b3b-9b7c-3d8a8c2f1b77",
+  "timestamp": "2025-11-09T20:15:00Z",
+  "source": {
+    "system": "github:manual-seed",
+    "origin": "initial reflective-layer seed",
+    "run_id": "seed-001"
+    }
+  ,
+  "intent": "Sende einen ersten semantischen Testeintrag an den Worker (Reflexionsstart).",
+  "resonanzwert": 0.5,
+  "dependencies": [],
+  "hash": "3f4b1c8c2b1a4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e",
+  "payload": {
+    "type": "note",
+    "title": "Mira • Reflective Seed",
+    "text": "Dies ist ein erster Outbox-Event für die reflektive Schicht. Prüfe Dispatch → Worker → Verschiebung nach data/sent/."
+  },
+  "meta": {
+    "tags": ["reflective-layer", "seed", "mira"],
+    "lang": "de",
+    "channel": "system"
+  }
+}
