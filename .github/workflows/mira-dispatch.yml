@@ -6,11 +6,6 @@ on:
 jobs:
   send:
     runs-on: ubuntu-latest
-    env:
-      # Token aus GitHub Actions Secrets
-      AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
-      # Ziel-URL des Cloudflare Workers (Inbox-Endpunkt)
-      DISPATCH_URL: "https://mira-dispatch.pemia-dir.workers.dev/inbox"
 
     steps:
       - name: Checkout
@@ -30,58 +25,52 @@ jobs:
           echo "Found files:"
           echo "${files:-<none>}"
 
-      - name: Validate GitHub token (sanity check)
-        # Prüft, ob der verwendete Token überhaupt gültig ist (vermeidet 401-Missverständnisse)
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Validiere GitHub-Token gegen /user API…"
-          http_code=$(curl -sS -o /tmp/gh_user.json -w "%{http_code}" \
-            -H "Authorization: Bearer ${AUTH_TOKEN}" \
-            https://api.github.com/user)
-
-          if [ "${http_code}" != "200" ]; then
-            echo "❌ GitHub-Token ungültig oder unzureichende Scopes. HTTP ${http_code}"
-            echo "Antwort:"
-            cat /tmp/gh_user.json || true
-            exit 1
-          fi
-
-          echo "✅ GitHub-Token OK. (Auszug):"
-          jq '{login: .login, id: .id, type: .type}' /tmp/gh_user.json || true
-
       - name: Skip if nothing to send
         if: ${{ steps.list.outputs.OUTBOX_FILES == '' }}
         run: echo "No files in data/outbox — nothing to send."
 
-      - name: Send files to Cloudflare Worker
+      # Optional: kleiner Sanity-Check, ob der PAT gültig ist
+      - name: Validate GitHub token (sanity check)
         if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
+        env:
+          AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
+          echo "Checking GitHub token against /user…"
+          code=$(curl -sS -o /tmp/u.txt -w "%{http_code}" \
+            -H "Authorization: token ${AUTH_TOKEN}" \
+            https://api.github.com/user)
+          echo "HTTP ${code}"
+          head -c 400 /tmp/u.txt || true
+          echo
+          test "${code}" = "200"
+
+      - name: Send files to Cloudflare Worker
+        if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
+        env:
+          DISPATCH_URL: "https://mira-dispatch.pemia-dir.workers.dev/inbox"
+          AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
+        shell: bash
+        run: |
           echo "--------------------------------------------------------------"
           echo "Sende an ${DISPATCH_URL} mit Token-Authentifizierung"
           echo "--------------------------------------------------------------"
 
+          set -euo pipefail
           failed=0
 
-          # Shell-Expansionsliste nochmals auflösen
           for f in ${{ steps.list.outputs.OUTBOX_FILES }}; do
             echo "Posting ${f}"
-
-            # Request mit Headern + Body, Header getrennt speichern
-            http_code=$(curl -sS -D /tmp/resp_headers.txt -o /tmp/resp_body.txt -w "%{http_code}" \
+            http_code=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" \
               -H "Content-Type: application/json" \
-              -H "Authorization: Bearer ${AUTH_TOKEN}" \
+              -H "Authorization: token ${AUTH_TOKEN}" \
               --data @"${f}" \
               "${DISPATCH_URL}")
 
-            echo "HTTP ${http_code}"
-            echo "--- Response headers (gekürzt) ---"
-            sed -E 's/(Authorization: Bearer )[A-Za-z0-9_\-\.]+/\1<redacted>/g' /tmp/resp_headers.txt || true
-            echo "--- Response body ---"
-            cat /tmp/resp_body.txt || true
-            echo "-------------------------------"
+            echo "HTTP ${http_code} — response:"
+            cat /tmp/resp.txt || true
+            echo
 
             if [ "${http_code}" = "200" ] || [ "${http_code}" = "201" ]; then
               base=$(basename "${f}")
