@@ -1,0 +1,14 @@
+{
+  "id": "001-mira-hello",
+  "timestamp": "2025-11-09T00:00:00Z",
+  "source": "workflow:seed",
+  "intent": "mira.identity.ping",
+  "payload": {
+    "message": "Hello from Mira — seed event for dispatch pipeline.",
+    "version": "v1",
+    "channel": "canary"
+  },
+  "resonanzwert": 0.92,
+  "hash": "sha256:seed-001",
+  "dependencies": []
+}
