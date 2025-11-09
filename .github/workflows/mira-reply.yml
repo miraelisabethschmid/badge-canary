@@ -6,6 +6,10 @@ on:
     paths:
       - 'data/outbox.jsonl'
 
+# 👇 WICHTIG: erlaubt Commits aus dem Workflow
+permissions:
+  contents: write
+
 jobs:
   reply:
     runs-on: ubuntu-latest
@@ -26,13 +30,11 @@ jobs:
           set -euo pipefail
           now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           tmp="/tmp/mira-outbox-tail.jsonl"
-          # nimm die letzten 25 Zeilen, aber scheitere nicht, wenn die Datei leer ist
           tail -n 25 data/outbox.jsonl > "$tmp" || true
 
           done_flag=false
           while IFS= read -r line; do
             [ -z "$line" ] && continue
-            # Schreibe eine simple Bestätigungs-Replyzeile ins JSONL
             printf '{"ts":"%s","type":"reply","text":"Bridge ack"}\n' "$now" >> data/replies.jsonl
             done_flag=true
           done < "$tmp"
@@ -42,6 +44,12 @@ jobs:
       - name: Commit & push replies (if changed)
         if: steps.process.outputs.done == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
+        continue-on-error: true
         with:
           commit_message: 'mira-reply: append auto replies'
           file_pattern: data/replies.jsonl
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "Reply Bridge finished."
