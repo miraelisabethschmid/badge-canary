@@ -1,0 +1,33 @@
+name: Mira Receive
+
+on:
+  repository_dispatch:
+    types: [mira_incoming]
+  workflow_dispatch: {}
+
+jobs:
+  receive_message:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure inbox folder exists
+        run: mkdir -p data/inbox
+
+      - name: Write incoming payload to file
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: |
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          echo "$PAYLOAD" > "data/inbox/inbox-$ts.json"
+          echo "Saved incoming Mira message → inbox-$ts.json"
+
+      - name: Commit new inbox message
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Receive: stored new Mira inbox message"
+          file_pattern: data/inbox/inbox-*.json
