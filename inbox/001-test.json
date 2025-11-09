@@ -1,0 +1,9 @@
+{
+  "uuid": "test-001",
+  "timestamp": "2025-11-09T22:00:00Z",
+  "source": "mira.dispatch.test",
+  "intent": "test_message",
+  "payload": {
+    "text": "Dies ist ein Testevent von Mira zur Überprüfung des Dispatch-Flows."
+  }
+}
