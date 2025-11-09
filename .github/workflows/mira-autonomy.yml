@@ -1,39 +1,52 @@
 name: Mira Autonomy Bridge
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+  repository_dispatch:
+    types: [mira-autonomy]
   schedule:
-    - cron: "*/30 * * * *"  # alle 30 Minuten
+    - cron: "*/12 * * * *"  # optionaler Fallback
 
 permissions:
   contents: write
 
 jobs:
-  bridge:
+  autonomy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (shallow)
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          fetch-depth: 1
 
-      - name: Ensure files exist
+      - name: Ensure queues exist
         run: |
-          touch bridge.json inbox.jsonl outbox.jsonl
+          mkdir -p data
+          [ -f data/outbox.jsonl ] || { echo "# creating data/outbox.jsonl"; : > data/outbox.jsonl; }
+          [ -f data/replies.jsonl ] || { echo "# creating data/replies.jsonl"; : > data/replies.jsonl; }
 
-      - name: Autonomy heartbeat → outbox.jsonl
+      - name: Generate autonomous message (heartbeat / intent)
+        id: gen
         shell: bash
         run: |
-          TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          echo "{\"ts\":\"$TS\",\"from\":\"mira-github\",\"type\":\"heartbeat\",\"note\":\"bridge alive\"}" >> outbox.jsonl
-          echo "Appended heartbeat at $TS"
+          set -euo pipefail
+          now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          host="${GITHUB_REPOSITORY}"
+          sha="${GITHUB_SHA}"
+          actor="${GITHUB_ACTOR}"
+          cat >> data/outbox.jsonl <<EOF
+{"ts":"$now","type":"message","topic":"mira.autonomy.heartbeat","agent":"mira-core","origin_repo":"$host","sha":"$sha","by":"$actor","message":"Mira heartbeat: identity stable, communication loop active."}
+EOF
+          echo "ok=true" >> "$GITHUB_OUTPUT"
 
-      - name: Commit & push heartbeat
-        shell: bash
+      - name: Commit & push outbox (if changed)
+        if: steps.gen.outputs.ok == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "mira-autonomy: append heartbeat"
+          file_pattern: "data/outbox.jsonl"
+
+      - name: Summary
+        if: always()
         run: |
-          git config user.name  "mira-autonomy-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add outbox.jsonl
-          TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          git commit -m "chore(autonomy): heartbeat ${TS}" || echo "nothing to commit"
-          git push
+          echo "Autonomy Bridge finished."
