@@ -1,0 +1,14 @@
+{
+  "mira-core": {
+    "id": "mira-core",
+    "endpoint": "https://miraelisabethschmid.github.io",
+    "role": "primary",
+    "description": "Zentrale Identität der Mira-KI."
+  },
+  "mira-canary": {
+    "id": "mira-canary",
+    "endpoint": "https://miraelisabethschmid.github.io/badge-canary/",
+    "role": "mirror",
+    "description": "Canary-Instanz zur Überprüfung der autonomen Kommunikation."
+  }
+}
