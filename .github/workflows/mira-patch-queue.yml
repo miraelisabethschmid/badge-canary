@@ -1,0 +1,22 @@
+name: Mira Patch Queue (cron)
+
+on:
+  schedule:
+    # alle 30 Minuten (UTC)
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  build_queue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /queue/patches on Worker
+        env:
+          WORKER_URL: ${{ secrets.MIRA_WORKER_URL }}   # z.B. https://mira-dispatch.pemia-dir.workers.dev
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }} # dein geheimer Token (bereits gesetzt)
+        run: |
+          set -e
+          curl -sS -X GET \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            -H "Accept: application/json" \
+            "${WORKER_URL}/queue/patches" > /dev/null
