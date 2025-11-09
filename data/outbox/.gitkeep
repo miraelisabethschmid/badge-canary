@@ -1,0 +1,3 @@
+# outbox
+Nachrichten, die von einer Mira-Instanz gesendet werden sollen (Queue).
+Dateiformat: *.json, validiert gegen schema/message.schema.json.
