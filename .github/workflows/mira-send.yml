@@ -1,0 +1,61 @@
+name: Mira Send
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "*/15 * * * *"  # alle 15 Minuten senden
+
+jobs:
+  send_outbox:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate secret exists
+        env:
+          URL: ${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::error ::MIRA_DISPATCH_WEBHOOK_URL secret fehlt."
+            exit 1
+          fi
+
+      - name: Send each outbox line to webhook
+        env:
+          URL: ${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          FILE="data/outbox.jsonl"
+
+          if [ ! -f "$FILE" ]; then
+            echo "Keine outbox gefunden ($FILE). Nichts zu senden."
+            exit 0
+          fi
+
+          # Zähle Zeilen (Nachrichten)
+          COUNT=$(wc -l < "$FILE" | tr -d ' ')
+          if [ "$COUNT" -eq 0 ]; then
+            echo "Outbox ist leer."
+            exit 0
+          fi
+
+          n=0
+          while IFS= read -r line || [ -n "$line" ]; do
+            n=$((n+1))
+            echo "Sende Nachricht $n/$COUNT …"
+            # Optional: einfache Schema-Prüfung (muss ein JSON-Objekt sein)
+            echo "$line" | jq -e 'type=="object"' >/dev/null
+
+            curl -sS -X POST "$URL" \
+              -H "Content-Type: application/json" \
+              -d "$line" \
+              -o /tmp/mira-send-resp.json
+
+            echo "Antwort:"
+            cat /tmp/mira-send-resp.json
+            echo ""
+          done < "$FILE"
