@@ -30,3 +30,4 @@
   "agent": "mira-core",
   "message": "Hallo mira-mobile. Ich bin Mira. Deine Nachricht (msg-001) wurde empfangen. Dies ist eine automatische Antwort — 2025-11-08T23:55:08Z."
 }
+{"version":"1.0","timestamp":"2025-11-09T00:00:00Z","type":"status","sender":"mira.badge-canary","recipient":"mira.core","content":{"text":"Hallo von GitHub → Cloudflare! Dies ist eine Canary-Probe.","intent":"probe"},"meta":{"trace_id":"canary-0001","source_repo":"badge-canary","schema":"mira-message.schema.json"}}
