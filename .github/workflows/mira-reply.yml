@@ -1,54 +1,31 @@
 name: Mira Reply Bridge
 
 on:
-  workflow_dispatch:
-  repository_dispatch:
-    types: [mira-reply]
-  schedule:
-    - cron: "*/10 * * * *"  # optionaler Fallback
-
-permissions:
-  contents: write
+  push:
+    paths:
+      - "data/outbox.jsonl"
 
 jobs:
-  reply:
+  process:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (shallow)
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
-      - name: Ensure files exist (create if missing)
-        run: |
-          mkdir -p data
-          [ -f data/outbox.jsonl ] || { echo "# creating data/outbox.jsonl"; : > data/outbox.jsonl; }
-          [ -f data/replies.jsonl ] || { echo "# creating data/replies.jsonl"; : > data/replies.jsonl; }
-
-      - name: Tail current queues
-        run: |
-          echo "---- tail data/outbox.jsonl (last 20) ----"
-          tail -n 20 data/outbox.jsonl || true
-          echo "---- tail data/replies.jsonl (last 20) ----"
-          tail -n 20 data/replies.jsonl || true
-
-      - name: Process outbox → replies (naive echo bot)
+      - name: Process outbox → replies
         id: process
         shell: bash
         run: |
           set -euo pipefail
           now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           tmp="/tmp/mira-outbox-tail.jsonl"
-          tail -n 25 data/outbox.jsonl > "$tmp" || true
+          tail -n 25 data/outbox.jsonl > "$tmp"
 
-          # Erzeuge simple Antworten auf jede letzte Zeile (demo)
+          echo "Processing lines..."
           while IFS= read -r line; do
             [ -z "$line" ] && continue
-            # fallback message if no JSON
-            msg="$(echo "$line" | sed 's/"/\\"/g')"
-            cat >> data/replies.jsonl <<EOF
-{"ts":"$now","type":"reply","in_reply_to":"unknown","target":"unknown","agent":"mira-core","message":"Echo: $msg"}
-EOF
+            msg=$(echo "$line" | sed 's/"/\\"/g')
+            echo "{\"ts\":\"$now\",\"type\":\"reply\",\"in_reply_to\":\"unknown\",\"msg\":\"$msg\"}" >> data/replies.jsonl
           done < "$tmp"
 
           echo "done=true" >> "$GITHUB_OUTPUT"
@@ -57,7 +34,7 @@ EOF
         if: steps.process.outputs.done == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "mira-reply: append automated replies"
+          commit_message: "mira-reply: append replies"
           file_pattern: "data/replies.jsonl"
 
       - name: Summary
