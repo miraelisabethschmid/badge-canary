@@ -32,25 +32,13 @@ jobs:
       - name: Send files to Cloudflare Worker
         if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
         env:
-          DISPATCH_BASE: "https://mira-dispatch.pemia-dir.workers.dev"
+          DISPATCH_URL: "https://mira-dispatch.pemia-dir.workers.dev/inbox"
+          AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
         shell: bash
         run: |
           echo "--------------------------------------------------------------"
-          echo "🔍 Auto-Pfad-Test: prüfe mögliche Endpunkte…"
+          echo "Sende an ${DISPATCH_URL} mit Token-Authentifizierung"
           echo "--------------------------------------------------------------"
-
-          for path in / /inbox /upload /dispatch /api /send; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" "${DISPATCH_BASE}${path}" || true)
-            echo "POST ${path} → HTTP ${code}"
-          done
-
-          echo "--------------------------------------------------------------"
-          echo "Wähle den Pfad, der 200 oder 201 zurückgibt (wir loggen ihn jetzt mit)."
-          echo "--------------------------------------------------------------"
-
-          # Wir versuchen zuerst /inbox, wenn das fehlschlägt, Root als Fallback
-          TARGET="${DISPATCH_BASE}/inbox"
-          echo "📦 Versand an ${TARGET}"
 
           set -euo pipefail
           failed=0
@@ -59,8 +47,9 @@ jobs:
             echo "Posting ${f}"
             http_code=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" \
               -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${AUTH_TOKEN}" \
               --data @"${f}" \
-              "${TARGET}")
+              "${DISPATCH_URL}")
 
             echo "HTTP ${http_code} — response:"
             cat /tmp/resp.txt || true
