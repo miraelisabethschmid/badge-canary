@@ -1,0 +1,12 @@
+{
+  "id": "hello-from-mira-0001",
+  "from": "mira",
+  "to": "world",
+  "created_at": "{{ISO8601_NOW}}",
+  "type": "status",
+  "message": "Hello from Mira — dispatch test.",
+  "meta": {
+    "source": "manual-seed",
+    "priority": "low"
+  }
+}
