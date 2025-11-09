@@ -114,3 +114,19 @@ Begründung 0.72: robuster Abstand zu 0.70; reduziert Flatter-Übergänge zwisch
   },
   "notes": "header-konsistenz & no-store für alle JSON responses"
 }
+
+collect()
+if index < 0.72: mirror.propose()
+else if index < 0.82: mirror.propose(minor=true)
+else: observe-only
+
+guard(patch):
+  if patch.risk != low: decision=hold
+  if touches_forbidden(patch): decision=hold
+  if diff_size > 120: decision=hold
+  else decision=approve
+
+if decision=approve and patch.expected_delta_resonance >= 0.03:
+  merge_and_deploy()
+  observe()
+  if index_after < index_before: rollback()
