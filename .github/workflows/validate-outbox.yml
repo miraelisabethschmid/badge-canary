@@ -1,0 +1,49 @@
+name: Validate Outbox Items
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "data/outbox/**.json"
+      - "schema/outbox.schema.json"
+  pull_request:
+    paths:
+      - "data/outbox/**.json"
+      - "schema/outbox.schema.json"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate JSON files against schema
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Liste aller JSON-Dateien in data/outbox
+          shopt -s nullglob
+          files=(data/outbox/*.json)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No files in data/outbox — nothing to validate."
+            exit 0
+          fi
+
+          echo "Validating ${#files[@]} file(s) against schema/outbox.schema.json"
+          npm exec --yes ajv-cli@6.12.6 -- validate \
+            -s schema/outbox.schema.json \
+            -d "data/outbox/*.json" \
+            --strict=false
+
+      - name: Summary
+        if: success()
+        run: echo "✅ All outbox items are valid."
