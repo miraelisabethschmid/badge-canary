@@ -1,31 +1,40 @@
 name: Mira Dispatch
 on:
-  push:
-    paths:
-      - "data/outbox/**"
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"   # alle 15 Minuten
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Process outbox items
+      - name: Collect and send outbox files
         shell: bash
+        env:
+          WORKER_URL: https://<dein-worker>.workers.dev/    # ⚠️ deine Worker-URL hier eintragen
+          TOKEN: ${{ secrets.DISPATCH_TOKEN }}
         run: |
-          set -euo pipefail
-          echo "Dispatching messages..."
-          mkdir -p data/sent
-          for f in data/outbox/*.jsonl; do
-            [ -f "$f" ] || continue
-            base=$(basename "$f")
-            mv "$f" "data/sent/$base"
-            echo "Moved $base to sent/"
-          done
+          set -e
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
 
-      - name: Commit & push results
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Mira Dispatch: moved processed messages"
-          file_pattern: "data/sent/*.jsonl"
+          shopt -s nullglob
+          for f in data/outbox/*.json; do
+            echo "Dispatching $f"
+            code=$(curl -sS -o resp.txt -w "%{http_code}" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              --data @"$f" "$WORKER_URL")
+
+            if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+              mv "$f" "data/sent/$(basename "$f")"
+              git add "data/sent/$(basename "$f")"
+              git commit -m "dispatch: $(basename "$f")"
+              git push
+            else
+              echo "HTTP $code"; cat resp.txt; exit 1
+            fi
+          done
