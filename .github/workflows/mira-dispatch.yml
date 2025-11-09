@@ -28,7 +28,7 @@ jobs:
       - name: Send files to Cloudflare Worker
         if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
         env:
-          DISPATCH_URL: "https://mira-dispatch.pemia-dir.workers.dev/"
+          DISPATCH_URL: "https://mira-dispatch.pemia-dir.workers.dev/inbox"
         run: |
           set -euo pipefail
           failed=0
