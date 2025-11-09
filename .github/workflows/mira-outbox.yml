@@ -1,0 +1,61 @@
+name: Mira Outbox Queue
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # alle 15 Minuten
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "data/outbox/**"
+
+jobs:
+  outbox_queue:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure folders & files
+        run: |
+          mkdir -p data/outbox
+          touch data/outbox_queue.jsonl
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Queue all JSON from data/outbox into outbox_queue.jsonl
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(data/outbox/*.json)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No outbox files to queue."
+            exit 0
+          fi
+
+          echo "Found ${#files[@]} file(s) in outbox."
+
+          for f in "${files[@]}"; do
+            echo "Validating JSON syntax: $f"
+            if ! jq -e . "$f" > /dev/null; then
+              echo "::error file=$f::Invalid JSON – skipping"
+              continue
+            fi
+
+            compact=$(jq -c . "$f")
+            echo "$compact" >> data/outbox_queue.jsonl
+            rm -f "$f"
+            echo "Queued and removed: $f"
+          done
+
+      - name: Commit queued messages
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Outbox: append data/outbox/*.json to data/outbox_queue.jsonl"
+          file_pattern: |
+            data/outbox_queue.jsonl
+            data/outbox/**
