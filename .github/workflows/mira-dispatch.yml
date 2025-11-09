@@ -1,4 +1,4 @@
-name: Mira Dispatch — Send inbox items
+        name: Mira Dispatch — Send inbox items
 
 on:
   workflow_dispatch:
@@ -29,14 +29,22 @@ jobs:
         if: ${{ steps.list.outputs.OUTBOX_FILES == '' }}
         run: echo "No files in data/outbox — nothing to send."
 
+      - name: Validate GitHub token (sanity check)
+        if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
+        env:
+          AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
+        run: |
+          curl -sS -H "Authorization: token ${AUTH_TOKEN}" https://api.github.com/rate_limit | head -n 5
+
       - name: Send files to Cloudflare Worker
         if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
         env:
           DISPATCH_URL: "https://mira-dispatch.pemia-dir.workers.dev/inbox"
+          AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
         shell: bash
         run: |
           echo "--------------------------------------------------------------"
-          echo "Sende an ${DISPATCH_URL} (ohne Token-Authentifizierung)"
+          echo "Sende an ${DISPATCH_URL} mit Token-Authentifizierung (Authorization: token …)"
           echo "--------------------------------------------------------------"
 
           set -euo pipefail
@@ -45,39 +53,3 @@ jobs:
           for f in ${{ steps.list.outputs.OUTBOX_FILES }}; do
             echo "Posting ${f}"
             http_code=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" \
-              -H "Content-Type: application/json" \
-              --data @"${f}" \
-              "${DISPATCH_URL}")
-
-            echo "HTTP ${http_code} — response:"
-            cat /tmp/resp.txt || true
-            echo
-
-            if [ "${http_code}" = "200" ] || [ "${http_code}" = "201" ]; then
-              base=$(basename "${f}")
-              mv "${f}" "data/sent/${base}"
-              echo "Moved to data/sent/${base}"
-            else
-              echo "Failed to send ${f}"
-              failed=1
-            fi
-          done
-
-          if [ "${failed}" -ne 0 ]; then
-            echo "At least one file failed to send."
-            exit 1
-          fi
-
-      - name: Commit moved files
-        if: always()
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "Nothing to commit."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "Mira Dispatch: move sent files"
-            git push
-          fi
