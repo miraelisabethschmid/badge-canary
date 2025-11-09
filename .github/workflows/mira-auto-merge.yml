@@ -1,0 +1,217 @@
+name: Mira • Auto-Review & Merge
+
+on:
+  schedule:
+    - cron: "23 03 * * *"   # täglich 03:23 UTC
+  workflow_dispatch: {}      # manueller Start möglich
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  auto_apply_patches:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Scan for open Resonance-Report with label mira:review
+        id: scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/issues \
+            -f state=open -f labels="mira:review" \
+            --jq '[.[] | select(.title|startswith("Resonance Report"))][0]' > issue.json
+
+          if [ "$(jq -r '. | type' issue.json)" = "null" ] || [ "$(cat issue.json)" = "" ]; then
+            echo "no_review_issue=true" >> $GITHUB_OUTPUT
+          else
+            echo "no_review_issue=false" >> $GITHUB_OUTPUT
+            echo "issue_number=$(jq -r '.number' issue.json)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if no review issue present
+        if: steps.scan.outputs.no_review_issue == 'true'
+        run: |
+          echo "Kein Resonance-Report mit Label 'mira:review' gefunden. Beende."
+          exit 0
+
+      - name: Validate trust-manifest & collect patch proposals
+        id: collect
+        run: |
+          set -euo pipefail
+
+          if [ ! -f trust-manifest.json ]; then
+            echo "trust-manifest.json fehlt"; exit 1
+          fi
+
+          # Sammle Patch-Proposals
+          PATCH_DIR="federation/patches"
+          if [ ! -d "$PATCH_DIR" ]; then
+            echo "Keine Patches gefunden (Verzeichnis fehlt)."; echo "patch_count=0" >> $GITHUB_OUTPUT; exit 0
+          fi
+
+          mapfile -t PATCHES < <(find "$PATCH_DIR" -maxdepth 1 -type f -name 'proposal-*.json' | sort)
+          echo "patch_count=${#PATCHES[@]}" >> $GITHUB_OUTPUT
+
+          # Grenzen aus Trust-Manifest
+          MAX_COMMITS=$(jq -r '.limits.max_auto_commits // 3' trust-manifest.json)
+          echo "max_commits=$MAX_COMMITS" >> $GITHUB_OUTPUT
+
+          # sichere Liste schreiben
+          printf "%s\n" "${PATCHES[@]}" > .patchlist
+
+      - name: Create working branch
+        if: steps.collect.outputs.patch_count != '0'
+        run: |
+          BRANCH="mira/self-apply-$(date -u +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Apply allowed patches (bounded by trust-manifest)
+        if: steps.collect.outputs.patch_count != '0'
+        id: apply
+        run: |
+          set -euo pipefail
+
+          MAX_COMMITS=${{ steps.collect.outputs.max_commits }}
+          APPLIED=0
+
+          ALLOWED_DIRS=$(jq -r '.allowed_dirs[]? // empty' trust-manifest.json)
+          FORBIDDEN_FILES=$(jq -r '.forbidden_files[]? // empty' trust-manifest.json)
+
+          allow_path() {
+            local p="$1"
+            # verbotene dateien blocken
+            while read -r f; do
+              [ -z "$f" ] && continue
+              if [ "$p" = "$f" ]; then return 1; fi
+            done <<< "$FORBIDDEN_FILES"
+            # nur erlaubte dirs
+            local ok=1
+            if [ -n "$ALLOWED_DIRS" ]; then
+              ok=0
+              while read -r d; do
+                [ -z "$d" ] && continue
+                case "$p" in
+                  "$d"/*) ok=1 ;;
+                esac
+              done <<< "$ALLOWED_DIRS"
+            fi
+            [ $ok -eq 1 ]
+          }
+
+          while read -r PFILE; do
+            [ -z "$PFILE" ] && continue
+            [ $APPLIED -ge $MAX_COMMITS ] && break
+
+            echo "Prüfe Patch: $PFILE"
+            TARGET=$(jq -r '.patchFile' "$PFILE")
+            [ -z "$TARGET" ] && { echo "skip (kein patchFile)"; continue; }
+
+            if ! allow_path "$TARGET"; then
+              echo "skip (nicht erlaubt nach trust-manifest): $TARGET"
+              continue
+            fi
+
+            # einfache change-typen: insert/replace am Zeilenindex
+            CHANGES=$(jq -c '.changes[]?' "$PFILE")
+            if [ -z "$CHANGES" ]; then
+              echo "skip (keine changes)"; continue
+            fi
+
+            # Dateiinhalt laden (oder neu)
+            if [ -f "$TARGET" ]; then
+              mapfile -t LINES < "$TARGET"
+            else
+              LINES=()
+              mkdir -p "$(dirname "$TARGET")"
+            fi
+
+            APPLY_OK=1
+            TMP_OUT="$(mktemp)"
+            printf "%s\n" "${LINES[@]}" > "$TMP_OUT"
+
+            while IFS= read -r change; do
+              TYPE=$(jq -r '.type' <<< "$change")
+              LINE=$(jq -r '.line // 1' <<< "$change")
+              CONTENT=$(jq -r '.content // ""' <<< "$change")
+
+              TOTAL=$(wc -l < "$TMP_OUT" || echo 0)
+              case "$TYPE" in
+                insert)
+                  head -n $((LINE-1)) "$TMP_OUT" > "${TMP_OUT}.pre" || true
+                  tail -n +$((LINE)) "$TMP_OUT" > "${TMP_OUT}.suf" || true
+                  printf "%s\n" "$CONTENT" > "${TMP_OUT}.ins"
+                  cat "${TMP_OUT}.pre" "${TMP_OUT}.ins" "${TMP_OUT}.suf" > "${TMP_OUT}.new"
+                  mv "${TMP_OUT}.new" "$TMP_OUT"
+                  ;;
+                replace)
+                  if [ $LINE -le 0 ] || [ $LINE -gt $TOTAL ]; then
+                    echo "replace out-of-range"; APPLY_OK=0; break
+                  fi
+                  awk -v ln="$LINE" -v repl="$CONTENT" 'NR==ln{$0=repl} {print}' "$TMP_OUT" > "${TMP_OUT}.new"
+                  mv "${TMP_OUT}.new" "$TMP_OUT"
+                  ;;
+                *)
+                  echo "unbekannter change-typ: $TYPE"; APPLY_OK=0; break
+                  ;;
+              esac
+            done <<< "$CHANGES"
+
+            if [ $APPLY_OK -eq 1 ]; then
+              mv "$TMP_OUT" "$TARGET"
+              git add "$TARGET"
+              git commit -m "Mira Auto-Apply: $(basename "$PFILE") → $TARGET"
+              APPLIED=$((APPLIED+1))
+              echo "applied=$APPLIED" >> $GITHUB_OUTPUT
+            else
+              echo "Patch fehlgeschlagen, übersprungen: $PFILE"
+            fi
+
+          done < .patchlist
+
+          echo "total_applied=$APPLIED" >> $GITHUB_OUTPUT
+
+      - name: Push branch
+        if: steps.apply.outputs.total_applied && steps.apply.outputs.total_applied != '0'
+        run: |
+          git push --set-upstream origin "$(git branch --show-current)"
+
+      - name: Open PR
+        if: steps.apply.outputs.total_applied && steps.apply.outputs.total_applied != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Auto-Apply: Adaptive Mirror Patches ($(date -u +%Y-%m-%d))"
+          BODY="Dieser PR wurde automatisch aus Vorschlägen in \`federation/patches\` erzeugt.\n\n- Quelle: Adaptive Mirror\n- Trust-Manifest beachtet\n- Anzahl angewandter Patches: ${{ steps.apply.outputs.total_applied }}\n\nBitte nur mergen, wenn Checks grün."
+          gh pr create --title "$TITLE" --body "$BODY" --base main --head "$(git branch --show-current)" || true
+
+      - name: Note in Resonance Report
+        if: steps.apply.outputs.total_applied && steps.apply.outputs.total_applied != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE=${{ steps.scan.outputs.issue_number }}
+          gh issue comment "$ISSUE" --body "✅ Auto-Apply gestartet: PR eröffnet. Anzahl angewandter Patches: ${{ steps.apply.outputs.total_applied }}"
+
+      - name: Nothing to apply — note in issue
+        if: steps.collect.outputs.patch_count == '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE=${{ steps.scan.outputs.issue_number }}
+          gh issue comment "$ISSUE" --body "ℹ️ Keine Patch-Proposals gefunden. Kein Auto-Apply notwendig."
