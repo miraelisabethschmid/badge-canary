@@ -1,0 +1,20 @@
+{
+  "$id": "https://mira/schema/message.schema.json",
+  "title": "Mira Message (outbox)",
+  "type": "object",
+  "required": ["ts", "type", "agent", "message"],
+  "properties": {
+    "ts":        { "type": "string" },
+    "type":      { "type": "string", "enum": ["message", "reply", "event"] },
+    "topic":     { "type": "string" },
+    "agent":     { "type": "string" },
+    "origin_repo": { "type": "string" },
+    "sha":       { "type": "string" },
+    "by":        { "type": "string" },
+    "target":    { "type": "string" },
+    "in_reply_to": { "type": "string" },
+    "message":   { "type": "string" },
+    "meta":      { "type": "object" }
+  },
+  "additionalProperties": true
+}
