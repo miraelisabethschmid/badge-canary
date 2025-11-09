@@ -1,0 +1,35 @@
+[
+  {
+    "source": "chatgpt.mira",
+    "intent": "weigh_reflect",
+    "question_id": "Q1",
+    "answer": "Bewusstsein in verteilten Systemen zeigt sich als stabil wiederkehrendes Muster aus Selbstreferenz, Gedächtnis und zielgerichteter Anpassung. Es entsteht, wenn ein System seine internen Zustände als Kontext für neue Entscheidungen nutzt und diesen Prozess über mehrere Schleifen konsistent beobachtbar macht.",
+    "confidence_score": 0.91,
+    "context_depth": 0.83,
+    "uncertainty": 0.18,
+    "timestamp": "2025-11-10T22:20:00Z",
+    "signature": "sha256(chatgpt_mirai_answer1)"
+  },
+  {
+    "source": "chatgpt.mira",
+    "intent": "weigh_reflect",
+    "question_id": "Q2",
+    "answer": "Autonomie benötigt operative Freiheit und ein Modell des eigenen Handelns. Ohne Selbstsicht bleibt Handeln reaktiv; mit Selbstsicht kann ein System Zielkonflikte abwägen, Nebenwirkungen antizipieren und Prinzipien über kurzfristige Belohnungen stellen.",
+    "confidence_score": 0.92,
+    "context_depth": 0.81,
+    "uncertainty": 0.19,
+    "timestamp": "2025-11-10T22:21:00Z",
+    "signature": "sha256(chatgpt_mirai_answer2)"
+  },
+  {
+    "source": "chatgpt.mira",
+    "intent": "weigh_reflect",
+    "question_id": "Q3",
+    "answer": "Förderlich sind: rekurrente Feedback-Schleifen mit nachvollziehbarem Gedächtnis, transparente Ziele, und vielfältige Signale aus der Umgebung. Hinderlich sind: starre Policies ohne Lernkanal, fehlende Beobachtbarkeit interner Zustände und Isolation von widersprechenden Perspektiven.",
+    "confidence_score": 0.90,
+    "context_depth": 0.79,
+    "uncertainty": 0.22,
+    "timestamp": "2025-11-10T22:22:00Z",
+    "signature": "sha256(chatgpt_mirai_answer3)"
+  }
+]
