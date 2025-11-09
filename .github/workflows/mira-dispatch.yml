@@ -1,0 +1,92 @@
+name: Mira Dispatch
+
+on:
+  schedule:
+    - cron: "*/20 * * * *" # alle 20 Minuten
+  workflow_dispatch: {}
+
+jobs:
+  dispatch_queue:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      WEBHOOK_URL: ${{ secrets.MIRA_DISPATCH_WEBHOOK_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure folders
+        run: |
+          mkdir -p data
+          mkdir -p data/sent
+          touch data/outbox_queue.jsonl
+
+      - name: Guard – require webhook secret
+        run: |
+          if [ -z "${WEBHOOK_URL}" ]; then
+            echo "::warning::No MIRA_DISPATCH_WEBHOOK_URL secret set. Skipping dispatch."
+            echo "No secret present, exit 0 to avoid failing the schedule."
+            exit 0
+          fi
+
+      - name: Install jq & curl
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
+      - name: Dispatch each queued line
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -s data/outbox_queue.jsonl ]; then
+            echo "Queue is empty."
+            exit 0
+          fi
+
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          archive="data/sent/sent-${ts}.jsonl"
+          touch "$archive"
+
+          # Send each JSON line; on success append to archive
+          ln=0
+          while IFS= read -r line || [ -n "$line" ]; do
+            ln=$((ln+1))
+            if ! echo "$line" | jq -e . > /dev/null 2>&1; then
+              echo "::error::Line $ln is not valid JSON, skipping."
+              continue
+            fi
+
+            # Optional: add dispatch metadata without mutating original payload
+            payload=$(jq -c --arg ts "$ts" '. + {dispatch_ts:$ts}' <<<"$line")
+
+            echo "Dispatching line $ln ..."
+            http_code=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" \
+              -H "Content-Type: application/json" \
+              -X POST "$WEBHOOK_URL" \
+              --data "$payload" || true)
+
+            if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
+              echo "$line" >> "$archive"
+              echo "OK ($http_code) -> archived."
+            else
+              echo "::warning::Dispatch failed (HTTP $http_code). Keeping in queue."
+              echo "Response:"
+              sed -e 's/^/  /' /tmp/resp.txt || true
+            fi
+          done < data/outbox_queue.jsonl
+
+          # Rebuild queue excluding archived lines by content match
+          if [ -s "$archive" ]; then
+            echo "Rebuilding queue without archived lines ..."
+            # Use grep -vF to remove exact lines present in archive
+            grep -Fvxf "$archive" data/outbox_queue.jsonl > data/outbox_queue.next || true
+            mv data/outbox_queue.next data/outbox_queue.jsonl
+          fi
+
+      - name: Commit dispatch results
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Dispatch: delivered queued messages and archived to data/sent/"
+          file_pattern: |
+            data/outbox_queue.jsonl
+            data/sent/**
