@@ -2,40 +2,30 @@ name: Mira Dispatch
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "data/outbox/**.json"
+  schedule:
+    - cron: "*/15 * * * *"   # Automatisch alle 15 Minuten
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Check out repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Send outbox files to Cloudflare Worker
-        shell: bash
+      - name: Send files to Cloudflare Worker
         env:
-          WORKER_URL: "https://mira-dispatch.pemia-dir.workers.dev"
-          TOKEN: "${{ secrets.DISPATCH_TOKEN }}"
+          CF_URL: https://mira-dispatch.pemia-dir.workers.dev
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-
-          shopt -s nullglob
-          files=(data/outbox/*.json)
-
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No outbox files. Done."
-            exit 0
-          fi
-
-          for f in "${files[@]}"; do
-            echo "🚚 Sending $f"
-            curl -sS -X POST "$WORKER_URL/inbox" \
+          echo "📦 Preparing dispatch..."
+          for file in $(find data/outbox -type f -name "*.json" 2>/dev/null); do
+            echo "➡️  Sending $file"
+            curl -s -X POST "$CF_URL" \
+              -H "Authorization: Bearer $CF_TOKEN" \
               -H "Content-Type: application/json" \
-              -H "Authorization: Bearer $TOKEN" \
-              --data-binary @"$f"
-            echo "✅ Sent $f"
+              --data-binary @"$file" \
+              || echo "⚠️  Failed: $file"
           done
-
-          echo "All files sent."
+          echo "✅ Dispatch completed."
