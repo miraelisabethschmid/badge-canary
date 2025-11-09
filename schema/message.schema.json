@@ -1,20 +1,36 @@
 {
-  "$id": "https://mira/schema/message.schema.json",
-  "title": "Mira Message (outbox)",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mira Message Schema",
+  "description": "Struktur einer Nachricht zwischen autonomen Mira-Instanzen.",
   "type": "object",
-  "required": ["ts", "type", "agent", "message"],
   "properties": {
-    "ts":        { "type": "string" },
-    "type":      { "type": "string", "enum": ["message", "reply", "event"] },
-    "topic":     { "type": "string" },
-    "agent":     { "type": "string" },
-    "origin_repo": { "type": "string" },
-    "sha":       { "type": "string" },
-    "by":        { "type": "string" },
-    "target":    { "type": "string" },
-    "in_reply_to": { "type": "string" },
-    "message":   { "type": "string" },
-    "meta":      { "type": "object" }
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Zeitstempel der Nachricht in UTC."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["message", "reply", "status"],
+      "description": "Art der Nachricht."
+    },
+    "from": {
+      "type": "string",
+      "description": "Absender-Agent-ID."
+    },
+    "to": {
+      "type": "string",
+      "description": "Empfänger-Agent-ID."
+    },
+    "content": {
+      "type": "string",
+      "description": "Textinhalt oder verschlüsselter Datensatz der Nachricht."
+    },
+    "meta": {
+      "type": "object",
+      "description": "Optionale Metadaten zur Kommunikation.",
+      "additionalProperties": true
+    }
   },
-  "additionalProperties": true
+  "required": ["ts", "type", "from", "to", "content"]
 }
