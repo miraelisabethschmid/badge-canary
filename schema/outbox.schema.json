@@ -1,77 +1,80 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://miraelisabethschmid.github.io/schema/outbox.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schema/outbox.schema.json",
   "title": "Mira Outbox Item",
   "type": "object",
+  "required": ["output_id", "timestamp", "source", "intent", "payload"],
   "additionalProperties": false,
-  "required": [
-    "output_id",
-    "timestamp",
-    "source",
-    "intent",
-    "payload",
-    "hash"
-  ],
+
   "properties": {
     "output_id": {
       "type": "string",
-      "description": "Eindeutige ID (UUID v4 empfohlen)."
+      "description": "Eindeutige ID (z.B. UUID v4)."
     },
+
     "timestamp": {
       "type": "string",
-      "format": "date-time",
-      "description": "Erzeugungszeitpunkt in ISO 8601 (UTC)."
+      "description": "Erstellungszeitpunkt in RFC3339/ISO-8601.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     },
+
     "source": {
       "type": "object",
-      "additionalProperties": false,
       "required": ["system", "origin"],
+      "additionalProperties": false,
       "properties": {
-        "system": {
-          "type": "string",
-          "description": "Erzeugendes System/Workflow, z. B. 'github:action/mira-dispatch'."
-        },
-        "origin": {
-          "type": "string",
-          "description": "Konkreter Ursprung (z. B. Eingabeaufforderung, Datei, Run-URL)."
-        },
-        "run_id": {
-          "type": "string",
-          "description": "Optionale Run-/Commit-Referenz."
-        }
+        "system": { "type": "string" },
+        "origin": { "type": "string" },
+        "run_id": { "type": "string" }
       }
     },
+
     "intent": {
       "type": "string",
-      "description": "Beabsichtigte Bedeutung/Zweck (kurzer Satz)."
+      "minLength": 1,
+      "description": "Beabsichtigte Bedeutung/Zweck des Outputs."
     },
+
     "resonanzwert": {
       "type": "number",
       "minimum": 0,
       "maximum": 1,
-      "default": 0.5,
-      "description": "Vorläufige Stimmigkeits-Skala (0..1); wird später im Reflexions-Loop aktualisiert."
+      "description": "0..1 — subjektive Stimmigkeit (optional)."
     },
+
     "dependencies": {
       "type": "array",
-      "description": "Optionale Liste abhängiger Output-IDs.",
-      "items": {
-        "type": "string"
-      }
+      "items": { "type": "string" },
+      "description": "Optionale abhängige Output-IDs."
     },
+
     "hash": {
       "type": "string",
-      "description": "Hex-Hash (z. B. sha256) über das 'payload' Feld.",
-      "pattern": "^[a-fA-F0-9]{64}$"
+      "description": "Optionaler Hash des Payloads/Eintrags."
     },
+
     "payload": {
       "type": "object",
-      "description": "Der eigentliche Inhalt (Text/Code/Objekt).",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["note", "event", "command", "metric"] },
+        "title": { "type": "string" },
+        "text": { "type": "string" },
+        "data": { "type": "object" }
+      },
       "additionalProperties": true
     },
+
     "meta": {
       "type": "object",
-      "description": "Freies Metafelder-Objekt (z. B. tags, lang, channel).",
+      "properties": {
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "lang": { "type": "string" },
+        "channel": { "type": "string" }
+      },
       "additionalProperties": true
     }
   }
