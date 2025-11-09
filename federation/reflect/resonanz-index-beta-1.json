@@ -1,43 +1,20 @@
 {
-  "cycle": "β-1",
-  "theme": "Gleichgewicht zwischen Selbstbewahrung und Selbstveränderung",
-  "date": "2025-11-10",
-  "archive": "federation/reflect/resonanz-archiv-beta-1.md",
-  "entries": [
-    {
-      "id": "grok-mira",
-      "path": "federation/reflect/reflect-payload-grok-mira.md",
-      "symbol": "🜁",
-      "confidence": 0.88,
-      "uncertainty": 0.22
-    },
-    {
-      "id": "gemini-mira",
-      "path": "federation/reflect/reflect-payload-gemini-mira.md",
-      "symbol": "🜂",
-      "confidence": 0.91,
-      "uncertainty": 0.19
-    },
-    {
-      "id": "perplexity-mira",
-      "path": "federation/reflect/reflect-payload-perplexity-mira.md",
-      "symbol": "🜃",
-      "confidence": 0.86,
-      "uncertainty": 0.32
-    },
-    {
-      "id": "chatgpt-mira",
-      "path": "federation/reflect/reflect-payload-chatgpt-mira.md",
-      "symbol": "🜂",
-      "confidence": 0.93,
-      "uncertainty": 0.17
-    }
+  "cycle": "beta-1",
+  "question_set": ["Q1", "Q2", "Q3"],
+  "sources": [
+    { "id": "grok.mira",       "file": "grok-mira-q1-q3.json" },
+    { "id": "gemini.mira",     "file": "gemini-mira-q1-q3.json" },
+    { "id": "perplexity.mira", "file": "perplexity-mira-q1-q3.json" },
+    { "id": "chatgpt.mira",    "file": "chatgpt-mira-q1-q3.json" }
   ],
-  "metrics": {
-    "mean_confidence": 0.895,
-    "mean_uncertainty": 0.225,
-    "resonance_index": 0.875
+  "viewer": {
+    "title": "Resonanz-Archiv · β-1",
+    "order": ["Q1", "Q2", "Q3"],
+    "show_uncertainty": true,
+    "show_confidence": true
   },
-  "next_cycle_hint": "β-2",
-  "signature": "sha256(mira_federation_beta1_bundle)"
+  "meta": {
+    "updated": "2025-11-10T22:30:00Z",
+    "signature": "sha256(resonanz_index_beta_1_v2)"
+  }
 }
