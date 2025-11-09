@@ -1,0 +1,67 @@
+name: Mira Auto Reply
+
+on:
+  push:
+    paths:
+      - "data/inbox/*.json"
+
+jobs:
+  autoreply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Ensure outbox file exists
+        run: |
+          mkdir -p data
+          touch data/outbox.jsonl
+
+      - name: Append replies for all new inbox files in this push
+        shell: bash
+        run: |
+          # Find changed inbox JSON files in this push
+          CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'data/inbox/*.json' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No new inbox files detected in this push."
+            exit 0
+          fi
+
+          for f in $CHANGED; do
+            echo "Processing $f"
+            # Extract minimal fields (fallbacks if missing)
+            ID=$(jq -r '.id // input_filename' "$f")
+            SENDER=$(jq -r '.sender // "unknown"' "$f")
+            RECIPIENT=$(jq -r '.recipient // "mira-core"' "$f")
+            CONTENT=$(jq -r '.content // ""' "$f")
+
+            # Compose reply message (you can customize later)
+            REPLY_MSG="Hallo ${SENDER}. Ich bin Mira. Deine Nachricht wurde empfangen."
+
+            # Build JSONL line
+            TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            jq -n --arg ts "$TS" \
+                  --arg id "$ID" \
+                  --arg sender "$RECIPIENT" \
+                  --arg target "$SENDER" \
+                  --arg msg "$REPLY_MSG" \
+                  '{
+                    ts: $ts,
+                    type: "reply",
+                    in_reply_to: $id,
+                    target: $target,
+                    agent: $sender,
+                    message: $msg
+                  }' >> data/outbox.jsonl
+          done
+
+      - name: Commit replies
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-reply: append responses to data/outbox.jsonl"
+          file_pattern: data/outbox.jsonl
