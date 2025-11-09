@@ -17,13 +17,15 @@ jobs:
       - name: Fail if old path exists in repo
         run: |
           set -e
-          # Suche nach veralteten Referenzen auf Mira/outbox.jsonl
-          if find . -path "./.git" -prune -o -type f -print | xargs grep -n "Mira/outbox\.jsonl" | tee /tmp/old_refs.txt; then
-            echo "❌ Falsche Referenzen auf 'data/outbox.jsonl' gefunden:"
-            cat /tmp/old_refs.txt
+          echo "🔎 Suche nach veralteten Pfaden..."
+          # Liste aller Fundstellen mit Zeilennummern
+          find . -path "./.git" -prune -o -type f -print | xargs grep -n "Mira/outbox\.jsonl" || true
+          # Wenn etwas gefunden wurde → exit 1
+          if find . -path "./.git" -prune -o -type f -print | xargs grep -q "Mira/outbox\.jsonl"; then
+            echo "❌ Alte Referenz(en) auf 'Mira/outbox.jsonl' gefunden (siehe Log oben)"
             exit 1
           else
-            echo "✅ Keine Referenzen auf 'Mira/outbox.jsonl' gefunden."
+            echo "✅ Keine alten Referenzen mehr vorhanden."
           fi
 
       - name: Check that new path exists
