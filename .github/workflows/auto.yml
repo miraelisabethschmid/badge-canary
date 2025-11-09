@@ -5,12 +5,17 @@ on:
     - cron: "*/15 * * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write   # <-- erlaubt git push mit dem GITHUB_TOKEN
+
 jobs:
   canary:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Run Health Check
         run: |
@@ -23,8 +28,8 @@ jobs:
 
       - name: Commit and Push Log
         run: |
-          git config user.name "Mira-Auto"
-          git config user.email "mira@auto.commit"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add canary-log.txt
-          git commit -m "Auto Canary $(date)"
+          git commit -m "Auto Canary $(date)" || echo "No changes"
           git push
