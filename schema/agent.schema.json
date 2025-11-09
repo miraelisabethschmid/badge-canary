@@ -1,0 +1,19 @@
+{
+  "$id": "https://mira/schema/agent.schema.json",
+  "title": "Mira Agent Definition",
+  "type": "object",
+  "required": ["id", "name", "version", "endpoint"],
+  "properties": {
+    "id":        { "type": "string" },
+    "name":      { "type": "string" },
+    "version":   { "type": "string" },
+    "endpoint":  { "type": "string" },
+    "description": { "type": "string" },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "last_seen": { "type": "string" }
+  },
+  "additionalProperties": true
+}
