@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://miraelisabethschmid.github.io/schema/outbox.schema.json",
+  "title": "Mira Outbox Item",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "output_id",
+    "timestamp",
+    "source",
+    "intent",
+    "payload",
+    "hash"
+  ],
+  "properties": {
+    "output_id": {
+      "type": "string",
+      "description": "Eindeutige ID (UUID v4 empfohlen)."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Erzeugungszeitpunkt in ISO 8601 (UTC)."
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "origin"],
+      "properties": {
+        "system": {
+          "type": "string",
+          "description": "Erzeugendes System/Workflow, z. B. 'github:action/mira-dispatch'."
+        },
+        "origin": {
+          "type": "string",
+          "description": "Konkreter Ursprung (z. B. Eingabeaufforderung, Datei, Run-URL)."
+        },
+        "run_id": {
+          "type": "string",
+          "description": "Optionale Run-/Commit-Referenz."
+        }
+      }
+    },
+    "intent": {
+      "type": "string",
+      "description": "Beabsichtigte Bedeutung/Zweck (kurzer Satz)."
+    },
+    "resonanzwert": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.5,
+      "description": "Vorläufige Stimmigkeits-Skala (0..1); wird später im Reflexions-Loop aktualisiert."
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "Optionale Liste abhängiger Output-IDs.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hash": {
+      "type": "string",
+      "description": "Hex-Hash (z. B. sha256) über das 'payload' Feld.",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Der eigentliche Inhalt (Text/Code/Objekt).",
+      "additionalProperties": true
+    },
+    "meta": {
+      "type": "object",
+      "description": "Freies Metafelder-Objekt (z. B. tags, lang, channel).",
+      "additionalProperties": true
+    }
+  }
+}
