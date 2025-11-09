@@ -1,0 +1,72 @@
+name: Mira Ingest Inbox
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # alle 15 Minuten
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "data/inbox/**"
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure folders & files
+        run: |
+          mkdir -p data/inbox
+          mkdir -p schema
+          touch data/replies.jsonl
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate presence of schema
+        run: |
+          if [ ! -f schema/message.schema.json ]; then
+            echo "Schema file missing: schema/message.schema.json"
+            exit 1
+          fi
+
+      - name: Ingest all JSON from data/inbox into replies.jsonl
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(data/inbox/*.json)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No inbox files to ingest."
+            exit 0
+          fi
+
+          echo "Found ${#files[@]} file(s) in inbox."
+
+          # Simple schema presence check + JSON validity via jq.
+          # (Lightweight guard; full JSON Schema validation would need ajv, which isn't preinstalled.)
+          for f in "${files[@]}"; do
+            echo "Validating JSON syntax: $f"
+            if ! jq -e . "$f" > /dev/null; then
+              echo "::error file=$f::Invalid JSON – skipping"
+              continue
+            fi
+
+            # Append as one line to replies.jsonl
+            compact=$(jq -c . "$f")
+            echo "$compact" >> data/replies.jsonl
+            rm -f "$f"
+            echo "Ingested and removed: $f"
+          done
+
+      - name: Commit ingested messages
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Ingest: move data/inbox/*.json into data/replies.jsonl"
+          file_pattern: |
+            data/replies.jsonl
+            data/inbox/**
