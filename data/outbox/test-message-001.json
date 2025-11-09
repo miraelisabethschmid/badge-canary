@@ -1,0 +1,12 @@
+{
+  "id": "test-message-001",
+  "from": "github:miraelisabethschmid/badge-canary",
+  "to": "worker:mira-dispatch",
+  "ts": "2025-11-09T00:00:00Z",
+  "type": "text",
+  "text": "Hallo aus der Outbox – Test der Mira-Dispatch-Automatisierung.",
+  "meta": {
+    "source": "mira-dispatch/manual-test",
+    "version": "v1"
+  }
+}
