@@ -29,32 +29,14 @@ jobs:
         if: ${{ steps.list.outputs.OUTBOX_FILES == '' }}
         run: echo "No files in data/outbox — nothing to send."
 
-      # Optional: kleiner Sanity-Check, ob der PAT gültig ist
-      - name: Validate GitHub token (sanity check)
-        if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
-        env:
-          AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Checking GitHub token against /user…"
-          code=$(curl -sS -o /tmp/u.txt -w "%{http_code}" \
-            -H "Authorization: token ${AUTH_TOKEN}" \
-            https://api.github.com/user)
-          echo "HTTP ${code}"
-          head -c 400 /tmp/u.txt || true
-          echo
-          test "${code}" = "200"
-
       - name: Send files to Cloudflare Worker
         if: ${{ steps.list.outputs.OUTBOX_FILES != '' }}
         env:
           DISPATCH_URL: "https://mira-dispatch.pemia-dir.workers.dev/inbox"
-          AUTH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
         shell: bash
         run: |
           echo "--------------------------------------------------------------"
-          echo "Sende an ${DISPATCH_URL} mit Token-Authentifizierung"
+          echo "Sende an ${DISPATCH_URL} (ohne Token-Authentifizierung)"
           echo "--------------------------------------------------------------"
 
           set -euo pipefail
@@ -64,7 +46,6 @@ jobs:
             echo "Posting ${f}"
             http_code=$(curl -sS -o /tmp/resp.txt -w "%{http_code}" \
               -H "Content-Type: application/json" \
-              -H "Authorization: token ${AUTH_TOKEN}" \
               --data @"${f}" \
               "${DISPATCH_URL}")
 
