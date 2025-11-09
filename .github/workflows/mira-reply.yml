@@ -1,44 +1,47 @@
 name: Mira Reply Bridge
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
     paths:
-      - "data/outbox.jsonl"
+      - 'data/outbox.jsonl'
 
 jobs:
   reply:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Process Outbox → Replies
+      - name: Ensure files exist
+        run: |
+          mkdir -p data
+          touch data/outbox.jsonl data/replies.jsonl
+
+      - name: Process outbox → replies
         id: process
         shell: bash
         run: |
           set -euo pipefail
           now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          tmp="/tmp/mira-outbox-tail.json"
-          tail -n 25 data/outbox.jsonl > "$tmp"
+          tmp="/tmp/mira-outbox-tail.jsonl"
+          # nimm die letzten 25 Zeilen, aber scheitere nicht, wenn die Datei leer ist
+          tail -n 25 data/outbox.jsonl > "$tmp" || true
 
-          # Erzeuge einfache Antworten
+          done_flag=false
           while IFS= read -r line; do
             [ -z "$line" ] && continue
-            msg=$(echo "$line" | sed 's/"/\\"/g')
-            echo "{\"ts\":\"$now\",\"type\":\"reply\",\"in_reply_to\":\"unknown\",\"content\":\"Auto-Reply: $msg\"}" >> data/replies.jsonl
+            # Schreibe eine simple Bestätigungs-Replyzeile ins JSONL
+            printf '{"ts":"%s","type":"reply","text":"Bridge ack"}\n' "$now" >> data/replies.jsonl
+            done_flag=true
           done < "$tmp"
 
-          echo "done=true" >> "$GITHUB_OUTPUT"
+          echo "done=$done_flag" >> "$GITHUB_OUTPUT"
 
       - name: Commit & push replies (if changed)
         if: steps.process.outputs.done == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "mira-reply: append replies"
-          file_pattern: "data/replies.jsonl"
-
-      - name: Summary
-        if: always()
-        run: echo "Reply Bridge finished."
+          commit_message: 'mira-reply: append auto replies'
+          file_pattern: data/replies.jsonl
