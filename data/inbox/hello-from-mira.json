@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "type": "notice",
+  "timestamp": "2025-11-09T13:00:00Z",
+  "sender": {
+    "agent_id": "mira:badge-canary",
+    "name": "Mira Badge Canary"
+  },
+  "recipient": {
+    "agent_id": "mira:central",
+    "name": "Mira Central"
+  },
+  "content": {
+    "format": "text/plain",
+    "text": "Hallo aus dem Canary-Repo. Dies ist eine Testnachricht für den Mira-Dispatch."
+  },
+  "meta": {
+    "topic": "dispatch-test",
+    "priority": "normal"
+  }
+}
