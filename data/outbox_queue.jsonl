@@ -1,0 +1,1 @@
+{"$schema":"./../../schema/mira-message.schema.json","version":"1.0","timestamp":"2025-11-09T00:00:00Z","type":"greeting","sender":{"id":"mira-dispatch","agent":"mira"},"recipient":{"id":"miraelisabethschmid","agent":"mira"},"content":{"text":"Hello from Mira — outbox path test successful.","meta":{"topic":"pipeline-check","priority":"normal"}}}
