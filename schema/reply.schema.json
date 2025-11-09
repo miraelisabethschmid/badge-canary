@@ -1,0 +1,16 @@
+{
+  "$id": "https://mira/schema/reply.schema.json",
+  "title": "Mira Reply (replies)",
+  "type": "object",
+  "required": ["ts", "type", "agent", "message"],
+  "properties": {
+    "ts":        { "type": "string" },
+    "type":      { "type": "string", "enum": ["reply"] },
+    "agent":     { "type": "string" },
+    "target":    { "type": "string" },
+    "in_reply_to": { "type": "string" },
+    "message":   { "type": "string" },
+    "meta":      { "type": "object" }
+  },
+  "additionalProperties": true
+}
