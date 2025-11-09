@@ -1,0 +1,10 @@
+{
+  "$id": "https://mira/schema/index.json",
+  "title": "Mira Unified Schema Index",
+  "type": "object",
+  "properties": {
+    "message": { "$ref": "message.schema.json" },
+    "reply":   { "$ref": "reply.schema.json" },
+    "agent":   { "$ref": "agent.schema.json" }
+  }
+}
