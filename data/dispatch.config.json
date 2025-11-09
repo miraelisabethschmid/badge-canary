@@ -1,0 +1,23 @@
+{
+  "target": {
+    "owner": "miraelisabethschmid",
+    "repo": "badge-canary",
+    "baseDir": "data/inbox"
+  },
+  "naming": {
+    "prefix": "inbox-",
+    "suffix": ".json",
+    "useIsoTimestamp": true,
+    "timestampReplace": [":", "-", "."]
+  },
+  "validation": {
+    "required": ["message"],
+    "maxMessageLength": 4000,
+    "allowFields": ["message", "from", "email", "meta"]
+  },
+  "enrich": {
+    "addCreatedAt": true,
+    "addUserAgent": true,
+    "source": "website"
+  }
+}
