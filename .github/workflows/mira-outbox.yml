@@ -1,61 +1,41 @@
 name: Mira Outbox Queue
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"  # alle 15 Minuten
-  workflow_dispatch: {}
   push:
     paths:
-      - "data/outbox/**"
+      - "data/outbox_queue.jsonl"
 
 jobs:
-  outbox_queue:
+  move:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Ensure folders & files
-        run: |
-          mkdir -p data/outbox
-          touch data/outbox_queue.jsonl
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Queue all JSON from data/outbox into outbox_queue.jsonl
+      - name: Append newest queued line to outbox
+        id: move
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          files=(data/outbox/*.json)
+          mkdir -p data
+          touch data/outbox_queue.jsonl data/outbox.jsonl
 
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No outbox files to queue."
+          # nimm die letzte Zeile aus der Queue
+          last="$(tail -n 1 data/outbox_queue.jsonl || true)"
+          if [ -z "${last}" ]; then
+            echo "moved=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "Found ${#files[@]} file(s) in outbox."
+          echo "${last}" >> data/outbox.jsonl
+          echo "moved=true" >> "$GITHUB_OUTPUT"
 
-          for f in "${files[@]}"; do
-            echo "Validating JSON syntax: $f"
-            if ! jq -e . "$f" > /dev/null; then
-              echo "::error file=$f::Invalid JSON – skipping"
-              continue
-            fi
-
-            compact=$(jq -c . "$f")
-            echo "$compact" >> data/outbox_queue.jsonl
-            rm -f "$f"
-            echo "Queued and removed: $f"
-          done
-
-      - name: Commit queued messages
+      - name: Commit & push (only if something moved)
+        if: steps.move.outputs.moved == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Outbox: append data/outbox/*.json to data/outbox_queue.jsonl"
+          commit_message: "outbox: append from queue"
           file_pattern: |
-            data/outbox_queue.jsonl
-            data/outbox/**
+            data/outbox.jsonl
