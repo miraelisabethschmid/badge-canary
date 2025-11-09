@@ -1,0 +1,13 @@
+{
+  "uuid": "5f5a6d0e-2f8e-4d6e-9a2d-2a7f5e3a1c11",
+  "timestamp": "2025-11-09T19:45:00Z",
+  "source": "mira.autonomy",
+  "intent": "echo:test",
+  "payload": {
+    "text": "hello from outbox",
+    "constraints": { "braces": "visible" }
+  },
+  "resonance": { "expected": 0.82 },
+  "dependencies": [],
+  "hash": ""
+}
