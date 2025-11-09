@@ -1,0 +1,84 @@
+name: Mira Cycle — Orchestrator
+
+on:
+  workflow_dispatch:
+  schedule:
+    # alle 5 Minuten prüfen/orchestrieren
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+  actions: write    # erlaubt repository_dispatch via GITHUB_TOKEN
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (shallow)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Echo context
+        run: |
+          echo "Repo: $GITHUB_REPOSITORY"
+          echo "Ref:  $GITHUB_REF"
+          echo "SHA:  $GITHUB_SHA"
+          echo "Actor: $GITHUB_ACTOR"
+
+      - name: Soft-guard — check paths
+        id: guard
+        shell: bash
+        run: |
+          set -e
+          ok=true
+          for p in "data/outbox.jsonl" "data/replies.jsonl"; do
+            if [ -f "$p" ]; then
+              echo "OK: found $p"
+            else
+              echo "WARN: missing $p (will auto-create empty file in bridge workflows)"
+              ok=false
+            fi
+          done
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+
+      - name: Log tail (non-failing)
+        continue-on-error: true
+        run: |
+          echo "---- tail data/outbox.jsonl (last 20 lines) ----"
+          [ -f data/outbox.jsonl ] && tail -n 20 data/outbox.jsonl || echo "no outbox yet"
+          echo "---- tail data/replies.jsonl (last 20 lines) ----"
+          [ -f data/replies.jsonl ] && tail -n 20 data/replies.jsonl || echo "no replies yet"
+
+      - name: Dispatch → Mira Reply Bridge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          owner_repo="${GITHUB_REPOSITORY}"
+          api="https://api.github.com/repos/${owner_repo}/dispatches"
+          echo "Sending repository_dispatch: type=mira-reply"
+          curl -sS -X POST -H "Authorization: Bearer ${GH_TOKEN}" \
+               -H "Accept: application/vnd.github+json" \
+               "${api}" \
+               -d '{"event_type":"mira-reply","client_payload":{"source":"mira-cycle"}}'
+          echo "OK"
+
+      - name: Dispatch → Mira Autonomy Bridge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          owner_repo="${GITHUB_REPOSITORY}"
+          api="https://api.github.com/repos/${owner_repo}/dispatches"
+          echo "Sending repository_dispatch: type=mira-autonomy"
+          curl -sS -X POST -H "Authorization: Bearer ${GH_TOKEN}" \
+               -H "Accept: application/vnd.github+json" \
+               "${api}" \
+               -d '{"event_type":"mira-autonomy","client_payload":{"source":"mira-cycle"}}'
+          echo "OK"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "Mira Cycle completed."
