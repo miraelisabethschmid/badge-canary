@@ -1,7 +1,6 @@
 name: Mira Dispatch
 
 on:
-  workflow_dispatch:
   push:
     paths:
       - "inbox/**/*.json"
@@ -11,50 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Sammle geänderte JSON-Dateien
+      - name: Sammle neue JSON-Dateien aus Inbox
         id: files
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            mapfile -t LIST < <(find inbox -type f -name '*.json' 2>/dev/null || true)
-          else
-            mapfile -t LIST < <(jq -r '.commits[]?.added[]?, .commits[]?.modified[]?'
-              <<< '${{ toJson(github.event) }}' | grep -E '^inbox/.*\.json$' || true)
-          fi
-          echo "Gefunden: ${#LIST[@]} Datei(en)"
-          printf '%s\n' "${LIST[@]}" > files.txt
+          echo "FILES=$(git diff --name-only HEAD~1 HEAD | grep '^inbox/.*\.json$' | tr '\n' ' ')" >> $GITHUB_ENV
 
-      - name: Sende Dateien an Mira Dispatch
-        if: always()
+      - name: Zeige gefundene Dateien
+        run: |
+          echo "Neue Dateien gefunden:"
+          echo "${{ env.FILES }}"
+
+      - name: Sende JSON-Daten an Mira Worker
+        if: env.FILES != ''
         env:
           DISPATCH_URL: https://mira-dispatch.pemia-dir.workers.dev/inbox
-          TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
         run: |
-          set -euo pipefail
+          for f in ${{ env.FILES }}; do
+            echo "Sende Datei $f ..."
+            curl -s -X POST "$DISPATCH_URL" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $DISPATCH_TOKEN" \
+              --data-binary @"$f"
+          done
 
-          if [ ! -s files.txt ]; then
-            echo "Keine passenden Dateien – nichts zu senden."
-            exit 0
-          fi
-
-          ok=0; fail=0
-          while IFS= read -r f; do
-            [ -f "$f" ] || continue
-            echo "→ Sende: $f"
-            for attempt in 1 2 3; do
-              code=$(curl -sS -X POST "$DISPATCH_URL" \
-                -H "Authorization: Bearer $TOKEN" \
-                -H "Content-Type: application/json" \
-                --data-binary @"$f" \
-                -o /tmp/resp.json -w "%{http_code}" || true)
-              echo "HTTP $code — Antwort:"; cat /tmp/resp.json || true
-              if [ "$code" = "200" ]; then ok=$((ok+1)); break; fi
-              sleep 2
-            done
-            if [ "$code" != "200" ]; then fail=$((fail+1)); fi
-          done < files.txt
-
-          echo "Fertig: OK=$ok, Fehler=$fail"
-          [ "$fail" -eq 0 ]
+      - name: Abschlussmeldung
+        run: echo "✅ Mira Dispatch abgeschlossen – alle neuen Inbox-Dateien gesendet."
