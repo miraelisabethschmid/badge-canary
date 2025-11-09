@@ -1,41 +1,76 @@
 name: Mira Dispatch
 
 on:
-  push:
-    paths:
-      - "inbox/**/*.json"
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"   # alle 30 Minuten (kannst du später ändern)
 
 jobs:
-  send-to-mira:
+  dispatch:
     runs-on: ubuntu-latest
-
+    env:
+      WORKER_URL: ${{ secrets.WORKER_URL }}           # z.B. https://dein-worker.workers.dev/inbox
+      TOKEN: ${{ secrets.DISPATCH_TOKEN }}            # exakt dein bereits angelegtes Secret
     steps:
-      - name: Checkout Repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Sammle neue JSON-Dateien aus Inbox
-        id: files
+      - name: Ensure folders exist
         run: |
-          echo "FILES=$(git diff --name-only HEAD~1 HEAD | grep '^inbox/.*\.json$' | tr '\n' ' ')" >> $GITHUB_ENV
+          mkdir -p data/outbox
+          mkdir -p data/sent
 
-      - name: Zeige gefundene Dateien
+      - name: Collect outbox files
+        id: coll
+        shell: bash
         run: |
-          echo "Neue Dateien gefunden:"
-          echo "${{ env.FILES }}"
+          shopt -s nullglob
+          files=(data/outbox/*.json)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "found=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          printf "%s\n" "${files[@]}" > outbox_list.txt
+          echo "found=1" >> $GITHUB_OUTPUT
 
-      - name: Sende JSON-Daten an Mira Worker
-        if: env.FILES != ''
-        env:
-          DISPATCH_URL: https://mira-dispatch.pemia-dir.workers.dev/inbox
-          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+      - name: Dispatch each file (skip if none)
+        if: steps.coll.outputs.found == '1'
+        shell: bash
         run: |
-          for f in ${{ env.FILES }}; do
-            echo "Sende Datei $f ..."
-            curl -s -X POST "$DISPATCH_URL" \
+          set -e
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            echo "Dispatching $f"
+
+            # Sende Datei an deinen Worker (/inbox) mit Bearer-Token
+            code=$(curl -sS -o resp.txt -w "%{http_code}" \
+              -H "Authorization: Bearer ${TOKEN}" \
               -H "Content-Type: application/json" \
-              -H "Authorization: Bearer $DISPATCH_TOKEN" \
-              --data-binary @"$f"
-          done
+              --data @"$f" "${WORKER_URL}")
 
-      - name: Abschlussmeldung
-        run: echo "✅ Mira Dispatch abgeschlossen – alle neuen Inbox-Dateien gesendet."
+            if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+              # Bei Erfolg verschieben & committen
+              dest="data/sent/$(basename "$f")"
+              mv "$f" "$dest"
+              git add "$dest"
+              git commit -m "dispatch: $(basename "$f")"
+            else
+              echo "HTTP $code"; cat resp.txt
+              exit 1
+            fi
+          done < outbox_list.txt
+
+          # Nur pushen, wenn es Commits gab
+          if ! git diff --quiet --cached; then
+            git push
+          fi
+
+      - name: Upload failure body (if any)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatch-responses
+          path: resp.txt
