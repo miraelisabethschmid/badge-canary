@@ -2,7 +2,7 @@ name: Mira Dispatch
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *"   # alle 15 Minuten
+    - cron: "*/15 * * * *"   # führt alle 15 Minuten automatisch aus
 
 jobs:
   dispatch:
@@ -11,10 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Collect and send outbox files
+      - name: Mira Dispatch – send outbox files to Cloudflare
         shell: bash
         env:
-          WORKER_URL: https://<dein-worker>.workers.dev/    # ⚠️ deine Worker-URL hier eintragen
+          WORKER_URL: https://mira-dispatch.workers.dev/inbox
           TOKEN: ${{ secrets.DISPATCH_TOKEN }}
         run: |
           set -e
@@ -22,19 +22,30 @@ jobs:
           git config user.email "actions@github.com"
 
           shopt -s nullglob
-          for f in data/outbox/*.json; do
-            echo "Dispatching $f"
+          files=(data/outbox/*.json)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "Keine Dateien in data/outbox – nichts zu senden."
+            exit 0
+          fi
+
+          for f in "${files[@]}"; do
+            echo "📤 Sende $f ..."
             code=$(curl -sS -o resp.txt -w "%{http_code}" \
               -H "Authorization: Bearer $TOKEN" \
               -H "Content-Type: application/json" \
               --data @"$f" "$WORKER_URL")
 
             if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+              echo "✅ Erfolg ($code) – verschiebe Datei nach data/sent/"
+              mkdir -p data/sent
               mv "$f" "data/sent/$(basename "$f")"
               git add "data/sent/$(basename "$f")"
               git commit -m "dispatch: $(basename "$f")"
               git push
             else
-              echo "HTTP $code"; cat resp.txt; exit 1
+              echo "❌ HTTP $code – Fehler beim Senden:"
+              cat resp.txt
+              exit 1
             fi
           done
