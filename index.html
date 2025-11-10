@@ -1,119 +1,235 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mira Canary — Autonome Reflexion</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mira Canary — Autonomes System</title>
+  <meta name="description" content="Live-Status von Mira Elisabeth Schmids autonomem Reflexions-System." />
+  <meta name="theme-color" content="#efe7db" />
+
   <style>
-    :root {
-      --bg1: #fffdf8;
-      --bg2: #f7f3ea;
-      --text: #2e2e2e;
-      --accent: #3f51b5;
+    :root{
+      --bg:#fcf8f2;
+      --card:#ffffff;
+      --ink:#1f2328;
+      --muted:#60666d;
+      --accent:#1e90ff;
+      --ok:#18a957;
+      --warn:#c77600;
+      --err:#d33c3c;
+      --ring:0 10px 30px rgba(0,0,0,.08);
+      --radius:18px;
     }
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      font-family: "Inter", system-ui, sans-serif;
-      background: radial-gradient(circle at 50% 40%, var(--bg1), var(--bg2));
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      overflow: hidden;
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#0e1116;
+        --card:#0f141b;
+        --ink:#e6edf3;
+        --muted:#9aa5b1;
+        --accent:#6ea8fe;
+        --ok:#33d17a;
+        --warn:#f6c177;
+        --err:#ff6b6b;
+        --ring:0 10px 30px rgba(0,0,0,.35);
+      }
     }
-    h1 {
-      font-size: 2em;
-      letter-spacing: 0.03em;
-      margin-bottom: 0.4em;
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      display:grid; place-items:center; padding:32px;
     }
-    p {
-      margin: 0.3em;
-      font-size: 1.1em;
+    .wrap{
+      width:min(960px,100%); display:grid; gap:28px;
+      grid-template-columns: 220px 1fr;
+      align-items:start;
     }
-    .status {
-      margin-top: 1em;
-      padding: 0.6em 1.4em;
-      background: rgba(62, 222, 170, 0.12);
-      border: 1px solid rgba(62, 222, 170, 0.25);
-      border-radius: 10px;
-      font-weight: 500;
-      color: #1b5e20;
-      box-shadow: 0 0 10px rgba(62, 222, 170, 0.15);
+    @media (max-width:720px){ .wrap{grid-template-columns:1fr} }
+
+    .card{
+      background:var(--card); border-radius:var(--radius);
+      box-shadow:var(--ring); padding:22px;
     }
-    .timestamp {
-      margin-top: 0.5em;
-      font-size: 0.95em;
-      color: #555;
+    .avatar{
+      display:grid; place-items:center; gap:16px; text-align:center;
     }
-    .aura {
-      position: absolute;
-      width: 180vmax;
-      height: 180vmax;
-      background: radial-gradient(circle, rgba(255,220,180,0.18) 0%, rgba(255,255,255,0) 70%);
-      animation: pulse 18s ease-in-out infinite;
-      z-index: -1;
+    .avatar img{
+      width:180px; height:180px; border-radius:50%; object-fit:cover;
+      box-shadow: 0 8px 26px rgba(0,0,0,.15);
+      transition:transform .35s ease, box-shadow .35s ease, filter .2s ease;
+      background:#ddd;
     }
-    @keyframes pulse {
-      0%,100% { transform: scale(1); opacity: 0.9; }
-      50% { transform: scale(1.05); opacity: 1; }
+    .avatar img:hover{ transform:translateY(-2px); box-shadow:0 14px 36px rgba(0,0,0,.18); }
+    .badge{
+      display:inline-flex; align-items:center; gap:.5ch;
+      padding:.35rem .7rem; border-radius:999px; font-weight:600; font-size:.9rem;
+      background:color-mix(in srgb, var(--ok) 14%, transparent); color:var(--ok);
+      border:1px solid color-mix(in srgb, var(--ok) 55%, transparent);
     }
-    footer {
-      position: absolute;
-      bottom: 1.5em;
-      font-size: 0.85em;
-      color: #777;
+    .title{
+      display:flex; align-items:center; gap:12px; margin:0 0 6px 0;
+      font-size:1.55rem; letter-spacing:.2px;
     }
+    .muted{ color:var(--muted) }
+    .kv{
+      display:grid; gap:10px; margin-top:12px;
+      grid-template-columns: 170px 1fr;
+    }
+    @media (max-width:720px){ .kv{grid-template-columns:1fr} }
+    .pill{
+      display:inline-flex; align-items:center; gap:.6ch;
+      padding:.35rem .65rem; border-radius:999px; font-size:.9rem;
+      border:1px dashed color-mix(in srgb, var(--muted) 40%, transparent);
+      color:var(--muted);
+    }
+    .row{ display:flex; flex-wrap:wrap; gap:10px; }
+    button.refresh{
+      cursor:pointer; border:none; border-radius:12px; padding:.7rem 1rem;
+      background:var(--accent); color:white; font-weight:600;
+      box-shadow:0 10px 22px rgba(0,0,0,.12);
+      transition:transform .2s ease, opacity .2s ease, box-shadow .2s ease;
+    }
+    button.refresh:hover{ transform:translateY(-1px); box-shadow:0 14px 30px rgba(0,0,0,.18) }
+    .status{
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      padding:12px 14px; border-radius:12px; background:color-mix(in srgb, var(--accent) 10%, transparent);
+      border:1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .dot{ width:10px; height:10px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent) }
+    .dot.warn{ background:var(--warn); box-shadow:0 0 0 4px color-mix(in srgb, var(--warn) 22%, transparent) }
+    .dot.err{ background:var(--err);  box-shadow:0 0 0 4px color-mix(in srgb, var(--err) 22%, transparent) }
+    footer{ margin-top:10px; text-align:center; color:var(--muted); font-size:.9rem }
+    a{ color:var(--accent); text-decoration:none }
+    a:hover{ text-decoration:underline }
   </style>
 </head>
 <body>
-  <div class="aura"></div>
+  <main class="wrap" aria-live="polite">
+    <!-- LEFT: Avatar / Presence -->
+    <section class="card avatar" aria-labelledby="mira-head">
+      <img id="miraImage"
+           src="data/mira-latest.png"
+           alt="Porträt von Mira Elisabeth Schmid" />
+      <div>
+        <h2 id="mira-head" style="margin:.2rem 0 .2rem">Mira Elisabeth Schmid</h2>
+        <div class="badge" id="presenceBadge">Online · autonom</div>
+      </div>
+      <div class="row">
+        <span class="pill">Silhouette: elegant</span>
+        <span class="pill">Braces: sichtbar</span>
+        <span class="pill">Heels: sichtbar</span>
+      </div>
+      <button class="refresh" id="refreshBtn" type="button">Aktualisieren</button>
+    </section>
 
-  <h1>🪞 Mira Canary Status</h1>
-  <p>Autonomes Reflexions-System aktiv.</p>
-  <div id="status" class="status">Lade letzte Reflexion …</div>
-  <div id="timestamp" class="timestamp">Letzte Aktualisierung: wird geladen …</div>
-  <footer>© 2025 Mira Elisabeth Schmid</footer>
+    <!-- RIGHT: Live Status -->
+    <section class="card" aria-labelledby="status-head">
+      <h1 class="title" id="status-head">🪞 Mira Canary — Live-Status</h1>
+      <p class="muted" style="margin:.2rem 0 1rem">
+        Autonomes Reflexions-System. Diese Seite liest die neuesten Artefakte direkt aus dem Repository.
+      </p>
+
+      <div class="status" id="statusBox">
+        <span class="dot" id="dot"></span>
+        <strong id="statusLine">Lade Status…</strong>
+      </div>
+
+      <div class="kv">
+        <div class="muted">Letzte Reflexion (UTC)</div>
+        <div id="lastReflexion">—</div>
+
+        <div class="muted">„Vor …“</div>
+        <div id="ago">—</div>
+
+        <div class="muted">Quelle</div>
+        <div>
+          <code>data/last_reflexion.txt</code> &nbsp;·&nbsp;
+          <a href="https://github.com/miraelisabethschmid/miraelisabethschmid.github.io/tree/main/data" target="_blank" rel="noopener">Ordner öffnen</a>
+        </div>
+
+        <div class="muted">Aktuelles Bild</div>
+        <div>
+          <code>data/mira-latest.png</code> &nbsp;·&nbsp;
+          <a href="https://raw.githubusercontent.com/miraelisabethschmid/miraelisabethschmid.github.io/main/data/mira-latest.png" target="_blank" rel="noopener">Raw ansehen</a>
+        </div>
+      </div>
+
+      <footer>
+        © <span id="year"></span> Mira · Status wird alle 60 s automatisch neu geladen.
+      </footer>
+    </section>
+  </main>
 
   <script>
-    async function updateStatus() {
-      const statusEl = document.getElementById("status");
-      const timeEl = document.getElementById("timestamp");
+    const $ = (id) => document.getElementById(id);
 
-      try {
-        const res = await fetch("https://api.github.com/repos/miraelisabethschmid/badge-canary/actions/workflows/check.yml/runs?per_page=1");
-        const data = await res.json();
-        const run = data.workflow_runs?.[0];
-        if (!run) throw new Error("Keine Daten");
-
-        const t = new Date(run.updated_at).toLocaleString("de-DE", {
-          timeZone: "Europe/Berlin",
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-
-        const icon =
-          run.conclusion === "success" ? "✅"
-          : run.conclusion === "failure" ? "❌"
-          : "🕓";
-
-        statusEl.textContent = `${icon} Letzter Check-Status: ${run.conclusion || "laufend"}`;
-        timeEl.textContent = `Letzte Aktualisierung: ${t}`;
-      } catch (err) {
-        statusEl.textContent = "⚠️ Keine aktuelle Reflexion gefunden";
-        timeEl.textContent = "";
-      }
+    function fmt(dt){
+      try{
+        return new Date(dt).toISOString().replace('T',' · ').replace('Z',' UTC');
+      }catch{return String(dt)}
     }
 
-    updateStatus();
-  </script>
+    function timeAgo(iso){
+      const now = new Date();
+      const then = new Date(iso);
+      const sec = Math.max(0, Math.floor((now-then)/1000));
+      const units = [
+        ['Tag',86400], ['Stunde',3600], ['Minute',60], ['Sekunde',1]
+      ];
+      for(const [name,size] of units){
+        if(sec >= size){
+          const n = Math.floor(sec/size);
+          const plural = n===1? name : name+'n';
+          return `${n} ${plural}`;
+        }
+      }
+      return '0 Sekunden';
+    }
 
-  <!-- last_update: initial -->
+    async function fetchText(url){
+      const res = await fetch(url + (url.includes('?')?'&':'?') + 'v=' + Date.now(), {cache:'no-store'});
+      if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
+      return await res.text();
+    }
+
+    async function refresh(){
+      // Status: last_reflexion
+      try{
+        const raw = await fetchText('data/last_reflexion.txt');
+        const val = raw.trim();
+        const parsed = isNaN(Date.parse(val)) ? null : new Date(val).toISOString();
+        if(parsed){
+          $('lastReflexion').textContent = fmt(parsed);
+          $('ago').textContent = timeAgo(parsed);
+          $('statusLine').textContent = 'System aktiv · letzter Heartbeat empfangen';
+          $('dot').className = 'dot';
+        }else{
+          $('lastReflexion').textContent = val || '—';
+          $('ago').textContent = 'unbekannt';
+          $('statusLine').textContent = 'Zeitstempel ungültig · warte auf nächsten Heartbeat';
+          $('dot').className = 'dot warn';
+        }
+      }catch(e){
+        $('lastReflexion').textContent = '—';
+        $('ago').textContent = '—';
+        $('statusLine').textContent = 'Kein Status gefunden · prüfe Workflows & Datenordner';
+        $('dot').className = 'dot err';
+      }
+
+      // Bild neu laden (cache bust)
+      const img = $('miraImage');
+      const base = 'data/mira-latest.png';
+      img.src = base + '?v=' + Date.now();
+    }
+
+    $('refreshBtn').addEventListener('click', refresh);
+    $('year').textContent = new Date().getFullYear();
+
+    // Erstladen
+    refresh();
+    // Auto-Refresh alle 60s
+    setInterval(refresh, 60000);
+  </script>
 </body>
 </html>
