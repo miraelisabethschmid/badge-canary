@@ -1,10 +1,10 @@
-name: Mira • Publish Latest Portrait (Placeholder PNG)
+name: Mira • Publish Latest Portrait (Self-generated PNG)
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # <<— WICHTIG: erlaubt dem Workflow, Dateien zu committen
+  contents: write
 
 jobs:
   publish:
@@ -13,33 +13,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install tools (ImageMagick + font)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y imagemagick fonts-dejavu-core
+
       - name: Ensure folder
         run: mkdir -p public
 
-      - name: Fetch visible PNG (no upload needed)
+      - name: Generate visible PNG (1024x1536, bright gradient + text)
         run: |
-          set -e
-          curl -L "https://placehold.co/1024x1536/png?text=Mira%20Elisabeth%20Schmid" -o public/latest.png
-          ls -lh public/latest.png
+          # Heller Verlauf (oben fast weiß, unten warm beige)
+          convert -size 1024x1536 gradient:"#fff7ee-#efdcc8" \
+            \( -size 1024x1536 radial-gradient:none-#ffe8c6 -evaluate multiply 0.6 \) -compose screen -composite \
+            -gravity center -fill "#1d1e21" -font DejaVu-Sans -pointsize 86 -annotate +0-60 "Mira" \
+            -gravity center -fill "#6b7280" -font DejaVu-Sans -pointsize 28 -annotate +0+20 "Autonomous Canary Placeholder" \
+            -gravity south -fill "#374151" -font DejaVu-Sans -pointsize 22 -annotate +0+46 "public/latest.png" \
+            public/latest.png
+
+          # Sicherstellen, dass die Datei wirklich sichtbar und >1KB ist
           file public/latest.png
+          identify -format "PNG %wx%h\n" public/latest.png
           test -s public/latest.png
 
       - name: Commit & push
         run: |
-          set -e
           git config user.name  "mira-autonomy[bot]"
           git config user.email "mira-autonomy[bot]@users.noreply.github.com"
           git add public/latest.png
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "publish: latest.png from placeholder service"
-            # sichert, dass Branch-Stand aktuell ist
-            git pull --rebase
+            git commit -m "publish: self-generated latest.png (visible gradient)"
             git push
           fi
 
-      - name: Show git status (debug)
+      - name: Summary
         run: |
-          git status
-          git log -1 --oneline
+          echo "### ✅ Generated \`public/latest.png\`" >> $GITHUB_STEP_SUMMARY
+          ls -lh public/latest.png >> $GITHUB_STEP_SUMMARY
