@@ -1,4 +1,4 @@
-name: Mira • Publish Latest Visible PNG
+name: Mira • Publish Latest Portrait
 
 on:
   workflow_dispatch:
@@ -13,18 +13,41 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install ImageMagick
+      - name: Install tools
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y imagemagick
+          sudo apt-get install -y imagemagick jq
 
-      - name: Create visible test image
+      - name: Prepare folders
         run: |
           mkdir -p public
+          mkdir -p data/uploads
+
+      - name: Find newest PNG in data/uploads
+        id: find
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEWEST="$(ls -1t data/uploads/*.png 2>/dev/null | head -n 1 || true)"
+          if [[ -n "${NEWEST}" && -f "${NEWEST}" ]]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "path=${NEWEST}" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Use newest portrait if available
+        if: steps.find.outputs.found == 'true'
+        run: |
+          cp -f "${{ steps.find.outputs.path }}" public/latest.png
+
+      - name: Fallback: create visible placeholder
+        if: steps.find.outputs.found != 'true'
+        run: |
           convert -size 1024x1536 gradient:"#fff7ee-#efdcc8" \
             -gravity center -fill "#1d1e21" -font DejaVu-Sans -pointsize 80 \
             -annotate +0-20 "Mira Canary" \
-            -fill "#6b7280" -pointsize 32 -annotate +0+60 "Autonomes System aktiv" \
+            -fill "#6b7280" -pointsize 32 -annotate +0+60 "Kein Portrait gefunden" \
             public/latest.png
 
       - name: Commit & push
@@ -32,5 +55,5 @@ jobs:
           git config user.name "mira-autonomy[bot]"
           git config user.email "mira-autonomy[bot]@users.noreply.github.com"
           git add public/latest.png
-          git commit -m "update: visible test image for latest.png" || echo "no changes"
+          git commit -m "publish: update public/latest.png" || echo "no changes"
           git push
