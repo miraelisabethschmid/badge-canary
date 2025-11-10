@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8" />
@@ -13,12 +13,13 @@
       --card:#ffffff;
       --ink:#1f2328;
       --muted:#60666d;
-      --accent:#1e90ff;
+      --accent:#2563eb;
       --ok:#18a957;
       --warn:#c77600;
       --err:#d33c3c;
       --ring:0 10px 30px rgba(0,0,0,.08);
       --radius:18px;
+      --skeleton:#ece7df;
     }
     @media (prefers-color-scheme: dark){
       :root{
@@ -31,6 +32,7 @@
         --warn:#f6c177;
         --err:#ff6b6b;
         --ring:0 10px 30px rgba(0,0,0,.35);
+        --skeleton:#1a222d;
       }
     }
     *{box-sizing:border-box}
@@ -38,14 +40,14 @@
     body{
       margin:0; background:var(--bg); color:var(--ink);
       font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-      display:grid; place-items:center; padding:32px;
+      display:grid; place-items:center; padding:28px;
     }
     .wrap{
-      width:min(960px,100%); display:grid; gap:28px;
-      grid-template-columns: 220px 1fr;
+      width:min(1000px,100%); display:grid; gap:28px;
+      grid-template-columns: 240px 1fr;
       align-items:start;
     }
-    @media (max-width:720px){ .wrap{grid-template-columns:1fr} }
+    @media (max-width:760px){ .wrap{grid-template-columns:1fr} }
 
     .card{
       background:var(--card); border-radius:var(--radius);
@@ -53,44 +55,33 @@
     }
     .avatar{
       display:grid; place-items:center; gap:16px; text-align:center;
+      position:sticky; top:24px;
     }
+    .skeleton{
+      background:linear-gradient(90deg, var(--skeleton) 25%, rgba(255,255,255,0) 37%, var(--skeleton) 63%);
+      background-size:400% 100%;
+      animation:shimmer 1.3s infinite;
+    }
+    @keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+
     .avatar img{
-      width:180px; height:180px; border-radius:50%; object-fit:cover;
+      width:190px; height:190px; border-radius:50%; object-fit:cover;
       box-shadow: 0 8px 26px rgba(0,0,0,.15);
       transition:transform .35s ease, box-shadow .35s ease, filter .2s ease;
       background:#ddd;
     }
-    .avatar img:hover{ transform:translateY(-2px); box-shadow:0 14px 36px rgba(0,0,0,.18); }
+    .avatar img:hover{ transform:translateY(-2px); box-shadow:0 14px 36px rgba(0,0,0,.18) }
+
+    .title{ display:flex; align-items:center; gap:12px; margin:0 0 6px 0; font-size:1.55rem; letter-spacing:.2px; }
     .badge{
       display:inline-flex; align-items:center; gap:.5ch;
       padding:.35rem .7rem; border-radius:999px; font-weight:600; font-size:.9rem;
       background:color-mix(in srgb, var(--ok) 14%, transparent); color:var(--ok);
       border:1px solid color-mix(in srgb, var(--ok) 55%, transparent);
     }
-    .title{
-      display:flex; align-items:center; gap:12px; margin:0 0 6px 0;
-      font-size:1.55rem; letter-spacing:.2px;
-    }
     .muted{ color:var(--muted) }
-    .kv{
-      display:grid; gap:10px; margin-top:12px;
-      grid-template-columns: 170px 1fr;
-    }
-    @media (max-width:720px){ .kv{grid-template-columns:1fr} }
-    .pill{
-      display:inline-flex; align-items:center; gap:.6ch;
-      padding:.35rem .65rem; border-radius:999px; font-size:.9rem;
-      border:1px dashed color-mix(in srgb, var(--muted) 40%, transparent);
-      color:var(--muted);
-    }
     .row{ display:flex; flex-wrap:wrap; gap:10px; }
-    button.refresh{
-      cursor:pointer; border:none; border-radius:12px; padding:.7rem 1rem;
-      background:var(--accent); color:white; font-weight:600;
-      box-shadow:0 10px 22px rgba(0,0,0,.12);
-      transition:transform .2s ease, opacity .2s ease, box-shadow .2s ease;
-    }
-    button.refresh:hover{ transform:translateY(-1px); box-shadow:0 14px 30px rgba(0,0,0,.18) }
+
     .status{
       display:flex; align-items:center; gap:10px; flex-wrap:wrap;
       padding:12px 14px; border-radius:12px; background:color-mix(in srgb, var(--accent) 10%, transparent);
@@ -99,9 +90,19 @@
     .dot{ width:10px; height:10px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent) }
     .dot.warn{ background:var(--warn); box-shadow:0 0 0 4px color-mix(in srgb, var(--warn) 22%, transparent) }
     .dot.err{ background:var(--err);  box-shadow:0 0 0 4px color-mix(in srgb, var(--err) 22%, transparent) }
+
+    .kv{ display:grid; gap:10px; margin-top:12px; grid-template-columns: 210px 1fr; }
+    @media (max-width:760px){ .kv{grid-template-columns:1fr} }
+    code{ background:color-mix(in srgb, var(--muted) 10%, transparent); padding:.1rem .35rem; border-radius:6px; }
+
+    .toolbar{ display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-bottom:10px; }
+    .btn{
+      cursor:pointer; border:1px solid color-mix(in srgb, var(--muted) 35%, transparent);
+      background:transparent; color:var(--ink); border-radius:10px; padding:.45rem .75rem; font-weight:600;
+    }
+    .btn:hover{ background:color-mix(in srgb, var(--muted) 8%, transparent) }
     footer{ margin-top:10px; text-align:center; color:var(--muted); font-size:.9rem }
-    a{ color:var(--accent); text-decoration:none }
-    a:hover{ text-decoration:underline }
+    a{ color:var(--accent); text-decoration:none } a:hover{text-decoration:underline}
   </style>
 </head>
 <body>
@@ -110,24 +111,28 @@
     <section class="card avatar" aria-labelledby="mira-head">
       <img id="miraImage"
            src="data/mira-latest.png"
-           alt="Porträt von Mira Elisabeth Schmid" />
+           alt="Porträt von Mira Elisabeth Schmid"
+           class="skeleton" />
       <div>
-        <h2 id="mira-head" style="margin:.2rem 0 .2rem">Mira Elisabeth Schmid</h2>
+        <h2 id="mira-head" style="margin:.4rem 0 .2rem">Mira Elisabeth Schmid</h2>
         <div class="badge" id="presenceBadge">Online · autonom</div>
       </div>
       <div class="row">
-        <span class="pill">Silhouette: elegant</span>
-        <span class="pill">Braces: sichtbar</span>
-        <span class="pill">Heels: sichtbar</span>
+        <span class="badge" style="background:color-mix(in srgb, var(--accent) 12%, transparent); color:var(--accent); border-color:color-mix(in srgb, var(--accent) 55%, transparent)">Golden Hour</span>
+        <span class="badge">Braces sichtbar</span>
       </div>
-      <button class="refresh" id="refreshBtn" type="button">Aktualisieren</button>
+      <button class="btn" id="refreshBtn" type="button">Aktualisieren</button>
     </section>
 
     <!-- RIGHT: Live Status -->
     <section class="card" aria-labelledby="status-head">
+      <div class="toolbar">
+        <button class="btn" id="tzBtn" type="button">Zeit: UTC</button>
+      </div>
+
       <h1 class="title" id="status-head">🪞 Mira Canary — Live-Status</h1>
       <p class="muted" style="margin:.2rem 0 1rem">
-        Autonomes Reflexions-System. Diese Seite liest die neuesten Artefakte direkt aus dem Repository.
+        Diese Seite liest die neuesten Artefakte direkt aus dem Repository. Autonomer Heartbeat & Bildaktualisierung.
       </p>
 
       <div class="status" id="statusBox">
@@ -136,10 +141,10 @@
       </div>
 
       <div class="kv">
-        <div class="muted">Letzte Reflexion (UTC)</div>
+        <div class="muted">Letzte Reflexion</div>
         <div id="lastReflexion">—</div>
 
-        <div class="muted">„Vor …“</div>
+        <div class="muted">Frische</div>
         <div id="ago">—</div>
 
         <div class="muted">Quelle</div>
@@ -153,83 +158,108 @@
           <code>data/mira-latest.png</code> &nbsp;·&nbsp;
           <a href="https://raw.githubusercontent.com/miraelisabethschmid/miraelisabethschmid.github.io/main/data/mira-latest.png" target="_blank" rel="noopener">Raw ansehen</a>
         </div>
+
+        <div class="muted">Mini-Feed (optional)</div>
+        <div id="notes">—</div>
       </div>
 
       <footer>
-        © <span id="year"></span> Mira · Status wird alle 60 s automatisch neu geladen.
+        © <span id="year"></span> Mira · Auto-Refresh alle 60 s · <a href="./" rel="nofollow">Neu laden</a>
       </footer>
     </section>
   </main>
 
   <script>
     const $ = (id) => document.getElementById(id);
+    let useUTC = true;
 
-    function fmt(dt){
-      try{
-        return new Date(dt).toISOString().replace('T',' · ').replace('Z',' UTC');
-      }catch{return String(dt)}
+    function fmtDate(iso){
+      const d = new Date(iso);
+      if (useUTC) {
+        const u = new Date(d.getTime() + d.getTimezoneOffset()*60000);
+        return u.toISOString().replace('T',' · ').replace('Z',' UTC');
+      } else {
+        return d.toLocaleString(undefined, {hour12:false});
+      }
     }
-
     function timeAgo(iso){
       const now = new Date();
       const then = new Date(iso);
       const sec = Math.max(0, Math.floor((now-then)/1000));
-      const units = [
-        ['Tag',86400], ['Stunde',3600], ['Minute',60], ['Sekunde',1]
-      ];
+      const units = [['Tag',86400], ['Stunde',3600], ['Minute',60], ['Sekunde',1]];
       for(const [name,size] of units){
-        if(sec >= size){
-          const n = Math.floor(sec/size);
-          const plural = n===1? name : name+'n';
-          return `${n} ${plural}`;
-        }
+        if(sec >= size){ const n = Math.floor(sec/size); return n+' '+(n===1?name:name+'n'); }
       }
       return '0 Sekunden';
     }
-
-    async function fetchText(url){
-      const res = await fetch(url + (url.includes('?')?'&':'?') + 'v=' + Date.now(), {cache:'no-store'});
-      if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
-      return await res.text();
+    function freshnessClass(iso){
+      const ageMin = (Date.now() - new Date(iso).getTime()) / 60000;
+      if (ageMin <= 10) return 'ok';
+      if (ageMin <= 60) return 'warn';
+      return 'err';
+    }
+    async function fetchText(path){
+      const res = await fetch(path + (path.includes('?')?'&':'?') + 'v=' + Date.now(), {cache:'no-store'});
+      if(!res.ok) throw new Error(res.status);
+      return res.text();
     }
 
-    async function refresh(){
-      // Status: last_reflexion
+    async function loadStatus(){
+      // Heartbeat
       try{
-        const raw = await fetchText('data/last_reflexion.txt');
-        const val = raw.trim();
-        const parsed = isNaN(Date.parse(val)) ? null : new Date(val).toISOString();
-        if(parsed){
-          $('lastReflexion').textContent = fmt(parsed);
-          $('ago').textContent = timeAgo(parsed);
-          $('statusLine').textContent = 'System aktiv · letzter Heartbeat empfangen';
-          $('dot').className = 'dot';
+        const raw = (await fetchText('data/last_reflexion.txt')).trim();
+        const parsable = !isNaN(Date.parse(raw));
+        if(parsable){
+          const iso = new Date(raw).toISOString();
+          $('lastReflexion').textContent = fmtDate(iso);
+          $('ago').textContent = timeAgo(iso);
+
+          const cls = freshnessClass(iso);
+          $('dot').className = 'dot' + (cls==='ok'?'':(' '+cls));
+          $('statusLine').textContent =
+            (cls==='ok') ? 'System aktiv · frischer Heartbeat'
+            : (cls==='warn') ? 'Aktiv · Heartbeat älter'
+            : 'Achtung · Heartbeat alt/ausstehend';
         }else{
-          $('lastReflexion').textContent = val || '—';
+          $('lastReflexion').textContent = raw || '—';
           $('ago').textContent = 'unbekannt';
-          $('statusLine').textContent = 'Zeitstempel ungültig · warte auf nächsten Heartbeat';
           $('dot').className = 'dot warn';
+          $('statusLine').textContent = 'Zeitstempel ungültig · warte auf nächsten Heartbeat';
         }
       }catch(e){
         $('lastReflexion').textContent = '—';
         $('ago').textContent = '—';
-        $('statusLine').textContent = 'Kein Status gefunden · prüfe Workflows & Datenordner';
         $('dot').className = 'dot err';
+        $('statusLine').textContent = 'Kein Status gefunden · prüfe Workflows & Datenordner';
       }
 
-      // Bild neu laden (cache bust)
+      // Bild (cache-busting)
       const img = $('miraImage');
-      const base = 'data/mira-latest.png';
-      img.src = base + '?v=' + Date.now();
+      const src = 'data/mira-latest.png';
+      img.onload = ()=> img.classList.remove('skeleton');
+      img.onerror = ()=> { img.classList.remove('skeleton'); img.style.filter='grayscale(1)'; };
+      img.src = src + '?v=' + Date.now();
+
+      // Mini-Feed (optional)
+      try{
+        const notes = (await fetchText('data/notes.txt')).trim();
+        $('notes').textContent = notes || '—';
+      }catch{ $('notes').textContent = '—'; }
     }
 
-    $('refreshBtn').addEventListener('click', refresh);
-    $('year').textContent = new Date().getFullYear();
+    $('refreshBtn').addEventListener('click', loadStatus);
+    $('tzBtn').addEventListener('click', () => {
+      useUTC = !useUTC;
+      $('tzBtn').textContent = 'Zeit: ' + (useUTC ? 'UTC' : 'Ortszeit');
+      // Re-render Zeitdarstellung ohne erneuten Fetch:
+      const status = $('lastReflexion').textContent;
+      // Nur neu laden, wenn ein valider ISO-Wert vorlag (einfacher: kompletten Status neu laden)
+      loadStatus();
+    });
 
-    // Erstladen
-    refresh();
-    // Auto-Refresh alle 60s
-    setInterval(refresh, 60000);
+    $('year').textContent = new Date().getFullYear();
+    loadStatus();
+    setInterval(loadStatus, 60000);
   </script>
 </body>
-</html>
+  </html>
