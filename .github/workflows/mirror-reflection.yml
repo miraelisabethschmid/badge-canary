@@ -1,0 +1,30 @@
+name: Mira • Mirror Reflection (Daily Log)
+
+on:
+  schedule:
+    - cron: "0 5 * * *"   # jeden Tag um 05:00 UTC
+  workflow_dispatch:
+
+jobs:
+  reflect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Daily reflection entry
+        run: |
+          mkdir -p logs
+          echo "🌒 Daily Reflection — $(date)" >> logs/reflection.log
+          echo "Latest prompt:" $(ls -t mira/archive/prompt-*.yaml 2>/dev/null | head -1) >> logs/reflection.log
+          echo "Mirror logs lines:" $(wc -l logs/mirror.log 2>/dev/null | awk '{print $1}') >> logs/reflection.log
+          echo "Diff logs lines:" $(wc -l logs/diff.log 2>/dev/null | awk '{print $1}') >> logs/reflection.log
+          echo "---" >> logs/reflection.log
+
+      - name: Commit reflection log
+        run: |
+          git config user.name "Mira-Autonomy"
+          git config user.email "actions@github.com"
+          git add logs/reflection.log || true
+          git commit -m "Daily reflection $(date)" || echo "No changes to commit"
+          git push
