@@ -1,4 +1,5 @@
-name: Mira • Publish Demo Image
+# .github/workflows/publish-demo.yml
+name: Mira • Publish Latest Portrait
 
 on:
   workflow_dispatch:
@@ -9,43 +10,63 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare folders
+      - name: Ensure folders exist
         run: |
-          set -e
-          mkdir -p data/uploads public data
+          mkdir -p data/uploads
+          mkdir -p public
+          mkdir -p data
 
-      - name: Create demo PNG (1×1 placeholder)
-        id: make_png
+      - name: Select newest PNG from data/uploads
+        id: pick
         shell: bash
         run: |
           set -e
-          TS="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          FN="demo_${TS//[:]/-}.png"
-          # 1x1 weißes PNG (Base64)
-          B64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
-          echo "$B64" | base64 -d > "data/uploads/${FN}"
-          # Kopie als aktuelles Titelbild
-          cp "data/uploads/${FN}" public/latest.png
-          echo "ts=${TS}"       >> $GITHUB_OUTPUT
-          echo "file=${FN}"     >> $GITHUB_OUTPUT
+          newest="$(ls -1t data/uploads/*.png 2>/dev/null | head -n 1 || true)"
+          if [ -z "$newest" ]; then
+            echo "Kein PNG in data/uploads gefunden."
+            echo "Tipp: Lade dort ein Portrait hoch (z.B. mira_YYYYMMDD.png) und starte den Workflow erneut."
+            exit 1
+          fi
+          echo "source=$newest" >> "$GITHUB_OUTPUT"
 
-      - name: Write status.json
+      - name: Publish to public/latest.png
         run: |
-          set -e
-          TS="${{ steps.make_png.outputs.ts }}"
-          FILE="${{ steps.make_png.outputs.file }}"
-          printf '{\n  "last_reflection": "%s",\n  "latest_file": "%s"\n}\n' "$TS" "$FILE" > data/status.json
-          cat data/status.json
+          cp -f "${{ steps.pick.outputs.source }}" public/latest.png
 
-      - name: Commit & push
+      - name: Update status.json
+        shell: bash
         run: |
-          set -e
+          ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          src="${{ steps.pick.outputs.source }}"
+          cat > data/status.json <<JSON
+          {
+            "last_reflection": "${ts}",
+            "source_image": "${src}",
+            "published_path": "public/latest.png"
+          }
+          JSON
+          echo "Aktualisiert: data/status.json"
+
+      - name: Commit changes
+        run: |
           git config user.name  "mira-autonomy[bot]"
           git config user.email "mira-autonomy[bot]@users.noreply.github.com"
-          git add data/status.json public/latest.png data/uploads/*.png
-          git commit -m "Publish demo image and update status.json"
-          git push
+          git add public/latest.png data/status.json
+          if git diff --cached --quiet; then
+            echo "Nichts zu committen."
+          else
+            git commit -m "Mira: publish latest portrait → public/latest.png"
+            git push
+          fi
+
+      - name: Summary
+        run: |
+          echo "### ✅ Veröffentlicht" >> $GITHUB_STEP_SUMMARY
+          echo "- Quelle: \`${{ steps.pick.outputs.source }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Ziel: \`public/latest.png\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: \`data/status.json\`" >> $GITHUB_STEP_SUMMARY
