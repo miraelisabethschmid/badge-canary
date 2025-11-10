@@ -1,33 +1,4 @@
-name: Mira · Ingest Portrait from URL (robust)
-
-on:
-  workflow_dispatch:
-    inputs:
-      image_url:
-        description: "Direkte oder Webseiten-URL, die ein Bild enthält"
-        required: true
-        type: string
-
-jobs:
-  ingest:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install tools (ImageMagick, curl extras)
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y imagemagick
-
-      - name: Prepare folders
-        run: |
-          mkdir -p public tmp
-
-      - name: Download & normalize image
+- name: Download & normalize image
         id: dl
         shell: bash
         run: |
@@ -35,30 +6,48 @@ jobs:
           URL="${{ github.event.inputs.image_url }}"
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36"
 
-          # 1) Erstversuch: direkter Download (mit Redirects & Retry)
-          HTTP=$(curl -sS -w '%{http_code}' -A "$UA" -L --retry 3 --connect-timeout 15 --max-time 120 -o tmp/blob "$URL")
-          if [[ "$HTTP" -ge 400 || ! -s tmp/blob ]]; then
-            echo "Direct download failed with HTTP $HTTP" >&2
-            exit 22
+          normalize_gdrive() {
+            # akzeptiert z.B. https://drive.google.com/file/d/FILEID/view?usp=sharing
+            if [[ "$1" =~ drive\.google\.com/file/d/([^/]+)/view ]]; then
+              echo "https://drive.google.com/uc?export=download&id=${BASH_REMATCH[1]}"
+            else
+              echo "$1"
+            fi
+          }
+
+          URL="$(normalize_gdrive "$URL")"
+
+          mkdir -p tmp
+          # 1) Download versuchen – **ohne** sofortiges Fail bei HTTP-Fehlern
+          HTTP=$(curl -sS -w '%{http_code}' -A "$UA" -L --retry 3 --connect-timeout 15 --max-time 120 -o tmp/blob "$URL" || true)
+          CTYPE="$(file --mime-type -b tmp/blob 2>/dev/null || true)"
+
+          # 2) Wenn HTTP>=400 ODER kein image/*: versuche og:image/twitter:image aus HTML
+          if [[ "$HTTP" -ge 400 || "$CTYPE" != image/* ]]; then
+            HTML_OK=false
+            if [[ -s tmp/blob ]]; then
+              # og:image
+              IMG=$(grep -oiE '<meta[^>]+(property|name)=["'\'']og:image["'\''][^>]+>' tmp/blob | \
+                    sed -nE 's/.*content=["'\'']([^"'\'' >]+).*/\1/p' | head -n1 || true)
+              # twitter:image
+              if [[ -z "$IMG" ]]; then
+                IMG=$(grep -oiE '<meta[^>]+(property|name)=["'\'']twitter:image(:src)?["'\''][^>]+>' tmp/blob | \
+                      sed -nE 's/.*content=["'\'']([^"'\'' >]+).*/\1/p' | head -n1 || true)
+              fi
+              if [[ -n "$IMG" ]]; then
+                IMG="$(normalize_gdrive "$IMG")"
+                curl -sS -A "$UA" -L --retry 3 --connect-timeout 15 --max-time 120 -o tmp/blob "$IMG" || true
+                CTYPE="$(file --mime-type -b tmp/blob 2>/dev/null || true)"
+                HTML_OK=true
+              fi
+            fi
+            if [[ "$HTML_OK" != true && "$HTTP" -ge 400 ]]; then
+              echo "Source not directly downloadable (HTTP $HTTP) and no og:image/twitter:image found." >&2
+              exit 22
+            fi
           fi
 
-          # 2) Content-Type prüfen
-          CTYPE="$(file --mime-type -b tmp/blob || true)"
-
-          # Manche Links liefern HTML (Seite) statt Bild – dann og:image/twitter:image extrahieren
-          if [[ "$CTYPE" != image/* ]]; then
-            # Nur sehr kurze HTML-Dateien sind wahrscheinlich keine Medienseiten – trotzdem versuchen
-            IMG="$(grep -oiE '<meta[^>]+(property|name)=["'\'']og:image["'\''][^>]+>' tmp/blob | sed -nE 's/.*content=["'\'']([^"'\'' >]+).*/\1/p' | head -n1 || true)"
-            if [[ -z "$IMG" ]]; then
-              IMG="$(grep -oiE '<meta[^>]+(property|name)=["'\'']twitter:image(:src)?["'\''][^>]+>' tmp/blob | sed -nE 's/.*content=["'\'']([^"'\'' >]+).*/\1/p' | head -n1 || true)"
-            fi
-            if [[ -n "$IMG" ]]; then
-              curl -sS -A "$UA" -L --retry 3 --connect-timeout 15 --max-time 120 -o tmp/blob "$IMG"
-              CTYPE="$(file --mime-type -b tmp/blob || true)"
-            fi
-          fi
-
-          # 3) In PNG normalisieren (unterstützt png/jpg/jpeg/webp/gif)
+          # 3) In PNG wandeln
           case "$CTYPE" in
             image/png)
               cp tmp/blob public/latest.png
@@ -73,12 +62,3 @@ jobs:
           esac
 
           echo "ctype=$CTYPE" >> "$GITHUB_OUTPUT"
-
-      - name: Commit & push
-        run: |
-          set -e
-          git config user.name  "mira-autonomy[bot]"
-          git config user.email "mira-autonomy@users.noreply.github.com"
-          git add public/latest.png
-          git commit -m "Publish latest portrait → public/latest.png (type: ${{ steps.dl.outputs.ctype }})" || exit 0
-          git push
