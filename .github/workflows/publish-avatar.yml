@@ -1,0 +1,70 @@
+name: Mira • Publish Avatar as Latest Portrait
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve avatar source
+        id: src
+        shell: bash
+        run: |
+          # Du kannst später AVATAR_URL als Repo-Secret setzen, dann nutzt die Action dieses Bild.
+          # Fallback: dein GitHub-Avatar (1024px)
+          if [ -n "${{ secrets.AVATAR_URL }}" ]; then
+            echo "url=${{ secrets.AVATAR_URL }}" >> $GITHUB_OUTPUT
+          else
+            # <username>.png liefert immer das aktuelle GitHub-Profilbild
+            echo "url=https://github.com/${GITHUB_REPOSITORY_OWNER}.png?size=1024" >> $GITHUB_OUTPUT
+          fi
+          echo "Avatar URL: $(cat $GITHUB_OUTPUT)"
+
+      - name: Ensure folders
+        run: |
+          mkdir -p public
+          mkdir -p .cache
+
+      - name: Fetch avatar
+        run: |
+          curl -L -o .cache/avatar.png "${{ steps.src.outputs.url }}"
+          # Falls das Avatar ein JPEG/WebP ist, konvertiert GitHub es trotzdem korrekt zu PNG-Stream.
+          file .cache/avatar.png || true
+
+      - name: Skip if no change
+        id: cmp
+        shell: bash
+        run: |
+          if [ -f public/latest.png ]; then
+            if cmp -s .cache/avatar.png public/latest.png; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          echo "changed=true" >> $GITHUB_OUTPUT
+          cp .cache/avatar.png public/latest.png
+
+      - name: Commit & push (only if changed)
+        if: steps.cmp.outputs.changed == 'true'
+        env:
+          GIT_AUTHOR_NAME: mira-autonomy[bot]
+          GIT_AUTHOR_EMAIL: actions@github.com
+          GIT_COMMITTER_NAME: mira-autonomy[bot]
+          GIT_COMMITTER_EMAIL: actions@github.com
+        run: |
+          git add public/latest.png
+          git commit -m "chore(portrait): update latest.png from avatar"
+          git push
+
+      - name: Summary
+        run: |
+          echo "### Mira Portrait" >> $GITHUB_STEP_SUMMARY
+          echo "Quelle: ${{ steps.src.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "![latest](public/latest.png)" >> $GITHUB_STEP_SUMMARY
