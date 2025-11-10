@@ -1,4 +1,4 @@
-name: Mira • Publish Latest Portrait
+name: Mira • Publish Latest Portrait (Placeholder PNG)
 
 on:
   workflow_dispatch:
@@ -13,60 +13,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure folders
-        run: |
-          mkdir -p public
-          mkdir -p .mira/tmp
+      - name: Ensure folder
+        run: mkdir -p public
 
-      - name: Install SVG renderer (librsvg)
+      - name: Fetch visible PNG (no upload needed)
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y librsvg2-bin
-
-      - name: Generate elegant SVG (no uploads needed)
-        shell: bash
-        run: |
-          cat > .mira/tmp/portrait.svg <<'SVG'
-          <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
-            <defs>
-              <linearGradient id="bg" x1="50%" y1="0%" x2="50%" y2="100%">
-                <stop offset="0%" stop-color="#fff8ef"/>
-                <stop offset="100%" stop-color="#f5e9dd"/>
-              </linearGradient>
-              <radialGradient id="glow" cx="50%" cy="28%" r="55%">
-                <stop offset="0%" stop-color="#ffe8c6" stop-opacity="0.85"/>
-                <stop offset="100%" stop-color="#ffe8c6" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <rect width="1024" height="1536" fill="url(#bg)"/>
-            <rect width="1024" height="1536" fill="url(#glow)"/>
-            <g opacity="0.75" transform="translate(0,40)">
-              <path d="M512,300 c120,0 210,90 210,210 c0,90 -50,150 -110,190
-                       c45,25 90,75 110,135 c40,125 -30,245 -210,245
-                       c-180,0 -250,-120 -210,-245 c20,-60 65,-110 110,-135
-                       c-60,-40 -110,-100 -110,-190 c0,-120 90,-210 210,-210z"
-                    fill="#e6d3c3"/>
-              <ellipse cx="512" cy="320" rx="220" ry="80" fill="#f2ded0" opacity="0.6"/>
-            </g>
-            <g>
-              <rect x="462" y="605" width="100" height="10" rx="5" fill="#cfd7df" opacity="0.85"/>
-              <rect x="462" y="605" width="100" height="10" rx="5" fill="#ffffff" opacity="0.35"/>
-              <rect x="505" y="603" width="14" height="14" rx="2" fill="#b3bdc7"/>
-              <rect x="526" y="603" width="14" height="14" rx="2" fill="#b3bdc7"/>
-            </g>
-          </svg>
-          SVG
-
-      - name: Convert SVG → PNG with rsvg-convert
-        run: |
-          rsvg-convert -w 1024 -h 1536 .mira/tmp/portrait.svg -o public/latest.png
+          curl -L "https://placehold.co/1024x1536/png?text=Mira%20Elisabeth%20Schmid" -o public/latest.png
           ls -lh public/latest.png
           file public/latest.png
           test -s public/latest.png
 
-      - name: Commit & push latest.png
-        env:
-          GH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
+      - name: Commit & push
         run: |
           git config user.name  "mira-autonomy[bot]"
           git config user.email "actions@users.noreply.github.com"
@@ -74,6 +31,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "feat(publish): update public/latest.png (rsvg)"
-            git push
+            git commit -m "publish: latest.png from placeholder service"
+            git push origin main
           fi
