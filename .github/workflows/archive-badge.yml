@@ -1,13 +1,10 @@
 name: Mira • Archive Badge
 
 on:
-  # Aktualisiere Badge bei neuen Archiv-Kopien
   push:
     paths:
       - "data/archive/**"
-  # Manuell startbar
   workflow_dispatch:
-  # Optional: 1x täglich refresh
   schedule:
     - cron: "17 3 * * *"
 
@@ -21,27 +18,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Ensure folders exist
+        run: |
+          mkdir -p data/archive
+          mkdir -p badges
+          echo "Folders ready."
+
       - name: Count archived PNGs
         id: count
-        shell: bash
         run: |
-          mkdir -p data/archive badges
-          COUNT=$(ls -1 data/archive/*.png 2>/dev/null | wc -l)
+          COUNT=$(find data/archive -type f -name "*.png" 2>/dev/null | wc -l)
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "Archived PNGs: $COUNT"
 
       - name: Generate badge SVG
         uses: emibcn/badge-action@v2
         with:
-          label: Archive
+          label: "Archive"
           status: ${{ steps.count.outputs.count }}
-          color: blue
-          path: badges/archive-count.svg
+          color: "blue"
+          path: "badges/archive-count.svg"
 
       - name: Commit badge if changed
-        shell: bash
         run: |
-          set -e
           git config user.name  "mira-autonomy[bot]"
           git config user.email "mira-autonomy[bot]@users.noreply.github.com"
           git add badges/archive-count.svg
