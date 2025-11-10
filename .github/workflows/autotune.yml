@@ -2,6 +2,12 @@ name: Mirai Canary — Autotune Prompt
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "mira/**"
+      - "data/outputs/**"
+      - "tools/**"
+      - ".github/workflows/autotune.yml"
 
 jobs:
   autotune:
