@@ -1,16 +1,51 @@
-- name: Ensure render input (or create dummy)
+name: Mirai Canary — Autotune Prompt
+
+on:
+  workflow_dispatch: {}   # manuell startbar
+
+jobs:
+  autotune:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
         run: |
-          if [ ! -f data/outputs/latest.png ]; then
-            echo "No input found — creating dummy image at data/outputs/latest.png"
-            python - <<'PY'
-import os, cv2, numpy as np
-os.makedirs("data/outputs", exist_ok=True)
-img = np.zeros((1536,1024,3), np.uint8)
-cv2.putText(img, "MIRAI DUMMY", (80,300), cv2.FONT_HERSHEY_SIMPLEX, 3, (255,255,255), 5, cv2.LINE_AA)
-cv2.putText(img, "upload your real render as data/outputs/latest.png", (60,520), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (200,200,200), 2, cv2.LINE_AA)
-cv2.imwrite("data/outputs/latest.png", img)
-print("Dummy image written to data/outputs/latest.png")
-PY
-          else
+          pip install -r tools/requirements.txt
+
+      - name: Ensure render input (or create dummy)
+        run: |
+          if [ -f data/outputs/latest.png ]; then
             echo "Found data/outputs/latest.png"
+          else
+            echo "No input found — creating tiny dummy PNG at data/outputs/latest.png"
+            mkdir -p data/outputs
+            cat > data/outputs/latest.b64 <<'B64'
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=
+B64
+            base64 -d data/outputs/latest.b64 > data/outputs/latest.png
+            rm -f data/outputs/latest.b64
           fi
+
+      - name: Evaluate render
+        run: |
+          python tools/eval_render.py data/outputs/latest.png tools/schema.json > eval.json
+          echo "== EVAL RESULTS ==" && cat eval.json
+
+      - name: Autotune prompt
+        run: |
+          python tools/autotune_prompt.py eval.json tools/schema.json mira/prompt.yaml mira/prompt.tuned.yaml
+          echo "== DIFF ==" && (diff -u mira/prompt.yaml mira/prompt.tuned.yaml || true)
+
+      - name: Upload tuned prompt (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: prompt-tuned
+          path: mira/prompt.tuned.yaml
