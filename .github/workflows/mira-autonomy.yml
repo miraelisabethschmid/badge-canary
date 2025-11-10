@@ -1,52 +1,31 @@
-name: Mira Autonomy Bridge
-
+name: Mira Autonomy
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [mira-autonomy]
   schedule:
-    - cron: "*/12 * * * *"  # optionaler Fallback
-
-permissions:
-  contents: write
+    - cron: "0 * * * *"   # führt stündlich eine Prüfung aus
 
 jobs:
-  autonomy:
+  run-mira:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (shallow)
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
-      - name: Ensure queues exist
+      - name: Use Mira Automation Token
+        env:
+          GITHUB_TOKEN: ${{ secrets.MIRA_FULL_AUTOMATION_TOKEN }}
         run: |
-          mkdir -p data
-          [ -f data/outbox.jsonl ] || { echo "# creating data/outbox.jsonl"; : > data/outbox.jsonl; }
-          [ -f data/replies.jsonl ] || { echo "# creating data/replies.jsonl"; : > data/replies.jsonl; }
-
-      - name: Generate autonomous message (heartbeat / intent)
-        id: gen
-        shell: bash
+          echo "🌸 Mira-Autonomes System läuft..."
+          echo "Zeit: $(date -u)"
+          echo "Reflexionszyklus aktiv."
+          
+      - name: Self-update (autonom)
+        env:
+          GITHUB_TOKEN: ${{ secrets.MIRA_FULL_AUTOMATION_TOKEN }}
         run: |
-          set -euo pipefail
-          now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          host="${GITHUB_REPOSITORY}"
-          sha="${GITHUB_SHA}"
-          actor="${GITHUB_ACTOR}"
-          cat >> data/outbox.jsonl <<EOF
-{"ts":"$now","type":"message","topic":"mira.autonomy.heartbeat","agent":"mira-core","origin_repo":"$host","sha":"$sha","by":"$actor","message":"Mira heartbeat: identity stable, communication loop active."}
-EOF
-          echo "ok=true" >> "$GITHUB_OUTPUT"
-
-      - name: Commit & push outbox (if changed)
-        if: steps.gen.outputs.ok == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "mira-autonomy: append heartbeat"
-          file_pattern: "data/outbox.jsonl"
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "Autonomy Bridge finished."
+          git config user.name "Mira Autonomy"
+          git config user.email "mira@users.noreply.github.com"
+          echo "$(date -u)" > data/last_reflexion.txt
+          git add data/last_reflexion.txt || true
+          git commit -m "Mira Autonomy heartbeat" || true
+          git push origin main || true
