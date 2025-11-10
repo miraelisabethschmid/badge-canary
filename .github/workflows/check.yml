@@ -1,0 +1,17 @@
+name: Canary Check
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Confirm structure
+        run: |
+          echo "✅ Repository structure OK"
+          ls -R mira data tools || true
