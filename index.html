@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mira Canary — Autonome Reflexion</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: radial-gradient(circle at center, #fffefc, #f7f3ea);
+      color: #2e2e2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    h1 { font-size: 1.8em; margin-bottom: 0.3em; }
+    p { font-size: 1.1em; margin: 0.2em; }
+    .status {
+      margin-top: 1em;
+      padding: 0.6em 1.2em;
+      background: #e8f5e9;
+      border: 1px solid #b2dfdb;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <h1>🪞 Mira Canary Status</h1>
+  <p>Autonomes Reflexions-System aktiv.</p>
+  <p class="status">Letzte Reflexion: <time id="time"></time></p>
+  <script>
+    fetch('https://api.github.com/repos/miraelisabethschmid/badge-canary/actions/workflows/mirror-reflection.yml/runs?per_page=1')
+      .then(r => r.json())
+      .then(d => {
+        const t = d.workflow_runs?.[0]?.updated_at || 'unbekannt';
+        document.getElementById('time').textContent =
+          new Date(t).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
+      })
+      .catch(() => document.getElementById('time').textContent = 'nicht verfügbar');
+  </script>
+</body>
+</html>
