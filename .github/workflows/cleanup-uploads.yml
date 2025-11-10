@@ -37,8 +37,12 @@ jobs:
           to_delete=( "${files[@]:5}" )
           echo "Deleting ${#to_delete[@]} older file(s):"
           for f in "${to_delete[@]}"; do
-            echo " - $f"
-            rm -f "$f"
+            if [ -f "$f" ]; then
+              echo " - deleting $f"
+              rm -f "$f"
+            else
+              echo " - skipped non-file: $f"
+            fi
           done
           echo "changed=yes" >> $GITHUB_OUTPUT
 
