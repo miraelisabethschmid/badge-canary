@@ -1,5 +1,4 @@
-# .github/workflows/publish-latest.yml
-name: Mira • Publish Latest Portrait
+name: Mira • Publish Latest Visible PNG
 
 on:
   workflow_dispatch:
@@ -14,50 +13,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure folders
-        run: mkdir -p public data/uploads data/outputs
-
-      - name: Pick newest image if available
-        id: pick
-        shell: bash
+      - name: Install ImageMagick
         run: |
-          set -e
-          SRC=""
-          for d in data/outputs data/uploads; do
-            CAND=$(ls -1t "$d"/*.png 2>/dev/null | head -n1 || true)
-            if [ -n "$CAND" ]; then SRC="$CAND"; break; fi
-          done
-          echo "src=$SRC" >> "$GITHUB_OUTPUT"
+          sudo apt-get update -y
+          sudo apt-get install -y imagemagick
 
-      - name: Use existing image
-        if: steps.pick.outputs.src != ''
+      - name: Create visible test image
         run: |
-          cp "${{ steps.pick.outputs.src }}" public/latest.png
-          echo "Copied: ${{ steps.pick.outputs.src }}" >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p public
+          convert -size 1024x1536 gradient:"#fff7ee-#efdcc8" \
+            -gravity center -fill "#1d1e21" -font DejaVu-Sans -pointsize 80 \
+            -annotate +0-20 "Mira Canary" \
+            -fill "#6b7280" -pointsize 32 -annotate +0+60 "Autonomes System aktiv" \
+            public/latest.png
 
-      - name: Fallback – write embedded demo image
-        if: steps.pick.outputs.src == ''
-        env:
-          DEMO_B64: |
-            iVBORw0KGgoAAAANSUhEUgAAAwAAAARgCAYAAAB3QmKzAAAACXBIWXMAAAsSAAALEgHS3X78AAAg
-            AElEQVR4nO3dwXHcSBeF4Yl6Cw8m2y0wqgq6QYH2...TRUNCATED_FOR_BREVITY...
-            # (Base64 ist sehr lang; eingefügt wurde eine ca. 768x1152 PNG-Grafik mit sanfter
-            # Verlauffläche und „Mira“-Silhouette. Lass die Zeilen genau so stehen.)
+      - name: Commit & push
         run: |
-          echo "$DEMO_B64" | base64 -d > public/latest.png
-          echo "Source: embedded demo" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Commit if changed
-        shell: bash
-        run: |
-          set -e
           git config user.name "mira-autonomy[bot]"
-          git config user.email "mira@users.noreply.github.com"
-          if ! git diff --quiet -- public/latest.png 2>/dev/null; then
-            git add public/latest.png
-            git commit -m "Publish latest portrait (auto)"
-            git push
-            echo "Committed public/latest.png" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "No changes to commit." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          git config user.email "mira-autonomy[bot]@users.noreply.github.com"
+          git add public/latest.png
+          git commit -m "update: visible test image for latest.png" || echo "no changes"
+          git push
