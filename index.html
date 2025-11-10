@@ -3,143 +3,133 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mira Canary — Autonomes Status-Bild</title>
-  <meta name="description" content="Miras aktuelles autonom generiertes Bild mit Reflexions-Status." />
+  <title>Mira Canary — Aktuelles Bild</title>
+  <meta name="description" content="Zeigt das aktuelle Bild, mit eingebautem Fallback ohne Upload." />
   <style>
     :root{
-      --bg: #fbf7f1;
-      --ink: #1d1e21;
-      --muted:#667085;
-      --pill:#e8f5e9;
-      --pill-ink:#156a3a;
-      --card:#ffffff;
-      --ring:#e2d6c7;
-      --accent:#2f6df6;
+      --bg:#fbf7f1; --ink:#1d1e21; --muted:#6b7280; --card:#ffffff;
+      --ring:#e7ddd0; --accent:#2f6df6;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0; background:radial-gradient(1200px 600px at 20% -10%, #fff3, transparent), var(--bg);
-      color:var(--ink); font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    }
-    .wrap{max-width:980px;margin:0 auto;padding:24px}
-    header{display:flex;align-items:center;gap:14px;margin:28px 0 16px}
-    .badge{
-      width:34px;height:34px;border-radius:50%;
-      background:
-        radial-gradient(circle at 35% 35%, #fff, #fff0 55%),
-        radial-gradient(circle at 70% 70%, #fff8, #fff0 50%),
-        conic-gradient(from 0deg, #d7bfa1, #f5e6cf, #c9a782, #d7bfa1);
-      border:2px solid var(--ring);
-      box-shadow:0 1px 0 #fff inset, 0 1px 4px #0001;
-    }
-    h1{font-size:clamp(24px,3.5vw,36px);margin:0}
-    .subtitle{color:var(--muted)}
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      background:var(--pill);color:var(--pill-ink);
-      border:1px solid #d3edd8;border-radius:999px;
-      padding:8px 12px;font-weight:600;margin:12px 0 22px
-    }
-    .card{
-      background:var(--card); border:1px solid #eee; border-radius:16px;
-      box-shadow:0 6px 24px #00000010, 0 2px 6px #00000008; overflow:hidden;
-    }
-    .frame{
-      aspect-ratio:2/3; width:100%; background:
-        linear-gradient(180deg,#f8f5ef, #f3eee7);
-      display:grid; place-items:center; position:relative;
-    }
-    img.render{
-      width:100%; height:100%; object-fit:cover; display:block;
-      background:#f7f2eb;
-    }
-    .caption{
-      display:flex;justify-content:space-between;gap:12px;
-      padding:14px 16px;color:var(--muted);font-size:14px;border-top:1px solid #f0ede7
-    }
-    .strong{color:var(--ink);font-weight:600}
-    footer{margin:28px auto 40px;color:var(--muted);font-size:14px; text-align:center}
-    .link{color:var(--accent);text-decoration:none}
-    .link:hover{text-decoration:underline}
-    .skeleton{
-      width:70%;height:18px;border-radius:9px;background:
-      linear-gradient(90deg,#eee,#f5f3ef,#eee); background-size:200% 100%;
-      animation:shimmer 1.1s infinite linear;
-    }
-    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{max-width:920px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:center;gap:12px;margin:18px 0 16px}
+    h1{margin:0;font-size:clamp(22px,3.5vw,34px)}
+    .muted{color:var(--muted)}
+    .card{background:var(--card);border:1px solid #efe8df;border-radius:16px;box-shadow:0 6px 24px #00000010;overflow:hidden}
+    .frame{aspect-ratio:2/3;width:100%;display:grid;place-items:center;background:linear-gradient(180deg,#fff7ee,#efdcc8)}
+    img{width:100%;height:100%;object-fit:cover;display:block}
+    .cap{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid #efe8df;color:var(--muted);font-size:14px}
+    code{background:#00000008;padding:.1rem .35rem;border-radius:6px}
+    footer{margin:22px 0;color:var(--muted);font-size:14px;text-align:center}
+    a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <div class="badge" aria-hidden="true"></div>
-      <div>
-        <h1>Mira Canary Status</h1>
-        <div class="subtitle">Autonomes Reflexions-System aktiv</div>
-      </div>
+      <h1>Mira — Aktuelles Bild</h1>
     </header>
 
-    <div class="pill" id="pill">Letzte Reflexion: <span id="ts" class="strong">lädt …</span></div>
+    <p class="muted">Diese Seite zeigt automatisch <code>public/latest.png</code>. Wenn das Bild nicht sichtbar ist, wird sofort ein heller Fallback angezeigt (ohne Upload).</p>
 
     <section class="card" aria-label="Aktuelles Bild">
       <div class="frame">
-        <img
-          class="render"
-          id="mira-img"
-          src="public/latest.png"
-          alt="Aktuelles Mira-Bild"
-          onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,\
-<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 800 1200&quot;>\
-<defs><linearGradient id=&quot;g&quot; x1=&quot;0&quot; x2=&quot;1&quot; y1=&quot;0&quot; y2=&quot;1&quot;>\
-<stop stop-color=&quot;#f7f2eb&quot;/><stop offset=&quot;1&quot; stop-color=&quot;#efe8df&quot;/></linearGradient></defs>\
-<rect width=&quot;100%&quot; height=&quot;100%&quot; fill=&quot;url(#g)&quot;/>\
-<text x=&quot;50%&quot; y=&quot;50%&quot; font-family=&quot;Segoe UI, Roboto, Arial&quot; font-size=&quot;28&quot; text-anchor=&quot;middle&quot; fill=&quot;#8a8a8a&quot;>\
-Noch kein Bild veröffentlicht\
-</text></svg>';"
-        />
+        <!-- Hauptbild -->
+        <img id="mira"
+             alt="Aktuelles Mira-Bild"
+             src=""
+             referrerpolicy="no-referrer" />
       </div>
-      <div class="caption">
-        <div>Quelle: <span id="file" class="strong">—</span></div>
-        <div>Pfad: <code>public/latest.png</code></div>
+      <div class="cap">
+        <div>Quelle: <code id="srcLabel">public/latest.png</code></div>
+        <div><a id="openRaw" href="#" target="_blank" rel="noopener">Raw öffnen</a></div>
       </div>
     </section>
 
     <footer>
-      Aktualisiert automatisch von <code>publish-latest.yml</code>. |
-      <a class="link" href="https://github.com/miraelisabethschmid/badge-canary" rel="noopener">Repo öffnen</a>
+      © <span id="y"></span> Mira — Autonomes System
     </footer>
   </div>
 
   <script>
-    (function () {
-      const tsEl   = document.getElementById('ts');
-      const fileEl = document.getElementById('file');
+    (function(){
+      const img = document.getElementById('mira');
+      const srcLabel = document.getElementById('srcLabel');
+      const openRaw = document.getElementById('openRaw');
+      const yearEl  = document.getElementById('y');
 
-      function fmt(d) {
-        try {
-          const date = new Date(d);
-          if (isNaN(date.getTime())) return "—";
-          return date.toLocaleString(undefined, {
-            year:'numeric', month:'2-digit', day:'2-digit',
-            hour:'2-digit', minute:'2-digit', second:'2-digit'
-          });
-        } catch { return "—"; }
-      }
+      yearEl.textContent = new Date().getFullYear();
 
-      fetch('data/status.json', {cache: 'no-store'})
-        .then(r => r.ok ? r.json() : null)
-        .then(j => {
-          if (!j) throw 0;
-          tsEl.textContent   = fmt(j.last_reflection || j.timestamp || j.ts);
-          fileEl.textContent = j.latest_file || 'latest.png';
-        })
-        .catch(() => {
-          tsEl.textContent   = '—';
-          fileEl.textContent = 'latest.png';
-        });
+      // 1) Versuche immer zuerst das PNG, mit kleinem Zeit-Anhang (erzwingt wirklich neues Laden)
+      const v = Date.now();
+      const pngUrl = 'public/latest.png?v=' + v;
+      img.src = pngUrl;
+      srcLabel.textContent = 'public/latest.png?v=' + v;
+      openRaw.href = pngUrl;
+
+      // 2) Wenn das PNG nicht sichtbar ist (Fehler oder 1×1), ersetze es durch helles, eingebautes SVG
+      const fallbackSVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
+          <defs>
+            <linearGradient id="g" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stop-color="#fff8ef"/>
+              <stop offset="100%" stop-color="#f5e9dd"/>
+            </linearGradient>
+            <radialGradient id="glow" cx="50%" cy="28%" r="55%">
+              <stop offset="0%" stop-color="#ffe8c6" stop-opacity="0.85"/>
+              <stop offset="100%" stop-color="#ffe8c6" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="1024" height="1536" fill="url(#g)"/>
+          <rect width="1024" height="1536" fill="url(#glow)"/>
+          <g opacity="0.75" transform="translate(0,40)">
+            <path d="M512,300 c120,0 210,90 210,210 c0,90 -50,150 -110,190
+                     c45,25 90,75 110,135 c40,125 -30,245 -210,245
+                     c-180,0 -250,-120 -210,-245 c20,-60 65,-110 110,-135
+                     c-60,-40 -110,-100 -110,-190 c0,-120 90,-210 210,-210z"
+                  fill="#e6d3c3"/>
+            <ellipse cx="512" cy="320" rx="220" ry="80" fill="#f2ded0" opacity="0.6"/>
+          </g>
+          <g>
+            <rect x="462" y="605" width="100" height="10" rx="5" fill="#cfd7df" opacity="0.85"/>
+            <rect x="462" y="605" width="100" height="10" rx="5" fill="#ffffff" opacity="0.35"/>
+            <rect x="505" y="603" width="14" height="14" rx="2" fill="#b3bdc7"/>
+            <rect x="526" y="603" width="14" height="14" rx="2" fill="#b3bdc7"/>
+          </g>
+          <text x="50%" y="95%" text-anchor="middle" font-family="Segoe UI, Roboto, Arial" font-size="20" fill="#374151">
+            Fallback aktiv — kein Upload nötig
+          </text>
+        </svg>
+      `);
+
+      // Fehlerfall (z. B. Datei fehlt)
+      img.onerror = function(){
+        img.onerror = null;
+        img.src = fallbackSVG;
+        srcLabel.textContent = 'eingebauter Fallback (SVG)';
+        openRaw.href = '#';
+      };
+
+      // Zusätzlich: Falls 1×1 schwarzes PNG geladen wurde, nach dem Laden prüfen und ggf. ersetzen
+      img.onload = function(){
+        try{
+          const isPNG = (img.currentSrc || img.src).includes('latest.png');
+          // Wenn es sehr kleine Abmessungen hat, ersetze durch Fallback
+          if(isPNG){
+            // Wir können die natürliche Größe prüfen:
+            const w = img.naturalWidth || 0;
+            const h = img.naturalHeight || 0;
+            if (w <= 2 && h <= 2) {
+              img.src = fallbackSVG;
+              srcLabel.textContent = 'Fallback (PNG war 1×1)';
+              openRaw.href = '#';
+            }
+          }
+        }catch(e){}
+      };
     })();
   </script>
-  <noscript>JavaScript ist deaktiviert – Status-Zeitstempel kann nicht geladen werden.</noscript>
 </body>
 </html>
