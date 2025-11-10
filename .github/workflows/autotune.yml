@@ -1,7 +1,7 @@
 name: Mirai Canary — Autotune Prompt
 
 on:
-  workflow_dispatch: {}   # manuell startbar
+  workflow_dispatch:
 
 jobs:
   autotune:
@@ -20,6 +20,7 @@ jobs:
         run: |
           pip install -r tools/requirements.txt
 
+      # Falls kein Eingabebild existiert, wird ein minimales PNG erzeugt.
       - name: Ensure render input (or create dummy)
         run: |
           if [ -f data/outputs/latest.png ]; then
