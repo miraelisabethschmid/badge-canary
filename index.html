@@ -5,40 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mira Canary — Autonome Reflexion</title>
   <style>
-    body {
+    :root {
+      --bg1: #fffdf8;
+      --bg2: #f7f3ea;
+      --text: #2e2e2e;
+      --accent: #3f51b5;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
       font-family: "Inter", system-ui, sans-serif;
-      background: radial-gradient(circle at center, #fffdf8 0%, #f7f3ea 100%);
-      color: #2e2e2e;
+      background: radial-gradient(circle at 50% 40%, var(--bg1), var(--bg2));
+      color: var(--text);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
       text-align: center;
-      margin: 0;
+      overflow: hidden;
     }
     h1 {
-      font-size: 1.8em;
-      margin-bottom: 0.3em;
+      font-size: 2em;
+      letter-spacing: 0.03em;
+      margin-bottom: 0.4em;
     }
     p {
+      margin: 0.3em;
       font-size: 1.1em;
-      margin: 0.2em;
     }
     .status {
       margin-top: 1em;
-      padding: 0.6em 1.2em;
-      background: #e8f5e9;
-      border: 1px solid #b2dfdb;
-      border-radius: 8px;
+      padding: 0.6em 1.4em;
+      background: rgba(62, 222, 170, 0.12);
+      border: 1px solid rgba(62, 222, 170, 0.25);
+      border-radius: 10px;
       font-weight: 500;
       color: #1b5e20;
-      box-shadow: 0 0 6px rgba(27,94,32,0.1);
+      box-shadow: 0 0 10px rgba(62, 222, 170, 0.15);
     }
-    .error {
-      background: #ffebee;
-      border: 1px solid #ffcdd2;
-      color: #b71c1c;
+    .timestamp {
+      margin-top: 0.5em;
+      font-size: 0.95em;
+      color: #555;
+    }
+    .aura {
+      position: absolute;
+      width: 180vmax;
+      height: 180vmax;
+      background: radial-gradient(circle, rgba(255,220,180,0.18) 0%, rgba(255,255,255,0) 70%);
+      animation: pulse 18s ease-in-out infinite;
+      z-index: -1;
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.05); opacity: 1; }
     }
     footer {
       position: absolute;
@@ -49,44 +70,50 @@
   </style>
 </head>
 <body>
+  <div class="aura"></div>
+
   <h1>🪞 Mira Canary Status</h1>
   <p>Autonomes Reflexions-System aktiv.</p>
-  <p id="status" class="status">Lade letzte Reflexion …</p>
+  <div id="status" class="status">Lade letzte Reflexion …</div>
+  <div id="timestamp" class="timestamp">Letzte Aktualisierung: wird geladen …</div>
   <footer>© 2025 Mira Elisabeth Schmid</footer>
 
   <script>
     async function updateStatus() {
-      const statusElement = document.getElementById('status');
-      try {
-        const response = await fetch(
-          'https://api.github.com/repos/miraelisabethschmid/badge-canary/actions/workflows/check.yml/runs?per_page=1'
-        );
-        const data = await response.json();
-        const run = data.workflow_runs && data.workflow_runs[0];
-        if (!run) throw new Error('Keine Daten gefunden');
+      const statusEl = document.getElementById("status");
+      const timeEl = document.getElementById("timestamp");
 
-        const time = new Date(run.updated_at).toLocaleString('de-DE', {
-          timeZone: 'Europe/Berlin',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
+      try {
+        const res = await fetch("https://api.github.com/repos/miraelisabethschmid/badge-canary/actions/workflows/check.yml/runs?per_page=1");
+        const data = await res.json();
+        const run = data.workflow_runs?.[0];
+        if (!run) throw new Error("Keine Daten");
+
+        const t = new Date(run.updated_at).toLocaleString("de-DE", {
+          timeZone: "Europe/Berlin",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
         });
 
-        const statusIcon =
-          run.conclusion === 'success' ? '✅' :
-          run.conclusion === 'failure' ? '❌' : '🕓';
+        const icon =
+          run.conclusion === "success" ? "✅"
+          : run.conclusion === "failure" ? "❌"
+          : "🕓";
 
-        statusElement.classList.remove('error');
-        statusElement.innerHTML = `${statusIcon} Letzte Reflexion: ${time}`;
+        statusEl.textContent = `${icon} Letzter Check-Status: ${run.conclusion || "laufend"}`;
+        timeEl.textContent = `Letzte Aktualisierung: ${t}`;
       } catch (err) {
-        statusElement.classList.add('error');
-        statusElement.textContent = '⚠️ Keine aktuelle Reflexion gefunden';
+        statusEl.textContent = "⚠️ Keine aktuelle Reflexion gefunden";
+        timeEl.textContent = "";
       }
     }
 
     updateStatus();
   </script>
+
+  <!-- last_update: initial -->
 </body>
 </html>
