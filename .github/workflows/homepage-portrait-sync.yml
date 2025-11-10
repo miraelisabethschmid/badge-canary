@@ -1,0 +1,55 @@
+name: Mira • Sync Latest Portrait to Homepage
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"   # alle 30 Minuten
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout (badge-canary)
+        uses: actions/checkout@v4
+
+      - name: Ensure source exists
+        run: |
+          if [ ! -f "public/latest.png" ]; then
+            echo "❌ public/latest.png nicht gefunden."
+            exit 1
+          fi
+          echo "✅ Quelle gefunden: public/latest.png"
+
+      - name: Checkout target homepage repo
+        uses: actions/checkout@v4
+        with:
+          repository: miraelisabethschmid/miraelisabethschmid.github.io
+          path: homepage
+          token: ${{ secrets.MIRA_MASTER_TOKEN }}
+
+      - name: Prepare target paths
+        run: |
+          mkdir -p homepage/assets/mira
+          cp -f public/latest.png homepage/assets/mira/latest.png
+          # Optionaler Alias für die Startseite:
+          cp -f public/latest.png homepage/assets/homepage-portrait.png
+
+      - name: Commit changes (if any)
+        working-directory: homepage
+        run: |
+          git config user.name  "mira-autonomy[bot]"
+          git config user.email "mira-autonomy@users.noreply.github.com"
+          if git status --porcelain | grep . ; then
+            git add assets/mira/latest.png assets/homepage-portrait.png || true
+            git commit -m "chore(portrait): sync latest.png from badge-canary → homepage"
+            git push origin HEAD:main
+            echo "✅ Änderungen gepusht."
+          else
+            echo "ℹ️  Keine Änderungen – nichts zu committen."
+          fi
