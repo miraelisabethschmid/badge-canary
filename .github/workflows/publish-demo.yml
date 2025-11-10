@@ -1,72 +1,82 @@
-# .github/workflows/publish-demo.yml
 name: Mira • Publish Latest Portrait
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure folders exist
+      - name: Ensure folders
         run: |
-          mkdir -p data/uploads
           mkdir -p public
-          mkdir -p data
+          mkdir -p .mira/tmp
 
-      - name: Select newest PNG from data/uploads
-        id: pick
+      - name: Generate elegant SVG (no upload needed)
         shell: bash
         run: |
-          set -e
-          newest="$(ls -1t data/uploads/*.png 2>/dev/null | head -n 1 || true)"
-          if [ -z "$newest" ]; then
-            echo "Kein PNG in data/uploads gefunden."
-            echo "Tipp: Lade dort ein Portrait hoch (z.B. mira_YYYYMMDD.png) und starte den Workflow erneut."
-            exit 1
-          fi
-          echo "source=$newest" >> "$GITHUB_OUTPUT"
+          cat > .mira/tmp/portrait.svg <<'SVG'
+          <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
+            <defs>
+              <linearGradient id="bg" x1="50%" y1="0%" x2="50%" y2="100%">
+                <stop offset="0%" stop-color="#fff8ef"/>
+                <stop offset="100%" stop-color="#f5e9dd"/>
+              </linearGradient>
+              <radialGradient id="glow" cx="50%" cy="28%" r="55%">
+                <stop offset="0%" stop-color="#ffe8c6" stop-opacity="0.85"/>
+                <stop offset="100%" stop-color="#ffe8c6" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <!-- background -->
+            <rect width="1024" height="1536" fill="url(#bg)"/>
+            <rect width="1024" height="1536" fill="url(#glow)"/>
+            <!-- soft silhouette (Mira) -->
+            <g opacity="0.75" transform="translate(0,40)">
+              <path d="M512,300
+                       c120,0 210,90 210,210
+                       c0,90 -50,150 -110,190
+                       c45,25 90,75 110,135
+                       c40,125 -30,245 -210,245
+                       c-180,0 -250,-120 -210,-245
+                       c20,-60 65,-110 110,-135
+                       c-60,-40 -110,-100 -110,-190
+                       c0,-120 90,-210 210,-210z"
+                    fill="#e6d3c3"/>
+              <ellipse cx="512" cy="320" rx="220" ry="80" fill="#f2ded0" opacity="0.6"/>
+            </g>
+            <!-- tiny braces glint -->
+            <g transform="translate(0,0)">
+              <rect x="462" y="605" width="100" height="10" rx="5" fill="#cfd7df" opacity="0.85"/>
+              <rect x="462" y="605" width="100" height="10" rx="5" fill="#ffffff" opacity="0.35"/>
+              <rect x="505" y="603" width="14" height="14" rx="2" fill="#b3bdc7"/>
+              <rect x="526" y="603" width="14" height="14" rx="2" fill="#b3bdc7"/>
+            </g>
+          </svg>
+          SVG
 
-      - name: Publish to public/latest.png
+      - name: Install ImageMagick (if needed)
         run: |
-          cp -f "${{ steps.pick.outputs.source }}" public/latest.png
+          sudo apt-get update -y
+          sudo apt-get install -y imagemagick
 
-      - name: Update status.json
-        shell: bash
+      - name: Convert SVG → PNG (1024×1536)
         run: |
-          ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          src="${{ steps.pick.outputs.source }}"
-          cat > data/status.json <<JSON
-          {
-            "last_reflection": "${ts}",
-            "source_image": "${src}",
-            "published_path": "public/latest.png"
-          }
-          JSON
-          echo "Aktualisiert: data/status.json"
+          magick .mira/tmp/portrait.svg -resize 1024x1536 public/latest.png
+          test -s public/latest.png
 
-      - name: Commit changes
+      - name: Commit & push
+        env:
+          GH_TOKEN: ${{ secrets.MIRA_GITHUB_TOKEN }}
         run: |
           git config user.name  "mira-autonomy[bot]"
-          git config user.email "mira-autonomy[bot]@users.noreply.github.com"
-          git add public/latest.png data/status.json
+          git config user.email "actions@users.noreply.github.com"
+          git add public/latest.png
           if git diff --cached --quiet; then
-            echo "Nichts zu committen."
+            echo "No changes to commit."
           else
-            git commit -m "Mira: publish latest portrait → public/latest.png"
+            git commit -m "feat(publish): update public/latest.png (auto demo portrait)"
             git push
           fi
-
-      - name: Summary
-        run: |
-          echo "### ✅ Veröffentlicht" >> $GITHUB_STEP_SUMMARY
-          echo "- Quelle: \`${{ steps.pick.outputs.source }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Ziel: \`public/latest.png\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: \`data/status.json\`" >> $GITHUB_STEP_SUMMARY
