@@ -46,11 +46,15 @@ jobs:
           done
           echo "changed=yes" >> $GITHUB_OUTPUT
 
-      - name: Commit changes
+      - name: Commit only uploads folder
         if: steps.prune.outputs.changed == 'yes'
         run: |
           git config user.name  "mira-autonomy[bot]"
           git config user.email "mira-autonomy[bot]@users.noreply.github.com"
           git add -A data/uploads || true
-          git commit -m "Cleanup: keep newest 5 PNGs in data/uploads"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Cleanup: keep newest 5 PNGs in data/uploads"
+            git push origin main
+          fi
