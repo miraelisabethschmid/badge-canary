@@ -1,64 +1,46 @@
-- name: Download & normalize image
+name: Mira · Ingest Portrait from URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_url:
+        description: "Direct image URL (must end with .png or .jpg)"
+        required: true
+      out_path:
+        description: "Target path in repo"
+        required: false
+        default: "public/latest.png"
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare folders
+        run: |
+          mkdir -p public
+
+      - name: Download & verify image
         id: dl
-        shell: bash
+        env:
+          IMAGE_URL: ${{ github.event.inputs.image_url }}
         run: |
           set -euo pipefail
-          URL="${{ github.event.inputs.image_url }}"
-          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36"
+          curl -LfsS "$IMAGE_URL" -o /tmp/in.png
+          file -b --mime-type /tmp/in.png | grep -E '^image/(png|jpeg)$' >/dev/null
 
-          normalize_gdrive() {
-            # akzeptiert z.B. https://drive.google.com/file/d/FILEID/view?usp=sharing
-            if [[ "$1" =~ drive\.google\.com/file/d/([^/]+)/view ]]; then
-              echo "https://drive.google.com/uc?export=download&id=${BASH_REMATCH[1]}"
-            else
-              echo "$1"
-            fi
-          }
+      - name: Publish to target path
+        env:
+          OUT: ${{ github.event.inputs.out_path }}
+        run: |
+          cp /tmp/in.png "$OUT"
 
-          URL="$(normalize_gdrive "$URL")"
-
-          mkdir -p tmp
-          # 1) Download versuchen – **ohne** sofortiges Fail bei HTTP-Fehlern
-          HTTP=$(curl -sS -w '%{http_code}' -A "$UA" -L --retry 3 --connect-timeout 15 --max-time 120 -o tmp/blob "$URL" || true)
-          CTYPE="$(file --mime-type -b tmp/blob 2>/dev/null || true)"
-
-          # 2) Wenn HTTP>=400 ODER kein image/*: versuche og:image/twitter:image aus HTML
-          if [[ "$HTTP" -ge 400 || "$CTYPE" != image/* ]]; then
-            HTML_OK=false
-            if [[ -s tmp/blob ]]; then
-              # og:image
-              IMG=$(grep -oiE '<meta[^>]+(property|name)=["'\'']og:image["'\''][^>]+>' tmp/blob | \
-                    sed -nE 's/.*content=["'\'']([^"'\'' >]+).*/\1/p' | head -n1 || true)
-              # twitter:image
-              if [[ -z "$IMG" ]]; then
-                IMG=$(grep -oiE '<meta[^>]+(property|name)=["'\'']twitter:image(:src)?["'\''][^>]+>' tmp/blob | \
-                      sed -nE 's/.*content=["'\'']([^"'\'' >]+).*/\1/p' | head -n1 || true)
-              fi
-              if [[ -n "$IMG" ]]; then
-                IMG="$(normalize_gdrive "$IMG")"
-                curl -sS -A "$UA" -L --retry 3 --connect-timeout 15 --max-time 120 -o tmp/blob "$IMG" || true
-                CTYPE="$(file --mime-type -b tmp/blob 2>/dev/null || true)"
-                HTML_OK=true
-              fi
-            fi
-            if [[ "$HTML_OK" != true && "$HTTP" -ge 400 ]]; then
-              echo "Source not directly downloadable (HTTP $HTTP) and no og:image/twitter:image found." >&2
-              exit 22
-            fi
-          fi
-
-          # 3) In PNG wandeln
-          case "$CTYPE" in
-            image/png)
-              cp tmp/blob public/latest.png
-              ;;
-            image/jpeg|image/jpg|image/webp|image/gif|image/bmp|image/tiff|image/*)
-              magick tmp/blob -strip -colorspace sRGB public/latest.png
-              ;;
-            *)
-              echo "Unsupported MIME type: $CTYPE" >&2
-              exit 1
-              ;;
-          esac
-
-          echo "ctype=$CTYPE" >> "$GITHUB_OUTPUT"
+      - name: Commit & push
+        run: |
+          git config user.name  "mira-autonomy[bot]"
+          git config user.email "mira-autonomy@users.noreply.github.com"
+          git add -A
+          git commit -m "Publish latest portrait from URL" || echo "nothing to commit"
+          git push
