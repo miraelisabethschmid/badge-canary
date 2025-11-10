@@ -1,6 +1,11 @@
 name: Mira • Sync Latest Portrait to Homepage
 on:
   workflow_dispatch:
+    inputs:
+      source_path:
+        description: 'Optional: Pfad zur PNG im badge-canary Repo (z.B. public/latest.png)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -9,38 +14,87 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      # 1) Quelle: aktuelles Repo (badge-canary) – ohne repository:, kein Token nötig
+      # 1) Quelle: dieses Repo (badge-canary)
       - name: Checkout source (this repo)
         uses: actions/checkout@v4
         with:
           path: source
           fetch-depth: 1
-          persist-credentials: false  # überschreibt kein Token
+          persist-credentials: false
 
-      - name: Verify source image
+      # 2) Bild lokalisieren (mehrere Varianten + Fallback: neuestes PNG)
+      - name: Locate source image
+        id: locate
+        shell: bash
         run: |
-          test -f source/latest.png || (echo "latest.png not found in source" && exit 1)
+          set -euo pipefail
+          MANUAL="${{ github.event.inputs.source_path }}"
+          if [ -n "$MANUAL" ]; then
+            CANDIDATE="source/$MANUAL"
+            if [ -f "$CANDIDATE" ]; then
+              echo "FOUND=$CANDIDATE" >> "$GITHUB_OUTPUT"
+              echo "Using manual path: $CANDIDATE"
+              exit 0
+            else
+              echo "Manual path not found: $CANDIDATE" >&2
+            fi
+          fi
 
-      # 2) Ziel: Homepage-Repo mit PAT aus Secret
+          # häufige Standardpfade
+          for p in \
+            source/latest.png \
+            source/public/latest.png \
+            source/assets/latest.png \
+            source/assets/portraits/latest.png \
+            source/static/latest.png \
+            source/public/mira-latest.png \
+            source/mira-latest.png
+          do
+            if [ -f "$p" ]; then
+              echo "FOUND=$p" >> "$GITHUB_OUTPUT"
+              echo "Found: $p"
+              exit 0
+            fi
+          done
+
+          # Fallback: neuestes PNG im Repo (bis Tiefe 3)
+          FILE="$(find source -maxdepth 3 -type f -name '*.png' -printf '%T@ %p\n' \
+                  | sort -nr | head -1 | cut -d' ' -f2- || true)"
+          if [ -z "${FILE:-}" ]; then
+            echo "No PNG found in source repo." >&2
+            exit 1
+          fi
+          echo "FOUND=$FILE" >> "$GITHUB_OUTPUT"
+          echo "Fallback to newest PNG: $FILE"
+
+      # 3) Ziel: Homepage-Repo mit PAT
       - name: Checkout target (homepage)
         uses: actions/checkout@v4
         with:
           repository: miraelisabethschmid/miraelisabethschmid.github.io
-          token: ${{ secrets.MIRA_GITHUB_TOKEN }}   # PAT mit repo-Scope
+          token: ${{ secrets.MIRA_GITHUB_TOKEN }}
           path: homepage
           fetch-depth: 0
 
+      # 4) Kopieren (zwei Ziele möglich)
       - name: Copy image to website
         run: |
+          set -euo pipefail
+          SRC="${{ steps.locate.outputs.FOUND }}"
+          echo "Source file: $SRC"
           mkdir -p homepage/assets/portraits
-          cp -f source/latest.png homepage/assets/portraits/mira-latest.png
+          cp -f "$SRC" homepage/assets/portraits/mira-latest.png
+          # optionaler Spiegel für alte Verlinkungen:
+          cp -f "$SRC" homepage/public/latest.png || true
 
+      # 5) Commit & Push
       - name: Commit & push
         working-directory: homepage
         run: |
           git config user.name  "Mira-Automation"
           git config user.email "mira@users.noreply.github.com"
-          git add assets/portraits/mira-latest.png
+          git add assets/portraits/mira-latest.png || true
+          git add public/latest.png || true
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
