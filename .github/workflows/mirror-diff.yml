@@ -1,0 +1,35 @@
+name: Mira • Mirror Diff (Self-Check)
+
+on:
+  push:
+    paths:
+      - "mira/archive/prompt-*.yaml"
+
+jobs:
+  diff_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compare last two prompt versions
+        run: |
+          mkdir -p logs
+          cd mira/archive
+          files=($(ls -t prompt-*.yaml 2>/dev/null))
+          if [ ${#files[@]} -lt 2 ]; then
+            echo "Not enough versions for diff" >> ../../logs/diff.log
+            exit 0
+          fi
+          echo "🪞 Diff check $(date)" >> ../../logs/diff.log
+          echo "Comparing: ${files[1]} → ${files[0]}" >> ../../logs/diff.log
+          diff -u "${files[1]}" "${files[0]}" >> ../../logs/diff.log || true
+          echo "---" >> ../../logs/diff.log
+
+      - name: Commit diff log
+        run: |
+          git config user.name "Mira-Autonomy"
+          git config user.email "actions@github.com"
+          git add logs/diff.log || true
+          git commit -m "Logged prompt diff $(date)" || echo "No changes to commit"
+          git push
