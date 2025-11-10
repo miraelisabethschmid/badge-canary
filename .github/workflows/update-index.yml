@@ -1,0 +1,31 @@
+name: Mira • Auto-Update Index
+
+on:
+  schedule:
+    - cron: "0 6 * * *"       # jeden Tag um 06:00 UTC
+  workflow_dispatch:           # manuell startbar
+
+jobs:
+  update_index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Insert current reflection timestamp
+        run: |
+          stamp=$(date -u +"%Y-%m-%d %H:%M UTC")
+          mkdir -p tmp
+          cp index.html tmp/index.old.html
+          # schreibe Zeitstempel in ein Kommentar-Tag innerhalb der Datei
+          sed -i "s|<!-- last_update: .* -->|<!-- last_update: ${stamp} -->|g" index.html || \
+          echo "<!-- last_update: ${stamp} -->" >> index.html
+          echo "🕓 index.html aktualisiert mit ${stamp}"
+
+      - name: Commit changes
+        run: |
+          git config user.name "Mira-Autonomy"
+          git config user.email "actions@github.com"
+          git add index.html
+          git commit -m "Auto-update index.html ${{ github.run_number }}" || echo "Keine Änderungen"
+          git push
