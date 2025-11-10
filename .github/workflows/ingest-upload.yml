@@ -1,0 +1,62 @@
+name: Mira • Ingest Upload (PNG → latest)
+
+on:
+  push:
+    paths:
+      - "data/uploads/*.png"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pick newest PNG from data/uploads
+        id: pick
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(data/uploads/*.png)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No PNGs found in data/uploads/"
+            exit 0
+          fi
+          newest=$(ls -t data/uploads/*.png | head -1)
+          echo "Newest file: $newest"
+          echo "file=$newest" >> $GITHUB_OUTPUT
+
+      - name: Mirror to outputs and public path
+        if: steps.pick.outputs.file != ''
+        shell: bash
+        run: |
+          mkdir -p data/outputs
+          cp -f "${{ steps.pick.outputs.file }}" "data/outputs/mira-latest.png"
+          cp -f "data/outputs/mira-latest.png" "data/mira-latest.png"
+          echo "Mirrored → data/outputs/mira-latest.png and data/mira-latest.png"
+
+      - name: Write ISO timestamp (UTC)
+        if: steps.pick.outputs.file != ''
+        shell: bash
+        run: |
+          mkdir -p data
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > data/last_reflexion.txt
+          echo "Wrote $(cat data/last_reflexion.txt) to data/last_reflexion.txt"
+
+      - name: Commit changes
+        if: steps.pick.outputs.file != ''
+        shell: bash
+        run: |
+          git config user.name  "mira-autonomy[bot]"
+          git config user.email "mira-autonomy[bot]@users.noreply.github.com"
+          git add data/outputs/mira-latest.png data/mira-latest.png data/last_reflexion.txt || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Ingest: mirror latest PNG and update heartbeat"
+            git push
+          fi
