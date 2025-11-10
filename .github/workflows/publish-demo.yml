@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write  # <<— WICHTIG: erlaubt dem Workflow, Dateien zu committen
 
 jobs:
   publish:
@@ -18,6 +18,7 @@ jobs:
 
       - name: Fetch visible PNG (no upload needed)
         run: |
+          set -e
           curl -L "https://placehold.co/1024x1536/png?text=Mira%20Elisabeth%20Schmid" -o public/latest.png
           ls -lh public/latest.png
           file public/latest.png
@@ -25,12 +26,20 @@ jobs:
 
       - name: Commit & push
         run: |
+          set -e
           git config user.name  "mira-autonomy[bot]"
-          git config user.email "actions@users.noreply.github.com"
+          git config user.email "mira-autonomy[bot]@users.noreply.github.com"
           git add public/latest.png
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
             git commit -m "publish: latest.png from placeholder service"
-            git push origin main
+            # sichert, dass Branch-Stand aktuell ist
+            git pull --rebase
+            git push
           fi
+
+      - name: Show git status (debug)
+        run: |
+          git status
+          git log -1 --oneline
