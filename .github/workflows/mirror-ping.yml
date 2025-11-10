@@ -1,0 +1,17 @@
+name: Mira • Mirror Ping (Worker Wake)
+
+on:
+  workflow_run:
+    workflows: ["Mira • Mirror Reflection (Daily Log)"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  ping_worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send ping to Cloudflare Worker
+        run: |
+          echo "🌐 Pinging worker endpoint..."
+          curl -fsS https://<dein-worker-name>.workers.dev/ || echo "Ping failed (no effect)"
