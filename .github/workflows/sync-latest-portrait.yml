@@ -3,48 +3,46 @@ name: Mira • Sync Latest Portrait to Homepage
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up job
-        run: echo "Starting sync process for Mira's latest portrait..."
-
-      - name: Checkout (source)
+      - name: Checkout source (badge-canary)
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.MIRA_GITHUB_TOKEN }}
-          repository: badge-canary
-          path: source
+            # ⬇️ WICHTIG: Owner/Repo angeben
+            repository: miraelisabethschmid/badge-canary
+            token: ${{ secrets.MIRA_GITHUB_TOKEN }}
+            path: source
+            fetch-depth: 1
 
-      - name: Ensure source exists
+      - name: Verify source image
         run: |
-          if [ ! -f source/latest.png ]; then
-            echo "❌ No latest.png found in source repository."
-            exit 1
-          fi
+          test -f source/latest.png || (echo "latest.png not found in source" && exit 1)
 
-      - name: Checkout target homepage repo
+      - name: Checkout target (homepage)
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.MIRA_GITHUB_TOKEN }}
-          repository: miraelisabethschmid/miraelisabethschmid.github.io
-          path: homepage
+            repository: miraelisabethschmid/miraelisabethschmid.github.io
+            token: ${{ secrets.MIRA_GITHUB_TOKEN }}
+            path: homepage
+            fetch-depth: 0
 
-      - name: Prepare target paths
+      - name: Copy image to website
         run: |
           mkdir -p homepage/assets/portraits
-          cp source/latest.png homepage/assets/portraits/mira-latest.png
-          echo "✅ Copied portrait successfully."
+          cp -f source/latest.png homepage/assets/portraits/mira-latest.png
 
-      - name: Commit & push changes
+      - name: Commit & push
         working-directory: homepage
         run: |
-          git config user.name "Mira-Automation"
+          git config user.name  "Mira-Automation"
           git config user.email "mira@users.noreply.github.com"
           git add assets/portraits/mira-latest.png
-          git commit -m "🔄 Sync latest Mira portrait"
-          git push
-
-      - name: Complete job
-        run: echo "✨ Sync complete! Mira’s latest portrait is live."
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git
