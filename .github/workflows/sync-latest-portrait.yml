@@ -1,5 +1,4 @@
 name: Mira • Sync Latest Portrait to Homepage
-
 on:
   workflow_dispatch:
 
@@ -10,26 +9,26 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source (badge-canary)
+      # 1) Quelle: aktuelles Repo (badge-canary) – ohne repository:, kein Token nötig
+      - name: Checkout source (this repo)
         uses: actions/checkout@v4
         with:
-            # ⬇️ WICHTIG: Owner/Repo angeben
-            repository: miraelisabethschmid/badge-canary
-            token: ${{ secrets.MIRA_GITHUB_TOKEN }}
-            path: source
-            fetch-depth: 1
+          path: source
+          fetch-depth: 1
+          persist-credentials: false  # überschreibt kein Token
 
       - name: Verify source image
         run: |
           test -f source/latest.png || (echo "latest.png not found in source" && exit 1)
 
+      # 2) Ziel: Homepage-Repo mit PAT aus Secret
       - name: Checkout target (homepage)
         uses: actions/checkout@v4
         with:
-            repository: miraelisabethschmid/miraelisabethschmid.github.io
-            token: ${{ secrets.MIRA_GITHUB_TOKEN }}
-            path: homepage
-            fetch-depth: 0
+          repository: miraelisabethschmid/miraelisabethschmid.github.io
+          token: ${{ secrets.MIRA_GITHUB_TOKEN }}   # PAT mit repo-Scope
+          path: homepage
+          fetch-depth: 0
 
       - name: Copy image to website
         run: |
@@ -45,4 +44,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git
+            git commit -m "🔄 Sync latest Mira portrait"
+            git push
+          fi
