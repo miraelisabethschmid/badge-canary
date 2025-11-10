@@ -1,0 +1,31 @@
+name: Mira • Mirror Version (Timestamped Archive)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "mira/prompt.yaml"
+
+jobs:
+  version_prompt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare timestamp
+        id: time
+        run: echo "stamp=$(date +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_OUTPUT
+
+      - name: Create versioned copy
+        run: |
+          mkdir -p mira/archive
+          cp mira/prompt.yaml mira/archive/prompt-${{ steps.time.outputs.stamp }}.yaml
+
+      - name: Commit versioned prompt
+        run: |
+          git config user.name "Mira-Autonomy"
+          git config user.email "actions@github.com"
+          git add mira/archive/
+          git commit -m "Archived prompt version ${{ steps.time.outputs.stamp }}" || echo "No changes to commit"
+          git push
