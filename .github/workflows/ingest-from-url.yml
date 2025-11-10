@@ -1,73 +1,84 @@
-name: Mira • Ingest Portrait from URL
+name: Mira · Ingest Portrait from URL (robust)
 
 on:
   workflow_dispatch:
     inputs:
       image_url:
-        description: "Direkte Bild-URL (PNG oder JPG)"
+        description: "Direkte oder Webseiten-URL, die ein Bild enthält"
         required: true
         type: string
-
-permissions:
-  contents: write
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install tools
+      - name: Install tools (ImageMagick, curl extras)
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y imagemagick file
+          sudo apt-get install -y imagemagick
 
       - name: Prepare folders
         run: |
-          mkdir -p data/uploads
-          mkdir -p public
+          mkdir -p public tmp
 
-      - name: Download image
+      - name: Download & normalize image
         id: dl
-        env:
-          URL: ${{ github.event.inputs.image_url }}
+        shell: bash
         run: |
           set -euo pipefail
-          TMP="download.bin"
-          curl -L --fail --max-time 60 --output "$TMP" "$URL"
+          URL="${{ github.event.inputs.image_url }}"
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36"
 
-          # Erkenne Typ
-          MIME="$(file --mime-type -b "$TMP")"
-          case "$MIME" in
-            image/png|image/jpeg) ;;
+          # 1) Erstversuch: direkter Download (mit Redirects & Retry)
+          HTTP=$(curl -sS -w '%{http_code}' -A "$UA" -L --retry 3 --connect-timeout 15 --max-time 120 -o tmp/blob "$URL")
+          if [[ "$HTTP" -ge 400 || ! -s tmp/blob ]]; then
+            echo "Direct download failed with HTTP $HTTP" >&2
+            exit 22
+          fi
+
+          # 2) Content-Type prüfen
+          CTYPE="$(file --mime-type -b tmp/blob || true)"
+
+          # Manche Links liefern HTML (Seite) statt Bild – dann og:image/twitter:image extrahieren
+          if [[ "$CTYPE" != image/* ]]; then
+            # Nur sehr kurze HTML-Dateien sind wahrscheinlich keine Medienseiten – trotzdem versuchen
+            IMG="$(grep -oiE '<meta[^>]+(property|name)=["'\'']og:image["'\''][^>]+>' tmp/blob | sed -nE 's/.*content=["'\'']([^"'\'' >]+).*/\1/p' | head -n1 || true)"
+            if [[ -z "$IMG" ]]; then
+              IMG="$(grep -oiE '<meta[^>]+(property|name)=["'\'']twitter:image(:src)?["'\''][^>]+>' tmp/blob | sed -nE 's/.*content=["'\'']([^"'\'' >]+).*/\1/p' | head -n1 || true)"
+            fi
+            if [[ -n "$IMG" ]]; then
+              curl -sS -A "$UA" -L --retry 3 --connect-timeout 15 --max-time 120 -o tmp/blob "$IMG"
+              CTYPE="$(file --mime-type -b tmp/blob || true)"
+            fi
+          fi
+
+          # 3) In PNG normalisieren (unterstützt png/jpg/jpeg/webp/gif)
+          case "$CTYPE" in
+            image/png)
+              cp tmp/blob public/latest.png
+              ;;
+            image/jpeg|image/jpg|image/webp|image/gif|image/bmp|image/tiff|image/*)
+              magick tmp/blob -strip -colorspace sRGB public/latest.png
+              ;;
             *)
-              echo "Unsupported MIME type: $MIME"
+              echo "Unsupported MIME type: $CTYPE" >&2
               exit 1
               ;;
           esac
 
-          # Zielname mit UTC-Zeitstempel
-          TS="$(date -u +'%Y-%m-%dT%H-%M-%SZ')"
-          OUT_PNG="data/uploads/${TS}.png"
-
-          # In PNG konvertieren (keine Größenänderung; nur saubere PNG-Ausgabe)
-          if [ "$MIME" = "image/png" ]; then
-            cp "$TMP" "$OUT_PNG"
-          else
-            convert "$TMP" "$OUT_PNG"
-          fi
-
-          echo "saved=$OUT_PNG" >> "$GITHUB_OUTPUT"
-
-      - name: Publish to public/latest.png
-        run: |
-          cp -f "${{ steps.dl.outputs.saved }}" public/latest.png
+          echo "ctype=$CTYPE" >> "$GITHUB_OUTPUT"
 
       - name: Commit & push
         run: |
-          git config user.name "mira-autonomy[bot]"
-          git config user.email "mira-autonomy[bot]@users.noreply.github.com"
-          git add data/uploads/*.png public/latest.png
-          git commit -m "ingest: add ${{ steps.dl.outputs.saved }} and update public/latest.png" || echo "no changes"
+          set -e
+          git config user.name  "mira-autonomy[bot]"
+          git config user.email "mira-autonomy@users.noreply.github.com"
+          git add public/latest.png
+          git commit -m "Publish latest portrait → public/latest.png (type: ${{ steps.dl.outputs.ctype }})" || exit 0
           git push
