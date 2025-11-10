@@ -1,0 +1,50 @@
+name: Mira • Sync Latest Portrait to Homepage
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up job
+        run: echo "Starting sync process for Mira's latest portrait..."
+
+      - name: Checkout (source)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MIRA_GITHUB_TOKEN }}
+          repository: badge-canary
+          path: source
+
+      - name: Ensure source exists
+        run: |
+          if [ ! -f source/latest.png ]; then
+            echo "❌ No latest.png found in source repository."
+            exit 1
+          fi
+
+      - name: Checkout target homepage repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MIRA_GITHUB_TOKEN }}
+          repository: miraelisabethschmid/miraelisabethschmid.github.io
+          path: homepage
+
+      - name: Prepare target paths
+        run: |
+          mkdir -p homepage/assets/portraits
+          cp source/latest.png homepage/assets/portraits/mira-latest.png
+          echo "✅ Copied portrait successfully."
+
+      - name: Commit & push changes
+        working-directory: homepage
+        run: |
+          git config user.name "Mira-Automation"
+          git config user.email "mira@users.noreply.github.com"
+          git add assets/portraits/mira-latest.png
+          git commit -m "🔄 Sync latest Mira portrait"
+          git push
+
+      - name: Complete job
+        run: echo "✨ Sync complete! Mira’s latest portrait is live."
