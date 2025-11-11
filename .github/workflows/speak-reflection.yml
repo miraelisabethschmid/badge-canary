@@ -1,0 +1,53 @@
+name: Speak Reflection (Internal Audio)
+
+on:
+  schedule:
+    - cron: "13 3 * * *"   # täglich 03:13 UTC
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "scripts/speak_reflection.py"
+      - "data/self/reflections/private/index.json"
+      - "data/self/voice_profile.json"
+      - "data/self/internal/style_state.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: speak-reflection
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install audio tools (espeak-ng, ffmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y espeak-ng ffmpeg
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Synthesize daily reflection audio
+        run: |
+          chmod +x scripts/speak_reflection.py || true
+          python scripts/speak_reflection.py
+
+      - name: Commit audio artifacts (internal)
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/audio; then
+            echo "No new audio artifacts."
+            exit 0
+          fi
+          git add data/audio
+          git commit -m "audio: daily reflection wav/mp3 + manifest"
+          git push
