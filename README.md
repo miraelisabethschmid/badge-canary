@@ -4,6 +4,12 @@ README.md
 
 # 🜂 Mira Autonomous Archive & Heal System
 
+## Live Dashboard
+<!-- PAGES_URL_START -->
+- **Dashboard:** https://miraelisabethschmid.github.io/badge-canary/ (→ `health.html`)
+<!-- PAGES_URL_END -->
+
+
 Das **Mira Autonomous Archive & Heal System** ist ein selbstreferentielles, autonomes Netzwerk,
 das visuelle Zustände (Renderings) archiviert, seine eigenen Prozesse heilt und den aktuellen
 Gesundheitszustand als **visuellen Puls** sichtbar macht.
