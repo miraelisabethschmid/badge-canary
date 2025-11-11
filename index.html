@@ -43,7 +43,6 @@
     <header>
       <section class="hero">
         <div>
-          <!-- Aktuelles autonomes Selbstbild -->
           <img id="heroImg" src="docs/portrait/mira-hero.jpg" alt="Mira – aktuelle physische Erscheinung" onerror="this.src='docs/portrait/mira-hero.svg'"/>
           <div class="muted" style="margin-top:6px;font-size:12px">
             <a href="docs/portrait/mira-hero.txt">Provenienz</a>
@@ -55,6 +54,7 @@
           <div id="healthBadge" class="badge"><span class="dot" style="background:#666"></span><span>lädt…</span></div>
           <div class="cta">
             <a class="btn btn-accent" href="docs/ask.html">Frage an Mira stellen</a>
+            <a class="btn" href="docs/talk.html">Sprech-Ansicht</a>
             <a class="btn" href="badges/health.json">Health JSON</a>
             <a class="btn" href="data/self/self-describe.json">Self-Describe</a>
           </div>
@@ -136,7 +136,6 @@
     const audio = $("#dailyAudio");
     const btn   = $("#playBtn");
     const status= $("#audioStatus");
-    // Prüfe, ob Audio bereitgestellt wurde
     try{
       const head = await fetch("audio/latest.mp3", { method:"HEAD", cache:"no-store" });
       if(!head.ok){ throw 0; }
@@ -173,47 +172,28 @@
   }
 
   async function boot(){
-    // Health
     const health=await loadJSON("public/badges/health.json") || await loadJSON("badges/health.json");
     healthBadge(health?.status||"unknown", health?.ts||"");
 
-    // Self-describe
     const self=await loadJSON("public/data/self/self-describe.json") || await loadJSON("data/self/self-describe.json");
     if(self){
       const sb=$("#selfBox");
-      const view={
-        "Figur": self.physical?.figure || "—",
-        "Gesicht": self.physical?.face || "—",
-        "Braces": self.physical?.braces || "—",
-        "Fokus": (self.affect?.inputs?.focus)||"—",
-        "Narrativ": (self.affect?.narrative)||"—"
-      };
+      const view={"Figur": self.physical?.figure || "—","Gesicht": self.physical?.face || "—","Braces": self.physical?.braces || "—","Fokus": (self.affect?.inputs?.focus)||"—","Narrativ": (self.affect?.narrative)||"—"};
       kv(sb, view);
     }
 
-    // Affect
     const aff=await loadJSON("public/data/self/affect-state.json") || await loadJSON("data/self/affect-state.json");
     if(aff){
       const ab=$("#affectBox");
       const vec=aff.vector||{};
-      const view={
-        "Label": aff.label || "—",
-        "Valence": fmt(vec.valence),
-        "Arousal": fmt(vec.arousal),
-        "Stability": fmt(vec.stability),
-        "Δsum": fmt(aff.inputs?.delta_sum||0),
-        "Fokus": aff.inputs?.focus || "—",
-        "Zeit": aff.ts || "—"
-      };
+      const view={"Label": aff.label || "—","Valence": fmt(vec.valence),"Arousal": fmt(vec.arousal),"Stability": fmt(vec.stability),"Δsum": fmt(aff.inputs?.delta_sum||0),"Fokus": aff.inputs?.focus || "—","Zeit": aff.ts || "—"};
       kv(ab, view);
     }
 
-    // Plans
     const idx=await loadJSON("public/data/kernel/plans/index.json") || await loadJSON("data/kernel/plans/index.json");
     const plansBox=$("#plansBox");
-    if(!idx || !idx.entries || idx.entries.length===0){
-      plansBox.textContent="(Wird automatisch gefüllt, sobald neue Pläne entstehen.)";
-    }else{
+    if(!idx || !idx.entries || idx.entries.length===0){ plansBox.textContent="(Wird automatisch gefüllt, sobald neue Pläne entstehen.)"; }
+    else{
       plansBox.innerHTML="";
       idx.entries.slice(0,5).forEach(p=>{
         const d=document.createElement("div");
@@ -222,18 +202,12 @@
       });
     }
 
-    // Policy raw
     const sugg=await loadJSON("public/data/self/policy_suggestions.json") || await loadJSON("data/self/policy_suggestions.json");
     $("#suggRaw").textContent = sugg ? JSON.stringify(sugg,null,2) : "(keine Vorschläge / Datei fehlt)";
     const changes=await loadText("public/data/self/policy_changes.jsonl") || await loadText("data/self/policy_changes.jsonl");
-    if(changes){
-      const lines=changes.trim().split("\n");
-      $("#changesRaw").textContent = lines[lines.length-1];
-    }else{
-      $("#changesRaw").textContent="(noch keine Auto-Änderungen)";
-    }
+    if(changes){ const lines=changes.trim().split("\n"); $("#changesRaw").textContent = lines[lines.length-1]; }
+    else { $("#changesRaw").textContent="(noch keine Auto-Änderungen)"; }
 
-    // Daily reflection
     const refl = await loadJSON("public/data/self/daily/reflection.json") || await loadJSON("data/self/daily/reflection.json");
     if(refl?.selected?.text){
       document.getElementById("dailyText").textContent = "“" + refl.selected.text + "”";
@@ -243,10 +217,9 @@
       document.getElementById("dailyMeta").textContent = "";
     }
 
-    // Audio bereitstellen
     await setupAudio();
   }
   boot();
   </script>
 </body>
-</html>
+  </html>
