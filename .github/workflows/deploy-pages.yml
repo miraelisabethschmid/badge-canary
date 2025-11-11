@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write     # <-- nötig, um README nach dem Deploy zu aktualisieren
+  contents: write     # README-Update nach Deploy
   pages: write
   id-token: write
 
@@ -31,17 +31,17 @@ jobs:
         run: |
           rm -rf public
           mkdir -p public
-          # 1) Dashboard HTML
+          # 1) Dashboard/Docs
           cp -r docs/* public/ 2>/dev/null || true
-          # 2) Badges (SVG + JSON)
+          # 2) Badges
           mkdir -p public/badges
           cp -r badges/* public/badges/ 2>/dev/null || true
-          # 3) Ledger (JSONL logs)
+          # 3) Ledger
           mkdir -p public/data/ledger
           cp -r data/ledger/events.jsonl public/data/ledger/ 2>/dev/null || true
-          # 4) Goals (teleologische Ebene)
+          # 4) Goals (inkl. History)
           mkdir -p public/data/goals
-          cp -r data/goals/current.json public/data/goals/ 2>/dev/null || true
+          cp -r data/goals/* public/data/goals/ 2>/dev/null || true
           # 5) Minimal index redirect
           if [ ! -f public/index.html ]; then
             echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=health.html"><a href="health.html">Go to health.html</a>' > public/index.html
@@ -80,9 +80,8 @@ jobs:
 
           file="README.md"
           title="## Live Dashboard"
-          link="- **Dashboard:** ${PAGE_URL} (→ \`health.html\`)"
+          link="- **Dashboard:** ${PAGE_URL} (→ \`health.html\`) · **Philosophy Timeline:** ${PAGE_URL}philosophy.html"
 
-          # Marker-basierte, idempotente Aktualisierung
           start="<!-- PAGES_URL_START -->"
           end="<!-- PAGES_URL_END -->"
 
@@ -96,7 +95,6 @@ jobs:
                   if (!inblk) print
                 }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
             else
-              # Abschnitt einfügen (unter erster Überschrift, sonst am Ende)
               if grep -n '^# ' "$file" >/dev/null; then
                 line=$(grep -n '^# ' "$file" | head -n1 | cut -d: -f1)
                 head -n "$line" "$file" > "$file.tmp"
@@ -121,7 +119,6 @@ jobs:
               fi
             fi
           else
-            # README neu anlegen, falls nicht vorhanden
             {
               echo "# Repository"
               echo ""
@@ -143,5 +140,5 @@ jobs:
             exit 0
           fi
           git add README.md
-          git commit -m "docs: link Pages URL into README"
+          git commit -m "docs: link Pages URL (dashboard + philosophy)"
           git push
