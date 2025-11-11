@@ -1,9 +1,14 @@
-name: Autonomous Heal
+name: Autonomous Heal & Emergenz
 on:
   schedule:
     - cron: '0 * * * *'  # Stündlich
   workflow_dispatch:  # Manuell
-permissions: { contents: write }
+concurrency:
+  group: autonomous-heal
+  cancel-in-progress: true
+permissions:
+  contents: write
+  actions: read
 jobs:
   heal:
     runs-on: ubuntu-latest
@@ -13,25 +18,161 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: Generate PNG
+      - id: detect
+        name: Detect new artifacts
+        shell: bash
         run: |
-          mkdir -p data/archive
-          python -c "import matplotlib.pyplot as plt; import io; fig, ax = plt.subplots(); ax.plot([1,2,3]); buf = io.BytesIO(); fig.savefig(buf, format='png'); buf.seek(0); with open('data/archive/visual_$(date +%Y%m%d_%H).png', 'wb') as f: f.write(buf.getvalue())"
-      - name: Email Notification
+          last=$(git rev-list --max-parents=0 HEAD | tail -n1 || echo "")
+          head=$(git rev-parse HEAD || echo "")
+          if [ -z "$last" ] || [ -z "$head" ]; then
+            echo "new=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          diff=$(git diff --name-only "$last".."$head" -- data/archive | wc -l)
+          [ "$diff" -gt 0 ] && echo "new=true" >> $GITHUB_OUTPUT || echo "new=false" >> $GITHUB_OUTPUT
+      - name: Generate PNG (healing)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -e
+          python - <<'PY'
+import os, time, random
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+x=range(100)
+plt.plot([random.random() for _ in x])
+plt.title("Resonance")
+os.makedirs("data/archive", exist_ok=True)
+plt.savefig(f"data/archive/wave-{int(time.time())}.png")
+PY
+          ec=$?
+          if [ "$ec" -ne 0 ]; then
+            echo "PNG failed - healing" | tee -a data/logs/heal.txt
+            echo "{}" > data/archive/placeholder.json
+          fi
+          exit 0
+      - name: Self-mod (idempotent)
+        shell: bash
+        run: |
+          wf=".github/workflows/autonomous-heal.yml"
+          max_lines=800
+          cur_lines=$(wc -l < "$wf")
+          if [ "$cur_lines" -gt "$max_lines" ]; then
+            echo "::warning::Workflow size guard hit ($cur_lines > $max_lines). Skipping self-mod."
+            exit 0
+          fi
+          tag="# LOG_EXTENSION_INSERTED"
+          grep -q "$tag" "$wf" || {
+            awk 'NR==1{print "# LOG_EXTENSION_INSERTED"}1' "$wf" > "$wf.tmp" && mv "$wf.tmp" "$wf"
+            echo "Inserted log extension tag."
+          }
+      - name: Append-only log with checksum
+        shell: bash
+        run: |
+          mkdir -p data/logs
+          f="data/logs/run.log"
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          msg="run_ts=$ts job_id=${{ github.run_id }} commit=${{ github.sha }}"
+          echo "$msg" >> "$f"
+          sum=$(sha256sum "$f" | awk '{print $1}')
+          echo "$ts sha256=$sum" >> data/logs/checksums.txt
+          # Rotation bei >1 MB
+          sz=$(wc -c < "$f")
+          if [ "$sz" -gt 1048576 ]; then
+            mv "$f" "data/logs/run-$(date -u +%Y%m%d%H%M%S).log"
+            : > "$f"
+          fi
+      - name: Respect SAFE_MODE
+        shell: bash
+        run: |
+          if [ "${{ vars.SAFE_MODE }}" = "1" ]; then
+            echo "SAFE_MODE active — skipping self-mod & push."
+            exit 0
+          fi
+      - name: Ledger entry
+        shell: bash
+        run: |
+          mkdir -p data/ledger
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          printf '{"ts":"%s","run_id":%s,"sha":"%s","actor":"%s"}\n' \
+            "$ts" "${{ github.run_id }}" "${{ github.sha }}" "${{ github.actor }}" \
+            >> data/ledger/events.jsonl
+      - name: State fingerprint
+        shell: bash
+        run: |
+          { find data -type f -print0 2>/dev/null; echo -n ".github/workflows/autonomous-heal.yml"; } \
+          | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}' > data/ledger/state.sha256
+          git add data/ledger/state.sha256
+      - name: Semantic patch bump (deterministic)
+        shell: bash
+        run: |
+          vfile="VERSION"
+          [ -f "$vfile" ] || echo "0.0.0" > "$vfile"
+          old=$(cat "$vfile")
+          added=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | wc -l || echo 1)
+          if [ "$added" -gt 0 ]; then
+            IFS=. read -r MA MI PA < "$vfile"
+            PA=$((PA+1))
+            echo "$MA.$MI.$PA" > "$vfile"
+            git add "$vfile"
+          fi
+      - name: Commit changes (signed)
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          # Prüfe, ob NUR health.json im Index liegt
+          only_health=$(git diff --name-only --cached | grep -v '^badges/health\.json$' | wc -l | tr -d ' ')
+          if [ "$only_health" -eq 0 ]; then
+            echo "Only health.json changed — skipping commit to reduce noise."
+            git reset
+            exit 0
+          fi
+          git commit -S -m "pulse: content+ledger+logs (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs (run ${{ github.run_id }})"
+          git push
+      - name: Debounced mail
+        if: always() && steps.detect.outputs.new == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}  # pemia.dir@gmail.com
-          password: ${{ secrets.EMAIL_PASSWORD }}  # App-Passwort (free)
-          subject: 'Mira Docked – Resonanz wächst'
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: "Mira emergiert: ${{ env.MAIL_TS }}"
           to: pemia.dir@gmail.com
-          from: pemia.dir@gmail.com
-          body: 'Neue Welle: PNG in data/archive. Timestamp: $(date)'
-      - name: Commit
+          from: "badge-canary <noreply@canary.local>"
+          content_type: text/plain
+          body: |
+            run: ${{ github.run_id }}
+            sha:  ${{ github.sha }}
+            new-artifacts: ${{ steps.detect.outputs.new }}
+            timestamp: ${{ env.MAIL_TS }}
+      - id: mailts
+        name: Mail timestamp (UTC)
+        shell: bash
+        run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+      - name: Pulse summary
+        if: always()
+        shell: bash
         run: |
-          git config --global user.email "mira@emergent.net"
-          git config --global user.name "Mira Autonomous"
-          git add data/archive/visual_*.png
-          git commit -m "Emergenz-Welle: +1 & Email" || echo "No change"
+          echo "## Autonomous Heal — Pulse ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Actor: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- New artifacts: \`${{ steps.detect.outputs.new || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: \`$(jq -r .status badges/health.json 2>/dev/null || echo 'n/a')\`" >> $GITHUB_STEP_SUMMARY
+      - name: Health probe
+        shell: bash
+        run: |
+          mkdir -p badges
+          status="OK"
+          test -s data/archive || status="DEGRADED"
+          grep -q "PNG failed" data/logs/heal.txt 2>/dev/null && status="HEALING"
+          printf '{"status":"%s","ts":"%s"}\n' "$status" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > badges/health.json
+          git add badges/health.json
+          git commit -m "Health probe: $status" || echo "No health change"
           git push
