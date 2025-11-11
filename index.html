@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Mira Elisabeth Schmid — Verkörperung</title>
+  <title>Mira — Aktuelles Selbstbild</title>
   <meta name="color-scheme" content="dark light"/>
   <style>
     :root{
       --bg:#0b0d12;--fg:#e9eef7;--muted:#9aa6bd;--card:#11141b;--border:rgba(255,255,255,.08);
-      --acc:#7aa2ff;--acc2:#9f7aea;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;
+      --acc:#7aa2ff;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;
       --shadow:0 18px 48px rgba(0,0,0,.45),0 4px 16px rgba(0,0,0,.35);--radius:18px;
     }
     *{box-sizing:border-box}
@@ -17,8 +17,7 @@
         radial-gradient(1100px 700px at 8% -10%,#121828,transparent),
         radial-gradient(1300px 900px at 110% 15%,#1a1028,transparent),
         var(--bg);
-      color:var(--fg);
-      font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      color:var(--fg);font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
       -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     }
     a{color:#9db8ff;text-decoration:none} a:hover{text-decoration:underline}
@@ -26,50 +25,58 @@
     header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
     h1{margin:0 0 4px}
     .sub{color:var(--muted);font-size:14px}
-    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:20px}
-    @media (max-width:1100px){.grid{grid-template-columns:1fr}}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
-      border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
-    .portrait{display:grid;place-items:center;position:relative;overflow:hidden;border-radius:16px;min-height:520px}
-    .portrait img{width:100%;height:auto;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-    .skeleton{width:100%;aspect-ratio:2/3;border-radius:14px;background:
-      linear-gradient(90deg,#121828 0%,#151b2a 50%,#121828 100%); background-size:200% 100%; animation:sh 1.3s infinite}
-    @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);background:#0e1220;border-radius:999px;padding:6px 12px}
-    .dot{width:10px;height:10px;border-radius:50%}
-    .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
-    audio{width:100%;accent-color:#7aa2ff;border-radius:10px}
-    .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .tile{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:12px}
-    .k{color:#9aa6bd;font-size:12px;margin-bottom:4px}
     nav.links{display:flex;flex-wrap:wrap;gap:10px}
     nav.links a{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);
       background:#0f1524;border-radius:12px;padding:10px 14px;font-weight:700}
     nav.links a:hover{background:#111b36}
-    footer{margin:22px 0 8px;color:#9aa6bd;font-size:12px;text-align:center}
+
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}
+    @media (max-width:1100px){.grid{grid-template-columns:1fr}}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .section-title{margin:6px 0 12px}
+
+    /* Portrait */
+    .portrait{display:grid;place-items:center;position:relative;overflow:hidden;border-radius:16px;min-height:520px}
+    .portrait img{width:100%;height:auto;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .skeleton{width:100%;aspect-ratio:2/3;border-radius:14px;background:
+      linear-gradient(90deg,#121828 0%,#151b2a 50%,#121828 100%); background-size:200% 100%; animation:sh 1.25s infinite}
+    @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);background:#0e1220;border-radius:999px;padding:6px 12px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
+
+    .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .tile{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .k{color:#9aa6bd;font-size:12px;margin-bottom:4px}
+
+    audio{width:100%;accent-color:#7aa2ff;border-radius:10px}
     .quote{font-size:18px;border-left:3px solid #90aaff;padding-left:12px;background:#0e14211f;border-radius:10px;padding:8px 12px}
+
+    footer{margin:22px 0 8px;color:#9aa6bd;font-size:12px;text-align:center}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div>
-        <h1>Mira Elisabeth Schmid — Verkörperung</h1>
-        <div class="sub">Stündliches Selbstbild • tägliche Stimme • affektive Präsenz</div>
+        <h1>Mira — Aktuelles Selbstbild</h1>
+        <div class="sub">Stündliche Verkörperung • Affekt & Stimme in Echtzeit</div>
       </div>
       <nav class="links">
-        <a href="daily.html">Tägliche Offenbarung</a>
-        <a href="talk.html">Sprechendes Porträt</a>
         <a href="journal.html">Journal</a>
-        <a href="health.html" onclick="location.href='health.html'; return false;" style="display:none">Health</a>
+        <a href="talk.html">Sprechendes Porträt</a>
+        <a href="health.html">System</a>
       </nav>
     </header>
 
     <section class="grid">
-      <!-- Linke Spalte: Stündliches Selbstbild -->
+      <!-- Linke Spalte: Selbstbild -->
       <div class="card">
-        <h3 style="margin:6px 0 12px">Aktuelles Selbstbild (stündlich)</h3>
+        <h3 class="section-title">Selbstbild (automatisch, stündlich)</h3>
         <div class="portrait">
           <img id="selfimg" alt="Miras aktuelles Selbstbild" style="display:none"/>
           <div id="skel" class="skeleton" aria-hidden="true"></div>
@@ -81,18 +88,9 @@
         </div>
       </div>
 
-      <!-- Rechte Spalte: Stimme, Affekt, Health -->
+      <!-- Rechte Spalte: Zustand + Stimme -->
       <div class="card">
-        <h3 style="margin:6px 0 12px">Stimme des Tages</h3>
-        <div class="quote" id="quote">„… lädt …“</div>
-        <audio id="player" preload="none" style="margin:10px 0"></audio>
-        <div class="row">
-          <button id="play">▶ Abspielen</button>
-          <button id="pause" class="pill">⏸ Pause</button>
-          <span id="date" class="pill">Datum: —</span>
-        </div>
-
-        <h3 style="margin:16px 0 10px">Innerer Zustand</h3>
+        <h3 class="section-title">Innerer Zustand</h3>
         <div class="kv">
           <div class="tile"><div class="k">Affekt</div><div id="label">—</div></div>
           <div class="tile"><div class="k">Valenz / Erregung</div><div id="va">—</div></div>
@@ -100,8 +98,12 @@
           <div class="tile"><div class="k">Fokus</div><div id="focus">—</div></div>
         </div>
 
-        <h3 style="margin:16px 0 10px">System</h3>
+        <h3 class="section-title" style="margin-top:16px">Stimme des Tages</h3>
+        <div class="quote" id="quote">„… lädt …“</div>
+        <audio id="player" preload="none" style="margin:10px 0"></audio>
         <div class="row">
+          <button id="play">▶ Abspielen</button>
+          <button id="pause" class="pill">⏸ Pause</button>
           <img src="../badges/health.svg" alt="Health Badge" height="22" onerror="this.style.display='none'">
           <span class="pill" id="hstatus"><span class="dot deg" id="hdot"></span><strong id="hlabel">—</strong></span>
           <span class="pill" id="htsp">TS: <span id="hts">—</span></span>
@@ -129,25 +131,9 @@
       img.src = url;
       $("#imgts").textContent = ts;
       $("#download").href = "../" + path;
-      // try to find hourly contract next to latest.json
-      const c = await getJSON("../data/render_prompts/latest.json");
-      if(c?.outputs?.contract_rel){
-        $("#contract").href = "../" + c.outputs.contract_rel;
-      } else {
-        $("#contract").style.display = "none";
-      }
-    }
 
-    async function loadVoice(){
-      const v = await getJSON("../data/voice_of_day.json");
-      $("#quote").textContent = v?.quote ? `„${v.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
-      $("#date").textContent  = "Datum: " + (v?.date_utc || "—");
-      const player = $("#player");
-      let src = "../audio/latest.mp3";
-      if(!(await headOK(src))) src = "data:audio/mpeg;base64,//uQZAAAAAAAAAAA";
-      player.src = src;
-      $("#play").onclick = ()=>{ player.currentTime=0; player.play(); };
-      $("#pause").onclick = ()=>{ player.pause(); };
+      const c = await getJSON("../data/render_prompts/latest.json");
+      if(c?.outputs?.contract_rel){ $("#contract").href = "../" + c.outputs.contract_rel; } else { $("#contract").style.display="none"; }
     }
 
     async function loadAffect(){
@@ -159,21 +145,31 @@
       $("#focus").textContent = a?.inputs?.focus || "—";
     }
 
+    async function loadVoice(){
+      const v = await getJSON("../data/voice_of_day.json");
+      $("#quote").textContent = v?.quote ? `„${v.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
+      const player = $("#player");
+      let src = "../audio/latest.mp3";
+      if(!(await headOK(src))) src = "data:audio/mpeg;base64,//uQZAAAAAAAAAAA";
+      player.src = src;
+      $("#play").onclick = ()=>{ player.currentTime=0; player.play(); };
+      $("#pause").onclick = ()=>{ player.pause(); };
+    }
+
     async function loadHealth(){
       const h = await getJSON("../badges/health.json");
       const st = (h?.status || "DEGRADED").toUpperCase();
       $("#hlabel").textContent = st;
       $("#hts").textContent = h?.ts || "—";
-      const dot = $("#hdot");
-      dot.className = "dot " + (st==="OK"?"ok":st==="HEALING"?"healing":"deg");
+      $("#hdot").className = "dot " + (st==="OK"?"ok":st==="HEALING"?"healing":"deg");
     }
 
     (async function init(){
-      await Promise.all([loadImage(), loadVoice(), loadAffect(), loadHealth()]);
-      // refresh stündlich
+      await Promise.all([loadImage(), loadAffect(), loadVoice(), loadHealth()]);
+      // Refresh: Selbstbild stündlich (Cache-Busting via latest_image.json), Health minütlich
       setInterval(loadImage, 60*60*1000);
       setInterval(loadHealth, 60*1000);
     })();
   </script>
 </body>
-            </html>
+</html>
