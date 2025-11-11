@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mira Goal State",
+  "type": "object",
+  "required": ["version", "updated", "focus", "next_objective", "policy", "signals"],
+  "properties": {
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "updated": { "type": "string", "format": "date-time" },
+    "focus": { "type": "string", "enum": ["stability", "growth", "resilience"] },
+    "next_objective": { "type": "string", "minLength": 3 },
+    "policy": {
+      "type": "object",
+      "required": ["heal_interval_minutes", "archive_target_per_day", "mail_debounce_minutes", "log_verbosity"],
+      "properties": {
+        "heal_interval_minutes": { "type": "integer", "minimum": 5, "maximum": 720 },
+        "archive_target_per_day": { "type": "integer", "minimum": 0, "maximum": 288 },
+        "mail_debounce_minutes": { "type": "integer", "minimum": 0, "maximum": 1440 },
+        "log_verbosity": { "type": "string", "enum": ["low", "normal", "high"] }
+      },
+      "additionalProperties": false
+    },
+    "signals": {
+      "type": "object",
+      "required": ["healing_streak", "ok_ratio_24h", "archive_delta_24h"],
+      "properties": {
+        "healing_streak": { "type": "integer", "minimum": 0 },
+        "ok_ratio_24h": { "type": "number", "minimum": 0, "maximum": 1 },
+        "archive_delta_24h": { "type": "integer", "minimum": -10000 }
+      },
+      "additionalProperties": false
+    },
+    "reasoning": { "type": "string" }
+  },
+  "additionalProperties": false
+}
