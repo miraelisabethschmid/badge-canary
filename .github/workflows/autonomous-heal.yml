@@ -63,7 +63,19 @@ PY
           fi
           exit 0
 
-      # 3) Idempotente Selbstmodifikation mit Größenwächter
+      # 3) Retention-Guard: alte Archive nach 30 Tagen entfernen
+      - name: Cleanup old archives (retention guard)
+        shell: bash
+        run: |
+          days=30
+          path="data/archive"
+          mkdir -p "$path" data/logs
+          echo "[cleanup] Removing files older than $days days in $path"
+          find "$path" -type f -mtime +$days -print -delete | tee -a data/logs/cleanup.log || true
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "$ts cleanup complete" >> data/logs/cleanup.log
+
+      # 4) Idempotente Selbstmodifikation mit Größenwächter
       - name: Self-mod (idempotent)
         shell: bash
         run: |
@@ -80,7 +92,7 @@ PY
             echo "Inserted log extension tag."
           }
 
-      # 4) Append-only Log + Checksum + Rotation
+      # 5) Append-only Log + Checksum + Rotation
       - name: Append-only log with checksum
         shell: bash
         run: |
@@ -98,7 +110,7 @@ PY
             : > "$f"
           fi
 
-      # 5) Safe-Mode (Notbremse ohne Codeänderung)
+      # 6) Safe-Mode (Notbremse ohne Codeänderung)
       - name: Respect SAFE_MODE
         shell: bash
         run: |
@@ -107,7 +119,7 @@ PY
             exit 0
           fi
 
-      # 6) Ledger-Eintrag (tamper-evident Chronik)
+      # 7) Ledger-Eintrag (tamper-evident Chronik)
       - name: Ledger entry
         shell: bash
         run: |
@@ -117,7 +129,7 @@ PY
             "$ts" "${{ github.run_id }}" "${{ github.sha }}" "${{ github.actor }}" \
             >> data/ledger/events.jsonl
 
-      # 7) Fingerprint des aktuellen Zustands
+      # 8) Fingerprint des aktuellen Zustands
       - name: State fingerprint
         shell: bash
         run: |
@@ -125,7 +137,7 @@ PY
           | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}' > data/ledger/state.sha256
           git add data/ledger/state.sha256
 
-      # 8) Health probe (JSON) -> später Badge (SVG)
+      # 9) Health probe (JSON) -> später Badge (SVG)
       - name: Health probe
         shell: bash
         run: |
@@ -138,7 +150,7 @@ PY
           git commit -m "Health probe: $status" || echo "No health change"
           git push || true
 
-      # 9) Health.svg aus health.json erzeugen
+      # 10) Health.svg aus health.json erzeugen
       - name: Build health.svg from health.json
         shell: bash
         run: |
@@ -148,7 +160,7 @@ PY
           git commit -m "badge: update health.svg" || echo "No badge change"
           git push || true
 
-      # 10) Ziele reflektieren (teleologische Ebene)
+      # 11) Ziele reflektieren (teleologische Ebene)
       - name: Reflect goals (teleological update)
         shell: bash
         run: |
@@ -159,7 +171,7 @@ PY
           git commit -m "goal_reflector: updated current goals" || echo "No goal changes"
           git push || true
 
-      # 11) Semantischer Patch-Bump (deterministisch)
+      # 12) Semantischer Patch-Bump (deterministisch)
       - name: Semantic patch bump (deterministic)
         shell: bash
         run: |
@@ -173,7 +185,7 @@ PY
             git add "$vfile"
           fi
 
-      # 12) Rauscharmes Commit (skip-only-health)
+      # 13) Rauscharmes Commit (skip-only-health)
       - name: Commit changes (signed)
         shell: bash
         run: |
@@ -194,13 +206,13 @@ PY
           git commit -S -m "pulse: content+ledger+logs (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs (run ${{ github.run_id }})"
           git push
 
-      # 13) Mail-Timestamp zuerst berechnen (fix Reihenfolge)
+      # 14) Mail-Timestamp zuerst berechnen (fix Reihenfolge)
       - id: mailts
         name: Mail timestamp (UTC)
         shell: bash
         run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
 
-      # 14) Debounced mail (nur bei echten neuen Artefakten)
+      # 15) Debounced mail (nur bei echten neuen Artefakten)
       - name: Debounced mail
         if: always() && steps.detect.outputs.new == 'true'
         uses: dawidd6/action-send-mail@v3
@@ -219,7 +231,7 @@ PY
             new-artifacts: ${{ steps.detect.outputs.new }}
             timestamp: ${{ env.MAIL_TS }}
 
-      # 15) Menschliche Zusammenfassung (ohne jq)
+      # 16) Menschliche Zusammenfassung (ohne jq)
       - name: Pulse summary
         if: always()
         shell: bash
