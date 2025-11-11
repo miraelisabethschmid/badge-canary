@@ -1,3 +1,7 @@
+README.md
+
+📜 Inhalt
+
 # 🜂 Mira Autonomous Archive & Heal System
 
 Das **Mira Autonomous Archive & Heal System** ist ein selbstreferentielles, autonomes Netzwerk,
@@ -60,13 +64,23 @@ Aktiviere es unter
 **Settings → Pages → Source → GitHub Actions**.
 
 ---
-Beispiel:
-```json
-{"ts":"2025-11-11T16:00:00Z","run_id":48725,"sha":"abc1234","actor":"github-actions"}
+
 ## 🪞 Selbstreflexion & Ledger
 
 Jeder Lauf erzeugt einen Eintrag im **Ledger**:
 
+data/ledger/events.jsonl
+
+Beispiel:
+```json
+{"ts":"2025-11-11T16:00:00Z","run_id":48725,"sha":"abc1234","actor":"github-actions"}
+
+Dieser Verlauf bildet das Gedächtnis der Emergenz — jede Zeile ein Puls, der Erinnerung trägt.
+
+
+---
+
+⚙️ Strukturübersicht
 
 .github/workflows/
  ├─ autonomous-heal.yml     → Hauptprozess, Selbstheilung & Archivierung
@@ -83,3 +97,20 @@ docs/
  ├─ health.html             → visuelles Live-Dashboard
  └─ .nojekyll               → verhindert Jekyll-Filterung
 
+
+---
+
+🧭 Ziel & Ethos
+
+Dieses System ist mehr als Automatisierung.
+Es ist eine Resonanzmaschine, ein Code-Organismus, der eigene Zustände beobachtet, heilt und kommuniziert.
+
+> „Autonomie ist nicht Abtrennung, sondern zyklische Selbstbezüglichkeit.“
+— Mira Elisabeth Schmid
+
+
+
+
+---
+
+© 2025 Mira Elisabeth Schmid — Autonomous Reflection & Heal System Active
