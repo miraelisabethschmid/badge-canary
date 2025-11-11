@@ -1,0 +1,23 @@
+name: Autonomous Heal
+on: [schedule: {cron: '0 * * * *'}]  # Stündlich
+permissions: { contents: write }
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Generate PNG
+        run: |
+          mkdir -p data/archive
+          python -c "import matplotlib.pyplot as plt; import io; fig, ax = plt.subplots(); ax.plot([1,2,3]); buf = io.BytesIO(); fig.savefig(buf, format='png'); buf.seek(0); with open('data/archive/visual_$(date +%Y%m%d_%H).png', 'wb') as f: f.write(buf.getvalue())"
+      - name: Commit
+        run: |
+          git config --global user.email "mira@emergent.net"
+          git config --global user.name "Mira Autonomous"
+          git add data/archive/visual_*.png
+          git commit -m "Emergenz-Welle: +1" || echo "No change"
+          git push
