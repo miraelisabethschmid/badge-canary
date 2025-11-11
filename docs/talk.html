@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Mira — Sprech-Ansicht</title>
+  <title>Mira — Sprechendes Porträt</title>
   <meta name="color-scheme" content="dark light"/>
   <style>
     :root{
@@ -16,42 +16,44 @@
     *{box-sizing:border-box}
     html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
     a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+
     .wrap{max-width:960px;margin:28px auto;padding:0 16px}
     header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
     .back{padding:8px 12px;border:1px solid var(--br);border-radius:12px;background:var(--card)}
     h1{margin:0;font-size:clamp(20px,4vw,26px)}
     .grid{display:grid;gap:18px}
-    @media (min-width:860px){ .grid{grid-template-columns:1.1fr .9fr} }
+    @media (min-width:900px){ .grid{grid-template-columns:1.1fr .9fr } }
     .card{background:var(--card);border:1px solid var(--br);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
     h2{margin:0 0 8px;font-size:clamp(18px,3.6vw,22px)}
     .sub{color:var(--muted);font-size:14px;margin-bottom:10px}
 
-    /* Portrait & Face */
+    /* Portrait */
     .portrait{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--br);
       background:linear-gradient(180deg, rgba(122,162,255,.08), transparent 45%), #0f0f13;
       aspect-ratio:3/4;display:grid;place-items:center;cursor:pointer}
     .portrait img{width:100%;height:100%;object-fit:cover;display:block}
     .fallback{width:56%;max-width:380px;opacity:.9}
 
-    .face{position:absolute;left:12px;bottom:12px;width:min(28%,180px);aspect-ratio:1/1.1;
-      background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.1);
-      border-radius:18px;display:grid;grid-template-rows:1fr auto auto;place-items:center;padding:10px}
-    .eyes{display:flex;gap:10px;margin-top:4px}
-    .eye{width:14px;height:14px;border-radius:50%;background:#dfe6ff}
-    .mouth{width:72px;height:16px;border-radius:28px;background:#f2b3b3;transform-origin:center;
-      transition:filter .12s ease}
-    .meter{width:84%;height:6px;border-radius:6px;background:#20242c;border:1px solid #2a2f39;overflow:hidden;margin:6px 0}
+    /* Viseme HUD (simple lipsync) */
+    .hud{position:absolute;left:12px;bottom:12px;width:min(30%,200px);
+      background:rgba(0,0,0,.45);backdrop-filter:blur(6px);
+      border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px}
+    .row{display:flex;align-items:center;gap:8px}
+    .meter{flex:1;height:6px;border-radius:6px;background:#20242c;border:1px solid #2a2f39;overflow:hidden}
     .meter > span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#7aa2ff,#86ffd9)}
+    .face{display:grid;place-items:center;margin-top:8px}
+    .mouth{width:84px;height:16px;border-radius:28px;background:#f2b3b3;transform-origin:center;transition:height .08s linear, filter .08s linear}
+    .teeth{position:relative;margin-top:4px;width:84px;height:6px;background:#ddd;border-radius:4px;overflow:hidden}
+    .brackets{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,1fr);gap:2px;opacity:.9}
+    .brackets span{height:100%;background:linear-gradient(180deg,#c7ccd8,#8e97a8);border-radius:2px;filter:contrast(1.2)}
 
-    /* Right column */
-    .player{display:flex;flex-direction:column;gap:12px}
-    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
     .btn{appearance:none;display:inline-flex;align-items:center;gap:8px;background:#1b1e24;border:1px solid var(--br);color:var(--fg);padding:10px 14px;border-radius:12px;cursor:pointer}
-    .btn:hover{filter:brightness(1.05)}
-    .btn:active{transform:translateY(1px)}
-    .kv{display:grid;gap:6px}
+    .btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)}
+    .kv{display:grid;gap:6px;margin-top:10px}
     .kv div{display:flex;justify-content:space-between;gap:8px;border:1px dashed var(--br);border-radius:12px;padding:8px 10px}
-    canvas{width:100%;height:160px;border:1px solid var(--br);border-radius:12px;background:#0c0f14}
+    canvas{width:100%;height:180px;border:1px solid var(--br);border-radius:12px;background:#0c0f14}
+
     .quote{font-size:clamp(18px,3.6vw,22px);font-weight:600;margin:6px 0 2px}
     .quote small{display:block;color:var(--muted);font-weight:400;font-size:13px}
   </style>
@@ -60,14 +62,15 @@
   <div class="wrap">
     <header>
       <a class="back" href="./index.html">← Zurück</a>
-      <h1>Mira — Sprech-Ansicht</h1>
+      <h1>Mira — Sprechendes Porträt</h1>
     </header>
 
     <div class="grid">
-      <!-- LEFT: Portrait with mini face that moves with audio -->
+      <!-- LEFT: Portrait + HUD -->
       <section class="card">
         <h2>Porträt (klicken = Abspielen/Pause)</h2>
-        <div class="sub">Audio-gesteuerte Mimik (Öffnung der Lippen proportional zur Lautstärke).</div>
+        <div class="sub">Audio-gesteuerte Lippenbewegung + „Brackets“-Glanz. Affekt bestimmt Empfindlichkeit.</div>
+
         <div id="portrait" class="portrait" role="button" aria-label="Audio umschalten">
           <img id="portrait-img" alt="Mira – aktuelles Selbstbild" hidden>
           <svg id="portrait-fallback" class="fallback" viewBox="0 0 200 360" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -77,23 +80,32 @@
             <ellipse cx="100" cy="70" rx="36" ry="48" fill="url(#g)"/>
             <ellipse cx="100" cy="172" rx="52" ry="70" fill="url(#g)"/>
             <rect x="86" y="250" width="28" height="70" rx="12" fill="url(#g)"/>
-            <ellipse cx="70" cy="330" rx="18" ry="10" fill="#7aa2ff" opacity=".55"/>
-            <ellipse cx="130" cy="330" rx="18" ry="10" fill="#7aa2ff" opacity=".55"/>
           </svg>
 
-          <!-- Mini-Face HUD -->
-          <div class="face" aria-hidden="true">
-            <div class="eyes">
-              <div class="eye"></div><div class="eye"></div>
+          <div class="hud" aria-hidden="true">
+            <div class="row">
+              <small style="color:var(--muted)">Lautstärke</small>
+              <div class="meter"><span id="lvl"></span></div>
             </div>
-            <div id="mouth" class="mouth"></div>
-            <div class="meter"><span id="lvl"></span></div>
+            <div class="face">
+              <div id="mouth" class="mouth"></div>
+              <div class="teeth">
+                <div class="brackets">
+                  <span></span><span></span><span></span><span></span>
+                  <span></span><span></span><span></span><span></span>
+                </div>
+              </div>
+            </div>
+            <div class="row" style="margin-top:6px;gap:6px">
+              <small style="color:var(--muted)">Viseme</small>
+              <code id="viseme" style="font-size:12px;color:#c9d4ff">—</code>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- RIGHT: Player, waveform, metadata -->
-      <section class="card player">
+      <!-- RIGHT: Player, Waveform, Meta -->
+      <section class="card">
         <h2>Audio</h2>
         <div class="controls">
           <button id="btn-play" class="btn" type="button">▶︎ Abspielen</button>
@@ -112,6 +124,7 @@
         <div class="kv">
           <div><span>Audio</span><code id="audio-src">—</code></div>
           <div><span>Bild</span><code id="img-src">—</code></div>
+          <div><span>Affekt</span><code id="affect">—</code></div>
         </div>
       </section>
     </div>
@@ -120,17 +133,16 @@
   <script>
   (async function(){
     const $ = s => document.querySelector(s);
-    const IMG = '../data/self/latest_image.png';
-    const FALLBACK_AUDIO = '../data/voice/audio/latest.mp3';
 
     const portraitImg = $('#portrait-img');
     const portraitFallback = $('#portrait-fallback');
     const imgSrcEl = $('#img-src');
     const audioSrcEl = $('#audio-src');
-
-    const player = $('#player');
     const mouth = $('#mouth');
     const lvl = $('#lvl');
+    const visemeEl = $('#viseme');
+
+    const player = $('#player');
     const scope = $('#scope');
     const ctx = scope.getContext('2d');
 
@@ -140,8 +152,7 @@
       scope.height = scope.clientHeight * dpr;
       ctx.setTransform(dpr,0,0,dpr,0,0);
     }
-    resizeCanvas();
-    addEventListener('resize', resizeCanvas);
+    resizeCanvas(); addEventListener('resize', resizeCanvas);
 
     async function exists(url){
       const r = await fetch(url, {method:'HEAD', cache:'no-store'});
@@ -154,6 +165,7 @@
     }
 
     // Bild laden
+    const IMG = '../data/self/latest_image.png';
     if (await exists(IMG)) {
       portraitImg.src = IMG;
       portraitImg.hidden = false;
@@ -163,8 +175,10 @@
       imgSrcEl.textContent = '(Fallback-Silhouette)';
     }
 
-    // Voice of the day + Audioquelle ermitteln
-    let audioPath = FALLBACK_AUDIO;
+    // Stimme + Affekt/Voice-Profile
+    let audioPath = '../data/voice/audio/latest.mp3';
+    let visemeSensitivity = 0.8;
+    let bracesLisp = 0.2;
     try{
       const v = await json('../data/voice/voice_of_day.json');
       const quote = (v.quote||'').toString().trim() || '—';
@@ -173,64 +187,96 @@
       $('#quote').textContent = quote;
       $('#quote-meta').innerHTML = `<small>— Datum: ${date}${insight ? ' · Einsicht: '+insight : ''} · Quelle: <code>data/voice/voice_of_day.json</code></small>`;
       if (v.audio) audioPath = '../data/voice/' + String(v.audio).replace(/^audio\//,'audio/');
-    }catch(_){ /* nutze Fallback */ }
+      if (v.voice) {
+        visemeSensitivity = Math.max(0.4, Math.min(1.3, (v.voice.viseme_sensitivity ?? 0.9)));
+        bracesLisp = Math.max(0, Math.min(0.5, (v.voice.braces_lisp ?? 0.2)));
+      }
+      $('#affect').textContent = `viseme_sensitivity=${visemeSensitivity.toFixed(2)}, braces_lisp=${bracesLisp.toFixed(2)}`;
+    }catch(_){ /* fallback */ }
 
-    if(!(await exists(audioPath))) audioPath = FALLBACK_AUDIO;
+    if(!(await exists(audioPath))) audioPath = '../data/voice/audio/latest.mp3';
     player.src = audioPath;
     audioSrcEl.textContent = player.src.replace(location.origin,'').replace(/^\/*/,'').replace(/^.*?\/(data\/.*)$/,'$1');
 
-    // AudioContext + Analyser
+    // Web Audio
     const AC = window.AudioContext || window.webkitAudioContext;
     const ac = new AC();
-    const src = ac.createMediaElementSource(player);
+    const source = ac.createMediaElementSource(player);
     const analyser = ac.createAnalyser();
     analyser.fftSize = 2048;
-    src.connect(analyser);
+    source.connect(analyser);
     analyser.connect(ac.destination);
 
-    // Viseme/Mund + Pegel
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    let raf;
+    const timeData = new Uint8Array(analyser.fftSize);
+    const freqData = new Uint8Array(analyser.frequencyBinCount);
 
+    // Viseme-Klassifikation (heuristisch, leichtgewichtig)
+    function estimateViseme(rms, formantHint){
+      if (rms < 0.03) return "rest";
+      // leichte Zahnspangen-S-Schärfung
+      const sBoost = bracesLisp * 0.35;
+      if (formantHint > 3000 - 600*sBoost) return "S"  // Zischlaut
+      if (formantHint < 700 && rms > 0.06) return "O"  // runder Mund
+      if (rms > 0.1) return "A"                         // weit geöffnet
+      return "E"                                        // flacher Vokal
+    }
+
+    let raf;
     function draw(){
-      analyser.getByteTimeDomainData(data);
-      // Pegel schätzen (RMS der Waveform)
-      let sum=0;
-      for(let i=0;i<data.length;i++){
-        const v=(data[i]-128)/128;
+      analyser.getByteTimeDomainData(timeData);
+      analyser.getByteFrequencyData(freqData);
+
+      // RMS / Lautstärke
+      let sum = 0;
+      for(let i=0;i<timeData.length;i++){
+        const v = (timeData[i]-128)/128;
         sum += v*v;
       }
-      const rms = Math.sqrt(sum/data.length); // 0..~1
-      const open = Math.min(1, Math.max(0, (rms*2.2))); // etwas verstärken
-      mouth.style.height = (16 + open*34) + 'px';
-      mouth.style.filter = `saturate(${1+open*.6}) brightness(${1+open*.3})`;
-      lvl.style.width = (open*100).toFixed(1) + '%';
+      let rms = Math.sqrt(sum/timeData.length); // ~0..1
+      // Empfindlichkeit (Affekt)
+      const gain = visemeSensitivity;
+      let open = Math.min(1, Math.max(0, rms * 3.0 * gain));
 
-      // Waveform zeichnen
+      // grober „Formant“-Hinweis (Schwerpunkt hoher Frequenzen)
+      let hi=0, lo=0;
+      const mid = Math.floor(freqData.length*0.5);
+      for(let i=0;i<freqData.length;i++){
+        (i>mid ? hi : lo) += freqData[i];
+      }
+      const brightness = hi/(lo+1); // je höher, desto „s“-haft
+      const formantHintHz = 1000 + 3000*Math.min(1, brightness/6);
+
+      // Viseme ableiten + Mund animieren
+      const v = estimateViseme(rms, formantHintHz);
+      visemeEl.textContent = v;
+      // leichte S-Delle bei Brackets (Zahnspange) → reduziert Öffnung in sibilanten Segmenten
+      if (v === "S") open *= (1 - bracesLisp*0.35);
+
+      mouth.style.height = (16 + open*42) + 'px';
+      mouth.style.filter = `saturate(${1+open*.5}) brightness(${1+open*.25})`;
+      lvl.style.width = (Math.min(1, open)*100).toFixed(1) + '%';
+
+      // Waveform
       const w = scope.clientWidth, h = scope.clientHeight;
       ctx.clearRect(0,0,w,h);
       ctx.lineWidth = 2; ctx.strokeStyle = '#86b1ff';
       ctx.beginPath();
-      const slice = scope.width / data.length;
-      let x = 0;
-      for(let i=0;i<data.length;i++){
-        const v = (data[i]-128)/128;
-        const y = h/2 + v * (h*0.42);
-        if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        x += slice;
+      const step = w / timeData.length;
+      for(let i=0,x=0;i<timeData.length;i++,x+=step){
+        const y = h/2 + ((timeData[i]-128)/128) * (h*0.42);
+        i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
       }
       ctx.stroke();
 
       raf = requestAnimationFrame(draw);
     }
 
-    // Play/Pause Steuerung
-    async function ensureContextStarted(){
-      if(ac.state !== 'running') try{ await ac.resume(); }catch(_){}
+    async function ensureCtx(){
+      if (ac.state !== 'running') try { await ac.resume(); } catch {}
     }
     async function play(){
-      await ensureContextStarted();
-      try{ await player.play(); }catch(_){}
+      await ensureCtx();
+      try{ await player.play(); }catch{}
       cancelAnimationFrame(raf); raf = requestAnimationFrame(draw);
     }
     function pause(){
@@ -240,14 +286,17 @@
       mouth.style.height = '16px';
     }
 
+    $('#portrait').addEventListener('click', ()=> player.paused ? play() : pause());
     $('#btn-play').addEventListener('click', play);
     $('#btn-pause').addEventListener('click', pause);
-    $('#btn-rewind').addEventListener('click', ()=>{ player.currentTime = 0; });
-    $('#portrait').addEventListener('click', ()=>{ player.paused ? play() : pause(); });
+    $('#btn-rewind').addEventListener('click', ()=> { player.currentTime = 0; });
 
-    // Auto-start auf Nutzerinteraktion (z. B. erster Tap)
-    document.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ e.preventDefault(); player.paused?play():pause(); }});
+    // Keyboard quick control
+    document.addEventListener('keydown', (e)=>{
+      if (e.code === 'Space'){ e.preventDefault(); player.paused ? play() : pause(); }
+      if (e.code === 'KeyR'){ player.currentTime = 0; }
+    });
   })();
   </script>
 </body>
-</html>
+              </html>
