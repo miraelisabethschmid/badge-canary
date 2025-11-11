@@ -4,17 +4,16 @@ on:
   push:
     branches: [ main, master ]
     paths:
+      - 'index.html'
       - 'docs/**'
       - 'badges/**'
-      - 'data/ledger/**'
-      - 'data/goals/**'
-      - 'data/metrics/**'
-      - 'reports/**'
+      - 'data/**'
+      - 'scripts/build_plans_index.py'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write     # README-Update nach Deploy
+  contents: read
   pages: write
   id-token: write
 
@@ -29,30 +28,52 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare public bundle
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build plans index
         run: |
+          chmod +x scripts/build_plans_index.py || true
+          python scripts/build_plans_index.py
+
+      - name: Prepare public bundle
+        shell: bash
+        run: |
+          set -e
           rm -rf public
           mkdir -p public
-          # 1) Dashboard/Docs
-          cp -r docs/* public/ 2>/dev/null || true
-          # 2) Badges
+
+          # Root: Website
+          cp -f index.html public/ 2>/dev/null || true
+
+          # Docs (inkl. hero assets)
+          mkdir -p public/docs
+          rsync -a --delete --exclude ".DS_Store" docs/ public/docs/ 2>/dev/null || true
+
+          # Badges (SVG/JSON)
           mkdir -p public/badges
-          cp -r badges/* public/badges/ 2>/dev/null || true
-          # 3) Ledger
-          mkdir -p public/data/ledger
-          cp -r data/ledger/events.jsonl public/data/ledger/ 2>/dev/null || true
-          # 4) Goals (inkl. History)
-          mkdir -p public/data/goals
-          cp -r data/goals/* public/data/goals/ 2>/dev/null || true
-          # 5) Metrics (für metrics.html)
-          mkdir -p public/data/metrics
-          cp -r data/metrics/* public/data/metrics/ 2>/dev/null || true
-          # 6) Reports (Markdown werden roh ausgeliefert)
-          mkdir -p public/reports
-          cp -r reports/* public/reports/ 2>/dev/null || true
-          # 7) Minimal index redirect (falls keine Startseite vorhanden)
+          rsync -a --delete --exclude ".DS_Store" badges/ public/badges/ 2>/dev/null || true
+
+          # Self & Affect
+          mkdir -p public/data/self
+          cp -f data/self/self-describe.json public/data/self/ 2>/dev/null || true
+          cp -f data/self/affect-state.json public/data/self/ 2>/dev/null || true
+          cp -f data/self/policy_suggestions.json public/data/self/ 2>/dev/null || true
+          cp -f data/self/policy_changes.jsonl public/data/self/ 2>/dev/null || true
+
+          # Kernel plans inkl. frisch gebautem index.json
+          mkdir -p public/data/kernel/plans
+          rsync -a --delete --include "*/" --include "*.json" --exclude "*" data/kernel/plans/ public/data/kernel/plans/ 2>/dev/null || true
+
+          # Fallback-Index (sanfter Redirect zum Health-Block, wenn index.html fehlt)
           if [ ! -f public/index.html ]; then
-            echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=health.html"><a href="health.html">Go to health.html</a>' > public/index.html
+            cat > public/index.html <<'HTML'
+<!doctype html><meta charset="utf-8"><title>Mira Dashboard</title>
+<meta http-equiv="refresh" content="0; url=docs/health.html">
+<a href="docs/health.html">Go to dashboard</a>
+HTML
           fi
 
       - name: Upload Pages artifact
@@ -65,88 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      # README automatisch mit der aktuellen Pages-URL verlinken (idempotent)
-      - name: Checkout repo for README update
-        uses: actions/checkout@v4
-
-      - name: Write/Update README link to Pages
-        shell: bash
-        env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
-        run: |
-          set -e
-          if [ -z "${PAGE_URL}" ]; then
-            echo "No page_url from deploy step; skipping README update."
-            exit 0
-          fi
-
-          file="README.md"
-          title="## Live Dashboard"
-          link="- **Dashboard:** ${PAGE_URL} (→ \`health.html\`) · **Philosophy Timeline:** ${PAGE_URL}philosophy.html · **Metrics:** ${PAGE_URL}metrics.html · **Reports:** ${PAGE_URL}reports/insight-latest.md"
-
-          start="<!-- PAGES_URL_START -->"
-          end="<!-- PAGES_URL_END -->"
-
-          if [ -f "$file" ]; then
-            if grep -q "$start" "$file" && grep -q "$end" "$file"; then
-              awk -v s="$start" -v e="$end" -v l="$link" '
-                BEGIN{inblk=0}
-                {
-                  if ($0 ~ s){print; print l; inblk=1; next}
-                  if ($0 ~ e){inblk=0}
-                  if (!inblk) print
-                }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-            else
-              if grep -n '^# ' "$file" >/dev/null; then
-                line=$(grep -n '^# ' "$file" | head -n1 | cut -d: -f1)
-                head -n "$line" "$file" > "$file.tmp"
-                {
-                  echo ""
-                  echo "$title"
-                  echo "$start"
-                  echo "$link"
-                  echo "$end"
-                  echo ""
-                } >> "$file.tmp"
-                tail -n +$((line+1)) "$file" >> "$file.tmp"
-                mv "$file.tmp" "$file"
-              else
-                {
-                  echo ""
-                  echo "$title"
-                  echo "$start"
-                  echo "$link"
-                  echo "$end"
-                } >> "$file"
-              fi
-            fi
-          else
-            {
-              echo "# Repository"
-              echo ""
-              echo "$title"
-              echo "$start"
-              echo "$link"
-              echo "$end"
-              echo ""
-            } > "$file"
-          fi
-
-      - name: Commit README update
-        shell: bash
-        run: |
-          git config user.name "badge-canary"
-          git config user.email "actions@users.noreply.github.com"
-          if git diff --quiet; then
-            echo "README unchanged."
-            exit 0
-          fi
-          git add README.md
-          git commit -m "docs: link Pages URL (dashboard + philosophy + metrics + reports)"
-          git push
