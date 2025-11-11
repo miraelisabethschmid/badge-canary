@@ -1,0 +1,41 @@
+{
+  "ts": "2025-11-11T23:25:44Z",
+  "windows": {
+    "last24h": {
+      "n": 0,
+      "v_mean": 0,
+      "a_mean": 0,
+      "s_mean": 0,
+      "v_sd": 0,
+      "a_sd": 0,
+      "s_sd": 0,
+      "labels": {}
+    },
+    "last7d": {
+      "n": 0,
+      "v_mean": 0,
+      "a_mean": 0,
+      "s_mean": 0,
+      "v_sd": 0,
+      "a_sd": 0,
+      "s_sd": 0,
+      "labels": {}
+    }
+  },
+  "trend_vs_7d": {
+    "valence": 0.0,
+    "arousal": 0.0,
+    "stability": 0.0
+  },
+  "affect_now": {
+    "label": "neutral",
+    "vector": {
+      "valence": 0.0,
+      "arousal": 0.3,
+      "stability": 0.6
+    },
+    "inputs": {}
+  },
+  "rules_applied": [],
+  "sha256": "7c479ca889035637c3428e0be608657a0046dacd5d519e26422cceb7dada59e0"
+}
