@@ -71,13 +71,19 @@ jobs:
           cp -f data/self/policy_suggestions.json public/data/self/ 2>/dev/null || true
           cp -f data/self/policy_changes.jsonl public/data/self/ 2>/dev/null || true
 
-          # Daily reflection
+          # Daily reflection (Text)
           mkdir -p public/data/self/daily
           cp -f data/self/daily/reflection.json public/data/self/daily/ 2>/dev/null || true
 
           # Kernel plans inkl. frisch gebautem index.json
           mkdir -p public/data/kernel/plans
           rsync -a --delete --include "*/" --include "*.json" --exclude "*" data/kernel/plans/ public/data/kernel/plans/ 2>/dev/null || true
+
+          # Audio: veröffentliche nur die "latest.mp3" (privat bleiben die übrigen)
+          mkdir -p public/audio
+          if [ -f "data/audio/latest.mp3" ]; then
+            cp -f data/audio/latest.mp3 public/audio/latest.mp3
+          fi
 
           # Fallback-Index, falls index.html fehlen würde
           if [ ! -f public/index.html ]; then
