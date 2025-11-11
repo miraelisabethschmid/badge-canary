@@ -1,0 +1,49 @@
+name: Build Weekly Insight (with Affect)
+
+on:
+  schedule:
+    - cron: "5 6 * * 1"   # jeden Montag 06:05 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weekly-insight
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Ensure prerequisites
+        run: |
+          mkdir -p reports data/self data/metrics data/goals/history
+          # optional: sicherstellen, dass Affect & Metrics existieren
+          [ -f data/self/affect-state.json ] || echo '{"vector":{"valence":0,"arousal":0.2,"stability":0.5},"label":"neutral fokussiert","narrative":"init"}' > data/self/affect-state.json
+          [ -f data/metrics/last7d.json ] || echo '{"runs_7d":0,"daily_runs":[],"status_counts":{}}' > data/metrics/last7d.json
+
+      - name: Build weekly insight
+        run: |
+          python scripts/insight_report.py
+
+      - name: Commit report if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet reports/; then
+            echo "No report changes."
+            exit 0
+          fi
+          git add reports/
+          git commit -m "report: weekly insight (with affect)"
+          git push
