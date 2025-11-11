@@ -1,0 +1,46 @@
+name: Inner Feedback (Synthesize from Private Chronicle)
+
+on:
+  schedule:
+    - cron: "9 * * * *"   # stündlich Minute 09
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "data/self/reflections/private/**"
+      - "scripts/inner_feedback.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inner-feedback
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run inner feedback synthesizer
+        run: |
+          chmod +x scripts/inner_feedback.py || true
+          python scripts/inner_feedback.py
+
+      - name: Commit feedback if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/self/internal/feedback.json; then
+            echo "No feedback changes."
+            exit 0
+          fi
+          git add data/self/internal/feedback.json
+          git commit -m "internal: refresh feedback from private chronicle"
+          git push
