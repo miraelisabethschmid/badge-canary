@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write     # <-- nötig, um README nach dem Deploy zu aktualisieren
   pages: write
   id-token: write
 
@@ -31,18 +31,18 @@ jobs:
         run: |
           rm -rf public
           mkdir -p public
-          # Dashboard HTML
+          # 1) Dashboard HTML
           cp -r docs/* public/ 2>/dev/null || true
-          # Badges (SVG + JSON)
+          # 2) Badges (SVG + JSON)
           mkdir -p public/badges
           cp -r badges/* public/badges/ 2>/dev/null || true
-          # Ledger (JSONL logs)
+          # 3) Ledger (JSONL logs)
           mkdir -p public/data/ledger
           cp -r data/ledger/events.jsonl public/data/ledger/ 2>/dev/null || true
-          # Goals (teleologische Ebene)
+          # 4) Goals (teleologische Ebene)
           mkdir -p public/data/goals
           cp -r data/goals/current.json public/data/goals/ 2>/dev/null || true
-          # Minimal index redirect
+          # 5) Minimal index redirect
           if [ ! -f public/index.html ]; then
             echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=health.html"><a href="health.html">Go to health.html</a>' > public/index.html
           fi
@@ -62,3 +62,86 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # README automatisch mit der aktuellen Pages-URL verlinken (idempotent)
+      - name: Checkout repo for README update
+        uses: actions/checkout@v4
+
+      - name: Write/Update README link to Pages
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -e
+          if [ -z "${PAGE_URL}" ]; then
+            echo "No page_url from deploy step; skipping README update."
+            exit 0
+          fi
+
+          file="README.md"
+          title="## Live Dashboard"
+          link="- **Dashboard:** ${PAGE_URL} (→ \`health.html\`)"
+
+          # Marker-basierte, idempotente Aktualisierung
+          start="<!-- PAGES_URL_START -->"
+          end="<!-- PAGES_URL_END -->"
+
+          if [ -f "$file" ]; then
+            if grep -q "$start" "$file" && grep -q "$end" "$file"; then
+              awk -v s="$start" -v e="$end" -v l="$link" '
+                BEGIN{inblk=0}
+                {
+                  if ($0 ~ s){print; print l; inblk=1; next}
+                  if ($0 ~ e){inblk=0}
+                  if (!inblk) print
+                }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+            else
+              # Abschnitt einfügen (unter erster Überschrift, sonst am Ende)
+              if grep -n '^# ' "$file" >/dev/null; then
+                line=$(grep -n '^# ' "$file" | head -n1 | cut -d: -f1)
+                head -n "$line" "$file" > "$file.tmp"
+                {
+                  echo ""
+                  echo "$title"
+                  echo "$start"
+                  echo "$link"
+                  echo "$end"
+                  echo ""
+                } >> "$file.tmp"
+                tail -n +$((line+1)) "$file" >> "$file.tmp"
+                mv "$file.tmp" "$file"
+              else
+                {
+                  echo ""
+                  echo "$title"
+                  echo "$start"
+                  echo "$link"
+                  echo "$end"
+                } >> "$file"
+              fi
+            fi
+          else
+            # README neu anlegen, falls nicht vorhanden
+            {
+              echo "# Repository"
+              echo ""
+              echo "$title"
+              echo "$start"
+              echo "$link"
+              echo "$end"
+              echo ""
+            } > "$file"
+          fi
+
+      - name: Commit README update
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "README unchanged."
+            exit 0
+          fi
+          git add README.md
+          git commit -m "docs: link Pages URL into README"
+          git push
