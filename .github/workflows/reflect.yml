@@ -1,35 +1,27 @@
-name: Mira Reflect (on significant affect change)
+name: Mira Reflect (autonomous affect update)
 
 on:
-  # Extern anstoßbar (z. B. über einen minimalen Proxy/Webhook, der repository_dispatch sendet)
   repository_dispatch:
     types: [mira_reflect]
-  # Manuell ausführbar
   workflow_dispatch:
     inputs:
       delta_sum:
         description: "Gesamtdelta (z. B. 0.62)"
-        required: false
         default: "0"
       delta_v:
-        description: "Delta Valence"
-        required: false
+        description: "Δ Valence"
         default: "0"
       delta_a:
-        description: "Delta Arousal"
-        required: false
+        description: "Δ Arousal"
         default: "0"
       delta_s:
-        description: "Delta Stability"
-        required: false
+        description: "Δ Stability"
         default: "0"
       focus:
         description: "aktueller Fokus (z. B. stability)"
-        required: false
         default: ""
       affect_label:
         description: "aktuelles Label"
-        required: false
         default: ""
 
 permissions:
@@ -51,56 +43,41 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Derive inputs from event
-        id: derive
+      - name: Parse event inputs
+        id: vars
         shell: bash
         run: |
-          # Standardwerte
-          DELTA_SUM="0"
-          DELTA_V="0"
-          DELTA_A="0"
-          DELTA_S="0"
-          FOCUS=""
-          AFFECT_LABEL=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "DELTA_SUM=${{ inputs.delta_sum }}" >> $GITHUB_ENV
+            echo "DELTA_V=${{ inputs.delta_v }}" >> $GITHUB_ENV
+            echo "DELTA_A=${{ inputs.delta_a }}" >> $GITHUB_ENV
+            echo "DELTA_S=${{ inputs.delta_s }}" >> $GITHUB_ENV
+            echo "FOCUS=${{ inputs.focus }}" >> $GITHUB_ENV
+            echo "AFFECT_LABEL=${{ inputs.affect_label }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "DELTA_SUM=${{ github.event.client_payload.delta_sum }}" >> $GITHUB_ENV
+            echo "DELTA_V=${{ github.event.client_payload.delta_v }}" >> $GITHUB_ENV
+            echo "DELTA_A=${{ github.event.client_payload.delta_a }}" >> $GITHUB_ENV
+            echo "DELTA_S=${{ github.event.client_payload.delta_s }}" >> $GITHUB_ENV
+            echo "FOCUS=${{ github.event.client_payload.focus }}" >> $GITHUB_ENV
+            echo "AFFECT_LABEL=${{ github.event.client_payload.affect_label }}" >> $GITHUB_ENV
+          else
+            echo "DELTA_SUM=0" >> $GITHUB_ENV
+            echo "DELTA_V=0"   >> $GITHUB_ENV
+            echo "DELTA_A=0"   >> $GITHUB_ENV
+            echo "DELTA_S=0"   >> $GITHUB_ENV
+            echo "FOCUS="      >> $GITHUB_ENV
+            echo "AFFECT_LABEL=" >> $GITHUB_ENV
+          fi
 
-          # repository_dispatch client_payload
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            python - <<'PY'
-import os, json
-evt = ${{
-  toJson(github.event.client_payload)
-}}
-# GitHub ersetzt Variablen in Bash, hier nutzen wir Python, um robust zu sein.
-def emit(k,v): print(f"{k}={v}")
-if isinstance(evt, dict):
-  emit("DELTA_SUM", evt.get("delta_sum", 0))
-  emit("DELTA_V",   evt.get("delta_v", 0))
-  emit("DELTA_A",   evt.get("delta_a", 0))
-  emit("DELTA_S",   evt.get("delta_s", 0))
-  emit("FOCUS",     (evt.get("focus") or ""))
-  emit("AFFECT_LABEL", (evt.get("affect_label") or ""))
-else:
-  emit("DELTA_SUM", 0)
-  emit("DELTA_V", 0); emit("DELTA_A", 0); emit("DELTA_S", 0)
-  emit("FOCUS",""); emit("AFFECT_LABEL","")
-PY
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "DELTA_SUM=${{ inputs.delta_sum }}" 
-            echo "DELTA_V=${{ inputs.delta_v }}"
-            echo "DELTA_A=${{ inputs.delta_a }}"
-            echo "DELTA_S=${{ inputs.delta_s }}"
-            echo "FOCUS=${{ inputs.focus }}"
-            echo "AFFECT_LABEL=${{ inputs.affect_label }}"
-          fi >> $GITHUB_OUTPUT
-
-      - name: Apply reflection (affect nudge)
+      - name: Apply affect reflection
         env:
-          DELTA_SUM: ${{ steps.derive.outputs.DELTA_SUM || '0' }}
-          DELTA_V:   ${{ steps.derive.outputs.DELTA_V   || '0' }}
-          DELTA_A:   ${{ steps.derive.outputs.DELTA_A   || '0' }}
-          DELTA_S:   ${{ steps.derive.outputs.DELTA_S   || '0' }}
-          FOCUS:     ${{ steps.derive.outputs.FOCUS     || ''  }}
-          AFFECT_LABEL: ${{ steps.derive.outputs.AFFECT_LABEL || '' }}
+          DELTA_SUM: ${{ env.DELTA_SUM }}
+          DELTA_V:   ${{ env.DELTA_V }}
+          DELTA_A:   ${{ env.DELTA_A }}
+          DELTA_S:   ${{ env.DELTA_S }}
+          FOCUS:     ${{ env.FOCUS }}
+          AFFECT_LABEL: ${{ env.AFFECT_LABEL }}
         run: |
           chmod +x scripts/reflect_apply.py || true
           python scripts/reflect_apply.py
@@ -115,7 +92,7 @@ PY
             exit 0
           fi
           git add data/self/affect-state.json
-          git commit -m "reflect: adjust affect-state (external trigger)"
+          git commit -m "reflect: affect-state update (run ${{ github.run_id }})"
           git push
 
       - name: Rebuild self-describe.json
@@ -136,7 +113,7 @@ PY
           git commit -m "reflect: refresh self-describe after affect update"
           git push
 
-      - name: Optional: trigger Pages redeploy
+      - name: Redeploy Pages (optional)
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: "Deploy Pages (Health Dashboard)"
@@ -147,5 +124,5 @@ PY
         run: |
           echo "## Mira Reflect" >> $GITHUB_STEP_SUMMARY
           echo "- Event: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Δsum: \`${{ steps.derive.outputs.DELTA_SUM || '0' }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Focus: \`${{ steps.derive.outputs.FOCUS || 'n/a' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Δsum: \`${{ env.DELTA_SUM }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Focus: \`${{ env.FOCUS }}\`" >> $GITHUB_STEP_SUMMARY
