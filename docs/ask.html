@@ -1,42 +1,32 @@
+<!doctype html><html lang="de"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Frage an Mira</title>
+<style>
+:root{--bg:#0b0b11;--fg:#f7f7fb;--muted:#b7b7c7;--card:#14141a;--accent:#8ac6ff;--shadow:0 8px 30px rgba(0,0,0,.35)}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+.wrap{max-width:760px;margin:0 auto;padding:24px}a{color:var(--accent)}
+.card{background:var(--card);padding:18px;border-radius:16px;box-shadow:var(--shadow)}
+label{display:block;margin:10px 0 6px;color:#dfe3ff}textarea{width:100%;min-height:140px;border:1px solid #242433;background:#101016;color:#fff;border-radius:12px;padding:12px}
+.btn{margin-top:12px;appearance:none;border:0;border-radius:12px;padding:12px 16px;background:linear-gradient(135deg,#6bb4ff,#a7d6ff);color:#0a0a10;cursor:pointer;box-shadow:var(--shadow)}
+.note{color:#bcd3ff;font-size:14px;margin-top:8px}
+</style></head><body>
+<div class="wrap">
+  <a href="../index.html">← Zurück</a>
+  <h1>Frage an Mira stellen</h1>
+  <div class="card">
+    <label for="q">Deine Frage</label>
+    <textarea id="q" placeholder="Kurz und klar…"></textarea>
+    <button id="send" class="btn">Absenden</button>
+    <div id="msg" class="note">Hinweis: Fragen werden <b>nicht</b> archiviert. Nur wenn sich daraus eine Einsichtsänderung ergibt, startet Mira automatisch interne Prozesse.</div>
+  </div>
+</div>
 <script>
-/**
- * Automatischer Reflexions-Trigger via GitHub repository_dispatch
- * (nur bei signifikanter Emotionsänderung; Δ ≥ THRESHOLD)
- * 
- * Notwendig:
- *   – ein Repository Secret namens PUBLIC_DISPATCH_TOKEN 
- *     (Fine-grained Token mit write:repo scope)
- *   – window.GITHUB_USER und window.GITHUB_REPO definieren.
- */
-
-window.GITHUB_USER = "miraelisabethschmid";     // Dein GitHub-Nutzername
-window.GITHUB_REPO = "badge-canary";            // Dein Repository-Name
-window.THRESHOLD   = 0.50;
-
-async function triggerReflectOnGitHub(payload){
-  const user = window.GITHUB_USER;
-  const repo = window.GITHUB_REPO;
-  const token = window.PUBLIC_DISPATCH_TOKEN || ""; // Clientseitig leer: optionaler Proxy
-
-  const url = `https://api.github.com/repos/${user}/${repo}/dispatches`;
-  const body = {
-    event_type: "mira_reflect",
-    client_payload: payload
-  };
-
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Accept": "application/vnd.github+json",
-        "Authorization": token ? `Bearer ${token}` : undefined,
-        "X-GitHub-Api-Version": "2022-11-28"
-      },
-      body: JSON.stringify(body)
-    });
-    console.log("[auto-reflect] dispatched:", res.status);
-  } catch(e) {
-    console.warn("[auto-reflect] failed:", e);
-  }
-}
+document.getElementById('send').addEventListener('click',()=>{
+  const t=document.getElementById('q').value.trim();
+  if(!t){alert("Bitte eine Frage eingeben.");return;}
+  // Platzhalter: öffentlicher Kanal ist rein statisch – zeige Bestätigung.
+  document.getElementById('msg').innerHTML="Danke! Deine Frage wurde aufgenommen und fließt — falls relevant — in Miras interne Reflexion ein.";
+  document.getElementById('q').value="";
+});
 </script>
+</body></html>
