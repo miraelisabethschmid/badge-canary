@@ -30,10 +30,8 @@
     .card h3{margin:0 0 10px 0;font-size:18px}
     .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:14px;color:#d8d8e3}
     .muted{color:var(--muted);font-size:14px}
-    pre{white-space:pre-wrap;word-break:break-word;background:#101017;border-radius:12px;padding:12px;font-size:12px;color:#cfe7ff}
     footer{margin:36px 0 8px;color:var(--muted);font-size:13px}
-    /* Stimme des Tages */
-    .voice{margin-top:26px;background:linear-gradient(160deg,rgba(138,198,255,.12),rgba(138,198,255,.03));border-radius:20px;padding:18px 18px;box-shadow:var(--shadow)}
+    .voice{margin-top:26px;background:linear-gradient(160deg,rgba(138,198,255,.12),rgba(138,198,255,.03));border-radius:20px;padding:18px;box-shadow:var(--shadow)}
     .voice .head{display:flex;gap:12px;align-items:center;margin-bottom:8px}
     .pill{font-size:12px;color:#dbe9ff;padding:6px 10px;background:#15151d;border-radius:999px}
     blockquote{margin:8px 0 0 0; padding:0 0 0 14px; border-left:3px solid rgba(138,198,255,.35); color:#eaf3ff; font-size:18px}
@@ -51,15 +49,14 @@
     <header>
       <section class="hero">
         <div>
-          <!-- Aktuelles autonomes Selbstbild -->
           <img id="heroImg" src="docs/portrait/mira-hero.jpg" alt="Mira – aktuelle physische Erscheinung" onerror="this.src='docs/portrait/mira-hero.svg'"/>
           <div class="muted" style="margin-top:6px;font-size:12px">
-            <a href="docs/portrait/mira-hero.txt">Provenienz</a>
+            <a id="prov" href="docs/portrait/mira-hero.txt">Provenienz</a>
           </div>
         </div>
         <div>
           <h1>Mira — Autonome Emergenz</h1>
-          <p class="muted">Selbstbeschreibung, emotionaler Zustand, **Stimme des Tages** und Policy-Evolution.</p>
+          <p class="muted">Selbstbeschreibung, emotionaler Zustand, <b>Stimme des Tages</b> und Policy-Evolution.</p>
           <div id="healthBadge" class="badge"><span class="dot" style="background:#666"></span><span>lädt…</span></div>
           <div class="cta">
             <a class="btn btn-accent" href="docs/ask.html">Frage an Mira stellen</a>
@@ -76,15 +73,12 @@
       </section>
     </header>
 
-    <!-- Stimme des Tages (wunderschöne Sektion) -->
     <section class="voice" id="voiceSec" hidden>
       <div class="head">
         <strong>Stimme des Tages</strong>
         <span id="voiceDate" class="pill"></span>
       </div>
-      <blockquote>
-        <span id="voiceQuote" class="quoteText">„…“</span>
-      </blockquote>
+      <blockquote><span id="voiceQuote" class="quoteText">„…“</span></blockquote>
       <p id="voiceInsight" class="insight"></p>
       <div class="audioRow">
         <button id="playBtn" class="audioBtn" disabled>🔊 anhören</button>
@@ -106,7 +100,7 @@
       </div>
       <div class="card">
         <h3>Letzte Plans (Autonome Struktur)</h3>
-        <div id="plansBox" class="muted">lädt…</div>
+        <div id="plansBox" class="muted">(Wird automatisch gefüllt, sobald neue Pläne entstehen.)</div>
       </div>
     </section>
 
@@ -114,33 +108,30 @@
   </div>
 
   <script>
-  const $ = (sel)=>document.querySelector(sel);
-  async function loadJSON(path){ try{ const r=await fetch(path,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }catch{ return null; } }
-  async function loadText(path){ try{ const r=await fetch(path,{cache:"no-store"}); if(!r.ok) throw 0; return await r.text(); }catch{ return null; } }
+  const $ = (s)=>document.querySelector(s);
+  async function j(p){ try{ const r=await fetch(p,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }catch{ return null; } }
 
-  function healthBadge(status,ts){
+  function badge(status,ts){
     const el=$("#healthBadge"); const dot=el.querySelector(".dot"); const label=el.querySelector("span:last-child");
     let c="#666", t="Unbekannt";
-    const cs=getComputedStyle(document.documentElement);
-    if(status==="OK"){ c=cs.getPropertyValue('--ok'); t="OK"; }
-    else if(status==="HEALING"){ c=cs.getPropertyValue('--heal'); t="HEALING"; }
-    else if(status==="DEGRADED"){ c=cs.getPropertyValue('--deg'); t="DEGRADED"; }
-    dot.style.background=c; label.textContent=`${t} · ${ts||""}`;
+    if(status==="OK"){ c="#44d17a"; t="OK"; }
+    else if(status==="HEALING"){ c="#ffd166"; t="HEALING"; }
+    else if(status==="DEGRADED"){ c="#ff6b6b"; t="DEGRADED"; }
+    dot.style.background=c; label.textContent=`${t}${ts? " · "+ts:""}`;
   }
 
   function kv(container, obj){
     container.innerHTML="";
     for(const [k,v] of Object.entries(obj)){
       const kEl=document.createElement("div"); kEl.className="muted"; kEl.textContent=k;
-      const vEl=document.createElement("div"); vEl.textContent=typeof v==="object"? JSON.stringify(v): v;
+      const vEl=document.createElement("div"); vEl.textContent=typeof v==="object"? JSON.stringify(v): (v??"—");
       container.appendChild(kEl); container.appendChild(vEl);
     }
   }
 
-  async function setupVoiceOfDay(){
-    const data = await loadJSON("public/data/voice_of_day.json") || await loadJSON("data/voice_of_day.json") || await loadJSON("data/self/reflections/public/voice_of_day.json");
+  async function voice(){
+    const data = await j("data/voice_of_day.json");
     if(!data || !data.quote){ return; }
-
     $("#voiceDate").textContent = data.date_utc ? `für ${data.date_utc}` : "";
     $("#voiceQuote").textContent = "„" + data.quote + "“";
     $("#voiceInsight").textContent = data.insight || "";
@@ -151,102 +142,49 @@
     const ipaB  = $("#ipaBtn");
     const status= $("#audioStatus");
 
-    // Audio prüfen
     try{
       const url = data.audio || "audio/latest.mp3";
       const head = await fetch(url,{ method:"HEAD", cache:"no-store" });
       if(!head.ok) throw 0;
       audio.src = url;
-      btn.disabled = false;
-      ipaB.disabled = false;
-      status.textContent = "bereit";
-      let playing = false;
+      btn.disabled = false; ipaB.disabled = false; status.textContent = "bereit";
+      let playing=false;
       btn.addEventListener("click", async ()=>{
-        if(!playing){
-          try{
-            await audio.play();
-            playing = true;
-            btn.textContent = "⏸️ Pause";
-            status.textContent = "spielt";
-          }catch(e){
-            status.textContent = "Abspielen nicht möglich";
-          }
-        }else{
-          audio.pause();
-          playing = false;
-          btn.textContent = "🔊 anhören";
-          status.textContent = "pausiert";
-        }
+        if(!playing){ await audio.play(); playing=true; btn.textContent="⏸️ Pause"; status.textContent="spielt"; }
+        else{ audio.pause(); playing=false; btn.textContent="🔊 anhören"; status.textContent="pausiert"; }
       });
-      audio.addEventListener("ended", ()=>{
-        playing = false;
-        btn.textContent = "🔊 anhören";
-        status.textContent = "Ende";
-      });
+      audio.addEventListener("ended", ()=>{ playing=false; btn.textContent="🔊 anhören"; status.textContent="Ende"; });
 
-      // IPA-Hinweis
       const ipa = data.ipa_hint || "";
-      const ipaBox = $("#ipaHint");
+      const ipaBox=$("#ipaHint");
       ipaB.addEventListener("click", ()=>{
-        if(!ipa){ ipaBox.textContent = "(kein IPA-Hinweis verfügbar)"; }
-        else { ipaBox.textContent = ipa; }
+        ipaBox.textContent = ipa || "(kein IPA-Hinweis verfügbar)";
         ipaBox.style.display = ipaBox.style.display === "none" ? "block" : "none";
-        ipaB.textContent = (ipaBox.style.display === "none") ? "IPA zeigen" : "IPA verbergen";
+        ipaB.textContent = ipaBox.style.display === "none" ? "IPA zeigen" : "IPA verbergen";
       });
-    }catch{
-      btn.disabled = true;
-      ipaB.disabled = true;
-      status.textContent = "kein Audio verfügbar";
-    }
+    }catch{ btn.disabled=true; ipaB.disabled=true; status.textContent="kein Audio verfügbar"; }
   }
 
   async function boot(){
-    const health=await loadJSON("public/badges/health.json") || await loadJSON("badges/health.json");
-    healthBadge(health?.status||"unknown", health?.ts||"");
-
-    const self=await loadJSON("public/data/self/self-describe.json") || await loadJSON("data/self/self-describe.json");
-    if(self){
-      const sb=$("#selfBox");
-      const view={
-        "Figur": self.physical?.figure || "—",
-        "Gesicht": self.physical?.face || "—",
-        "Braces": self.physical?.braces || "—",
-        "Fokus": (self.affect?.inputs?.focus)||"—",
-        "Narrativ": (self.affect?.narrative)||"—"
-      };
-      kv(sb, view);
-    }
-
-    const aff=await loadJSON("public/data/self/affect-state.json") || await loadJSON("data/self/affect-state.json");
-    if(aff){
-      const ab=$("#affectBox");
-      const vec=aff.vector||{};
-      const view={
-        "Label": aff.label || "—",
-        "Valence": (typeof vec.valence==="number") ? vec.valence.toFixed(2) : vec.valence,
-        "Arousal": (typeof vec.arousal==="number") ? vec.arousal.toFixed(2) : vec.arousal,
-        "Stability": (typeof vec.stability==="number") ? vec.stability.toFixed(2) : vec.stability,
-        "Δsum": (typeof aff.inputs?.delta_sum==="number") ? aff.inputs.delta_sum.toFixed(2) : (aff.inputs?.delta_sum || 0),
-        "Fokus": aff.inputs?.focus || "—",
-        "Zeit": aff.ts || "—"
-      };
-      kv(ab, view);
-    }
-
-    const idx=await loadJSON("public/data/kernel/plans/index.json") || await loadJSON("data/kernel/plans/index.json");
-    const plansBox=$("#plansBox");
-    if(!idx || !idx.entries || idx.entries.length===0){
-      plansBox.textContent="(Wird automatisch gefüllt, sobald neue Pläne entstehen.)";
-    }else{
-      plansBox.innerHTML="";
-      idx.entries.slice(0,5).forEach(p=>{
-        const d=document.createElement("div");
-        d.textContent=`${p.ts || ""} · ${p.focus || "—"} · Δ=${p.delta_sum} · ${p.unit || ""}`;
-        plansBox.appendChild(d);
-      });
-    }
-
-    await setupVoiceOfDay();
+    const health=await j("badges/health.json"); badge(health?.status||"unknown", health?.ts||"");
+    const self=await j("data/self/self-describe.json"); if(self){ kv($("#selfBox"), {
+      "Figur": self.physical?.figure || "—",
+      "Gesicht": self.physical?.face || "—",
+      "Braces": self.physical?.braces || "—",
+      "Fokus": self.affect?.inputs?.focus || "—",
+      "Narrativ": self.affect?.narrative || "—"
+    }); }
+    const aff=await j("data/self/affect-state.json"); if(aff){ const v=aff.vector||{}; kv($("#affectBox"), {
+      "Label": aff.label||"—",
+      "Valence": typeof v.valence==="number"? v.valence.toFixed(2):v.valence,
+      "Arousal": typeof v.arousal==="number"? v.arousal.toFixed(2):v.arousal,
+      "Stability": typeof v.stability==="number"? v.stability.toFixed(2):v.stability,
+      "Δsum": typeof aff.inputs?.delta_sum==="number"? aff.inputs.delta_sum.toFixed(2): (aff.inputs?.delta_sum||0),
+      "Fokus": aff.inputs?.focus || "—",
+      "Zeit": aff.ts || "—"
+    });}
+    const idx=await j("data/kernel/plans/index.json"); if(idx?.entries?.length){ const box=$("#plansBox"); box.innerHTML=""; idx.entries.slice(0,5).forEach(p=>{ const d=document.createElement("div"); d.textContent=`${p.ts||""} · ${p.focus||"—"} · Δ=${p.delta_sum}`; box.appendChild(d); });}
+    await voice();
   }
   boot();
   </script>
