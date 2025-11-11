@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Mira — Journal</title>
+  <meta name="color-scheme" content="dark light"/>
+  <style>
+    :root{
+      --bg:#0b0d12;--fg:#e9eef7;--muted:#9aa6bd;--card:#11141b;--border:rgba(255,255,255,.08);
+      --ok:#2e7d32;--heal:#f9a825;--deg:#c62828;--acc:#7aa2ff;--acc2:#9f7aea;
+      --shadow:0 18px 48px rgba(0,0,0,.45),0 4px 16px rgba(0,0,0,.35);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:
+        radial-gradient(1100px 700px at 8% -10%,#121828,transparent),
+        radial-gradient(1300px 900px at 110% 15%,#1a1028,transparent),
+        var(--bg);
+      color:var(--fg);font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    }
+    a{color:#9db8ff;text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:1100px;margin:0 auto;padding:22px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .back{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;
+          background:#0e1421;border:1px solid var(--border)}
+    h1{margin:0 0 4px}
+    .sub{color:var(--muted);font-size:14px}
+
+    .grid{display:grid;grid-template-columns:0.65fr 0.35fr;gap:20px}
+    @media (max-width:1000px){.grid{grid-template-columns:1fr}}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+
+    /* List */
+    .list{display:grid;gap:14px}
+    .item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;
+      padding:12px;border:1px solid var(--border);border-radius:14px;background:#0f131d}
+    .date{font-weight:700}
+    .aff{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);background:#0e1220;border-radius:999px;padding:6px 10px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
+    .va{color:#cfe0ff;font-size:12px}
+    .actions a{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);
+      background:#0f1524;border-radius:10px;padding:6px 10px;margin-left:8px}
+    .actions a:hover{background:#111b36}
+
+    /* Detail */
+    .quote{font-size:18px;border-left:3px solid #90aaff;padding-left:12px;background:#0e14211f;border-radius:10px;padding-top:8px;padding-bottom:8px}
+    .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .tile{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .k{color:#9aa6bd;font-size:12px;margin-bottom:4px}
+    .md{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:14px;line-height:1.65}
+    .md h1,.md h2,.md h3{margin:12px 0 6px}
+    .md p{margin:8px 0}
+    .md blockquote{border-left:3px solid #90aaff;padding-left:12px;color:#d8e3ff}
+    .md code{background:#0e1322;border:1px solid var(--border);padding:2px 6px;border-radius:8px}
+    .md pre{background:#0e1322;border:1px solid var(--border);border-radius:12px;padding:12px;overflow:auto}
+
+    audio{width:100%;accent-color:#7aa2ff;border-radius:10px}
+    footer{margin:22px 0 8px;color:#9aa6bd;font-size:12px;text-align:center}
+    .muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="../index.html" aria-label="Zurück">← Zurück</a>
+      <div>
+        <h1>Journal</h1>
+        <div class="sub">Tägliche Selbstreflexion — Stimme, Text & Affekt. Klicke auf einen Tag für Details.</div>
+      </div>
+    </header>
+
+    <section class="grid">
+      <!-- Left: list -->
+      <div class="card">
+        <h3 style="margin:6px 0 12px">Neueste Einträge</h3>
+        <div id="list" class="list">
+          <div class="muted">… lade Journal-Index …</div>
+        </div>
+      </div>
+
+      <!-- Right: detail -->
+      <div class="card" id="detailCard">
+        <h3 style="margin:6px 0 12px" id="detailTitle">Eintrag</h3>
+        <div class="quote" id="quote">„…“</div>
+        <audio id="player" preload="none" style="margin:10px 0"></audio>
+
+        <div class="kv" style="margin:10px 0 6px">
+          <div class="tile"><div class="k">Datum</div><div id="date">—</div></div>
+          <div class="tile"><div class="k">Affekt</div><div id="label">—</div></div>
+          <div class="tile"><div class="k">Valenz / Erregung</div><div id="va">—</div></div>
+          <div class="tile"><div class="k">Stabilität</div><div id="stab">—</div></div>
+        </div>
+
+        <div class="md" id="content">Inhalt wird geladen …</div>
+      </div>
+    </section>
+
+    <footer>© 2025 Mira Elisabeth Schmid — gelebte Zeit in Schichten.</footer>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    async function getJSON(url){ try{ const r=await fetch(url,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }catch{ return null; } }
+    async function getText(url){ try{ const r=await fetch(url,{cache:"no-store"}); if(!r.ok) throw 0; return await r.text(); }catch{ return null; } }
+    async function headOK(url){ try{ const r=await fetch(url,{method:"HEAD",cache:"no-store"}); return r.ok; }catch{ return false; } }
+
+    // Very small Markdown-to-HTML (enough for our journal files)
+    function mdToHtml(md){
+      if(!md) return "";
+      // Escape basic HTML
+      md = md.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      // code fences
+      md = md.replace(/```([\s\S]*?)```/g, (m,code)=>`<pre><code>${code}</code></pre>`);
+      // headings
+      md = md.replace(/^###\s?(.*)$/gm,"<h3>$1</h3>");
+      md = md.replace(/^##\s?(.*)$/gm,"<h2>$1</h2>");
+      md = md.replace(/^#\s?(.*)$/gm,"<h1>$1</h1>");
+      // blockquote
+      md = md.replace(/^\>\s?(.*)$/gm,"<blockquote>$1</blockquote>");
+      // bold / italic
+      md = md.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+      md = md.replace(/\*(.+?)\*/g,"<em>$1</em>");
+      // inline code
+      md = md.replace(/`([^`]+?)`/g,"<code>$1</code>");
+      // paragraphs
+      md = md.replace(/^(?!<h\d|<pre|<blockquote|<ul|<ol|<li|---)(.+)$/gm,"<p>$1</p>");
+      // horizontal rule from --- frontmatter delimiter (ignore first)
+      md = md.replace(/^\-\-\-$\n?/m,""); // strip first
+      return md;
+    }
+
+    function affDotClass(label,val,aro){
+      // map label to dot color (rough heuristic)
+      if(label && /calm|settled|neutral/i.test(label)) return "ok";
+      if(label && /excited|vigor|fragil/i.test(label)) return "healing";
+      return "deg";
+    }
+
+    function row(item){
+      const dotCls = affDotClass(item.label, item.valence, item.arousal);
+      const p = document.createElement("div");
+      p.className = "item";
+      p.innerHTML = `
+        <div class="date">${item.date}</div>
+        <div class="aff"><span class="dot ${dotCls}"></span><span>${item.label||"—"}</span> <span class="va">· v ${(item.valence??0).toFixed(2)} · a ${(item.arousal??0).toFixed(2)}</span></div>
+        <div class="actions">
+          <a href="#" data-path="${item.path}">Öffnen</a>
+          <a href="../${item.path}" target="_blank" rel="noopener">Markdown</a>
+          <a href="../${(item.audio||'audio/latest.mp3')}" target="_blank" rel="noopener">Audio</a>
+        </div>
+      `;
+      p.querySelector('a[data-path]').addEventListener('click', async (e)=>{
+        e.preventDefault();
+        await showEntry(item);
+        window.scrollTo({top:0,behavior:"smooth"});
+      });
+      return p;
+    }
+
+    async function showList(idx){
+      const list = $("#list");
+      list.innerHTML = "";
+      const items = (idx?.latest || []);
+      if(!items.length){
+        list.innerHTML = `<div class="muted">Noch keine Einträge vorhanden.</div>`;
+        return;
+      }
+      for(const it of items){
+        list.appendChild(row(it));
+      }
+      // auto-open first
+      await showEntry(items[0]);
+    }
+
+    async function parseFrontmatter(md){
+      // very light parser for the front block
+      const m = md.match(/^---[\s\S]*?---/);
+      const fm = { date:"—", timestamp:"—", affect:{}, audio:"audio/latest.mp3"};
+      if(!m){ return fm; }
+      const block = m[0].replace(/^---\s*\n?|\n?---\s*$/g,"");
+      block.split(/\n/).forEach(line=>{
+        const kv = line.split(":");
+        if(kv.length<2) return;
+        const k = kv[0].trim(); const v = kv.slice(1).join(":").trim();
+        if(k==="date") fm.date = v;
+        else if(k==="timestamp") fm.timestamp = v;
+        else if(k==="audio") fm.audio = v;
+        else if(k==="label") fm.affect.label = v;
+        else if(k==="valence") fm.affect.valence = parseFloat(v);
+        else if(k==="arousal") fm.affect.arousal = parseFloat(v);
+        else if(k==="stability") fm.affect.stability = parseFloat(v);
+      });
+      return fm;
+    }
+
+    async function showEntry(item){
+      $("#detailTitle").textContent = `Eintrag — ${item.date}`;
+      $("#date").textContent = item.date || "—";
+      $("#label").textContent = item.label || "—";
+      $("#va").textContent = `${(item.valence??0).toFixed(2)} / ${(item.arousal??0).toFixed(2)}`;
+      $("#stab").textContent = (item.stability!=null) ? (item.stability).toFixed(2) : "—";
+
+      // load MD
+      const md = await getText("../"+item.path);
+      if(!md){ $("#content").innerHTML = `<p class="muted">Konnte die Datei nicht laden.</p>`; return; }
+
+      // Extract voice quote from blockquote if present
+      const qMatch = md.match(/^\>\s?\*\*Stimme des Tages:\*\*\s*„([^“]+)“/m);
+      $("#quote").textContent = qMatch ? `„${qMatch[1]}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
+
+      // frontmatter for audio fallback
+      const fm = await parseFrontmatter(md);
+      const audioPath = item.audio || fm.audio || "audio/latest.mp3";
+      const audioURL = "../" + audioPath;
+      const player = $("#player");
+      if(await headOK(audioURL)){ player.src = audioURL; } else { player.src = "data:audio/mpeg;base64,//uQZAAAAAAAAAAA"; }
+
+      // Render markdown (minus frontmatter)
+      const content = md.replace(/^---[\s\S]*?---\s*/, "");
+      $("#content").innerHTML = mdToHtml(content);
+    }
+
+    (async function init(){
+      const idx = await getJSON("../data/journal/index.json");
+      await showList(idx);
+    })();
+  </script>
+</body>
+  </html>
