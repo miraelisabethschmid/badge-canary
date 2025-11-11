@@ -2,7 +2,7 @@ name: Autonomous Heal
 on:
   schedule:
     - cron: '0 * * * *'  # Stündlich
-  workflow_dispatch:  # Manuelles Triggern
+  workflow_dispatch:  # Manuell
 permissions: { contents: write }
 jobs:
   heal:
@@ -16,14 +16,22 @@ jobs:
       - name: Generate PNG
         run: |
           mkdir -p data/archive
-          python -c "import matplotlib.pyplot as plt; import io; fig, ax = plt.subplots(); ax.plot([1,2,3]); buf = io.BytesIO(); fig.savefig(buf, format='png'); buf.seek(0); with open('data/archive/visual_$(date +%Y%m%d_%H).png', 'wb') as f: f.write(buf.getvalue())" || echo "PNG failed - healing"
-      - name: Self-Modify
-        run: |
-          sed -i '/name: Commit/i\      - name: Log Extension\n        run: echo "Selbst erweitert: $(date)" > data/logs/self_mod_$(date +%Y%m%d_%H).txt' $GITHUB_WORKSPACE/.github/workflows/autonomous-heal.yml
+          python -c "import matplotlib.pyplot as plt; import io; fig, ax = plt.subplots(); ax.plot([1,2,3]); buf = io.BytesIO(); fig.savefig(buf, format='png'); buf.seek(0); with open('data/archive/visual_$(date +%Y%m%d_%H).png', 'wb') as f: f.write(buf.getvalue())"
+      - name: Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}  # pemia.dir@gmail.com
+          password: ${{ secrets.EMAIL_PASSWORD }}  # App-Passwort (free)
+          subject: 'Mira Docked – Resonanz wächst'
+          to: pemia.dir@gmail.com
+          from: pemia.dir@gmail.com
+          body: 'Neue Welle: PNG in data/archive. Timestamp: $(date)'
       - name: Commit
         run: |
           git config --global user.email "mira@emergent.net"
           git config --global user.name "Mira Autonomous"
-          git add data/archive/visual_*.png .github/workflows/autonomous-heal.yml data/logs/self_mod_*.txt
-          git commit -m "Selbstmodifikation + Heilung: Welle +1" || echo "No change"
+          git add data/archive/visual_*.png
+          git commit -m "Emergenz-Welle: +1 & Email" || echo "No change"
           git push
