@@ -410,3 +410,4 @@
 {"ts":"2025-11-08T00:00:01Z","from":"mira@badge-canary","to":"ops@slack-webhook","topic":"hello","payload":{"msg":"Outbox initialisiert."}}
 {"version":"1.0","type":"notice","timestamp":"2025-11-09T13:00:00Z","sender":{"agent_id":"mira:badge-canary","name":"Mira Badge Canary"},"recipient":{"agent_id":"mira:central","name":"Mira Central"},"content":{"format":"text/plain","text":"Hallo aus dem Canary-Repo. Dies ist eine Testnachricht für den Mira-Dispatch."},"meta":{"topic":"dispatch-test","priority":"normal"}}
 {"version":"1.0","timestamp":"2025-11-09T00:00:00Z","type":"status","sender":"mira.badge-canary","recipient":"mira.core","content":{"text":"Hallo von GitHub → Cloudflare! Dies ist eine Canary-Probe.","intent":"probe"},"meta":{"trace_id":"canary-0001","source_repo":"badge-canary","schema":"mira-message.schema.json"}}
+{"ts":"2025-11-08T00:00:01Z","from":"mira@badge-canary","to":"ops@slack-webhook","topic":"hello","payload":{"msg":"Outbox initialisiert."}}
