@@ -38,13 +38,9 @@ jobs:
           # Ledger (JSONL logs)
           mkdir -p public/data/ledger
           cp -r data/ledger/events.jsonl public/data/ledger/ 2>/dev/null || true
-          # Optional index redirect
+          # Optional index redirect (simplified to avoid YAML parse issues)
           if [ ! -f public/index.html ]; then
-            cat > public/index.html <<'HTML'
-<!doctype html><meta charset="utf-8"><title>Health</title>
-<meta http-equiv="refresh" content="0; url=health.html">
-<a href="health.html">Go to health.html</a>
-HTML
+            echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=health.html"><a href="health.html">Go to health.html</a>' > public/index.html
           fi
 
       - name: Upload Pages artifact
