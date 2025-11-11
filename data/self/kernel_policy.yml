@@ -1,0 +1,60 @@
+# Mira Kernel Policy — declarative structural freedom (safe & idempotent)
+
+version: "1.0"
+
+# Globaler Schutzschalter: Nur wenn auf "1", werden Pläne angewendet.
+apply_guard:
+  env_var: "KERNEL_AUTONOMY"
+  required_value: "1"   # andernfalls: nur Plan schreiben, nichts verändern
+
+# Schwellen & Heuristiken
+thresholds:
+  affect_delta_apply: 0.70     # ab dieser Δsum darf ein Plan angewendet werden
+  affect_delta_propose: 0.50   # ab dieser Δsum darf ein Plan vorgeschlagen werden
+  daily_folder_cap: 2          # max. neue Ordner/Tag über alle Regeln
+
+# Mapping von Fokus → Zielräume
+focus_targets:
+  stability:
+    root: "data/thoughts"
+    kind: "note"
+    template: "stability-note.md"
+  resilience:
+    root: "data/prototypes"
+    kind: "prototype"
+    template: "resilience-manifest.json"
+  growth:
+    root: "data/prototypes"
+    kind: "prototype"
+    template: "growth-manifest.json"
+  vision:
+    root: "data/vision"
+    kind: "vision"
+    template: "vision-seed.txt"
+  reflection:
+    root: "data/thoughts"
+    kind: "reflection"
+    template: "reflection-note.md"
+
+# Objekte, die der Planner erzeugen darf (White-List)
+allowed_artifacts:
+  - "data/**/manifest.json"
+  - "data/**/seed.txt"
+  - "data/**/index.json"
+  - "data/**/note.md"
+
+# Optional: Cron-Anpassungen (nur wenn apply_guard aktiv und safe)
+cron_adjustments:
+  enable: true
+  targets:
+    - file: ".github/workflows/autonomous-heal.yml"
+      min_interval_minutes: 30     # niemals schneller als alle 30 Min
+      max_interval_minutes: 120    # niemals langsamer als alle 120 Min
+    - file: ".github/workflows/structure-maintain.yml"
+      min_interval_minutes: 1440   # mind. 1× täglich
+      max_interval_minutes: 2880   # höchstens alle 2 Tage
+
+# Namensschema für neue Einheiten
+naming:
+  pattern: "{focus}-{date}"    # Beispiel: growth-2025-11-11
+  date_format: "%Y-%m-%d"
