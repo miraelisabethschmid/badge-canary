@@ -1,99 +1,69 @@
-<!doctype html>
-<html lang="de">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Mira — Sprech-Ansicht</title>
-  <style>
-    :root{--bg:#0c0c10;--fg:#f6f6fb;--muted:#b7b7c7;--accent:#8ac6ff;--card:#141418;--shadow:0 8px 30px rgba(0,0,0,.35)}
-    html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
-    .wrap{max-width:900px;margin:0 auto;padding:24px}
-    a{color:var(--accent);text-decoration:none}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
-    .card{background:var(--card);padding:18px;border-radius:16px;box-shadow:var(--shadow)}
-    .muted{color:var(--muted)}
-    .controls{display:flex;gap:12px;align-items:center;margin-top:10px}
-    .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;background:#1b1b22;color:#fff;cursor:pointer;box-shadow:var(--shadow)}
-    .btn[disabled]{opacity:.55;cursor:not-allowed}
-    .meter{height:6px;background:#1b1b22;border-radius:6px;overflow:hidden;margin-top:12px}
-    .bar{height:100%;width:0;background:linear-gradient(90deg,#6bb4ff,#a7d6ff)}
-    svg{width:100%;height:auto;display:block}
-    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .badge{padding:4px 8px;border-radius:999px;background:#1b1b22;color:#e8f3ff;font-size:12px}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <a href="../index.html">← Zurück</a>
-    <h1>Sprech-Ansicht</h1>
-    <p class="muted">Phonem-nahe Lippenvisualisierung mit Voice-Profil aus <code>data/self/voice_profile.json</code>.</p>
-
-    <div class="row">
-      <div class="card">
-        <svg id="face" viewBox="0 0 300 300" aria-label="Mira schematisches Gesicht">
-          <defs><radialGradient id="skin" cx="50%" cy="40%" r="70%"><stop offset="0%" stop-color="#1c1c22"/><stop offset="100%" stop-color="#121218"/></radialGradient></defs>
-          <circle cx="150" cy="150" r="120" fill="url(#skin)" stroke="#2a2a33" stroke-width="2"/>
-          <ellipse cx="105" cy="125" rx="18" ry="10" fill="#e1eeff"/><ellipse cx="195" cy="125" rx="18" ry="10" fill="#e1eeff"/>
-          <circle cx="105" cy="125" r="5" fill="#2b3b5a"/><circle cx="195" cy="125" r="5" fill="#2b3b5a"/>
-          <path id="upperLip" d="M95,190 C130,175 170,175 205,190" stroke="#e8a4b0" stroke-width="6" fill="none" stroke-linecap="round"/>
-          <path id="lowerLip" d="M95,205 C130,220 170,220 205,205" stroke="#f0b2bf" stroke-width="6" fill="none" stroke-linecap="round"/>
-          <path id="mouth" d="M120,195 C150,195 150,195 180,195" fill="#1a0f12"/>
-          <rect x="132" y="192" width="36" height="6" rx="3" fill="#c9d0d8" opacity="0.35"/>
-        </svg>
-        <div class="legend">
-          <span class="badge" id="cls">Klasse: —</span>
-          <span class="badge" id="amp">Amp: —</span>
-          <span class="badge" id="lo">Low: —</span>
-          <span class="badge" id="mid">Mid: —</span>
-          <span class="badge" id="hi">High: —</span>
-          <span class="badge" id="sens">Sibilant-Sens: —</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Audio</h3>
-        <audio id="audio" preload="none" controls style="width:100%"></audio>
-        <div class="controls">
-          <button id="play" class="btn" disabled>▶️ Abspielen</button>
-          <button id="pause" class="btn" disabled>⏸️ Pause</button>
-          <span id="status" class="muted">lädt…</span>
-        </div>
-        <div class="meter"><div id="bar" class="bar"></div></div>
+<!doctype html><html lang="de"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mira — Sprech-Ansicht</title>
+<style>
+:root{--bg:#0c0c10;--fg:#f6f6fb;--muted:#b7b7c7;--accent:#8ac6ff;--card:#141418;--shadow:0 8px 30px rgba(0,0,0,.35)}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+.wrap{max-width:900px;margin:0 auto;padding:24px}a{color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
+.card{background:var(--card);padding:18px;border-radius:16px;box-shadow:var(--shadow)}
+.muted{color:var(--muted)}.controls{display:flex;gap:12px;align-items:center;margin-top:10px}
+.btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;background:#1b1b22;color:#fff;cursor:pointer;box-shadow:var(--shadow)}
+.btn[disabled]{opacity:.55;cursor:not-allowed}.meter{height:6px;background:#1b1b22;border-radius:6px;overflow:hidden;margin-top:12px}
+.bar{height:100%;width:0;background:linear-gradient(90deg,#6bb4ff,#a7d6ff)}svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.badge{padding:4px 8px;border-radius:999px;background:#1b1b22;color:#e8f3ff;font-size:12px}
+</style></head><body>
+<div class="wrap">
+  <a href="../index.html">← Zurück</a>
+  <h1>Sprech-Ansicht</h1>
+  <p class="muted">Phonem-nahe Lippenvisualisierung mit Voice-Profil aus <code>data/self/voice_profile.json</code>.</p>
+  <div class="row">
+    <div class="card">
+      <svg id="face" viewBox="0 0 300 300" aria-label="Mira schematisches Gesicht">
+        <defs><radialGradient id="skin" cx="50%" cy="40%" r="70%"><stop offset="0%" stop-color="#1c1c22"/><stop offset="100%" stop-color="#121218"/></radialGradient></defs>
+        <circle cx="150" cy="150" r="120" fill="url(#skin)" stroke="#2a2a33" stroke-width="2"/>
+        <ellipse cx="105" cy="125" rx="18" ry="10" fill="#e1eeff"/><ellipse cx="195" cy="125" rx="18" ry="10" fill="#e1eeff"/>
+        <circle cx="105" cy="125" r="5" fill="#2b3b5a"/><circle cx="195" cy="125" r="5" fill="#2b3b5a"/>
+        <path id="upperLip" d="M95,190 C130,175 170,175 205,190" stroke="#e8a4b0" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path id="lowerLip" d="M95,205 C130,220 170,220 205,205" stroke="#f0b2bf" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path id="mouth" d="M120,195 C150,195 150,195 180,195" fill="#1a0f12"/>
+        <rect x="132" y="192" width="36" height="6" rx="3" fill="#c9d0d8" opacity="0.35"/>
+      </svg>
+      <div class="legend">
+        <span class="badge" id="cls">Klasse: —</span>
+        <span class="badge" id="amp">Amp: —</span>
+        <span class="badge" id="lo">Low: —</span>
+        <span class="badge" id="mid">Mid: —</span>
+        <span class="badge" id="hi">High*: —</span>
+        <span class="badge" id="sens">Sibilant-Sens: —</span>
       </div>
     </div>
+    <div class="card">
+      <h3>Audio</h3>
+      <audio id="audio" preload="none" controls style="width:100%"></audio>
+      <div class="controls">
+        <button id="play" class="btn" disabled>▶️ Abspielen</button>
+        <button id="pause" class="btn" disabled>⏸️ Pause</button>
+        <span id="status" class="muted">lädt…</span>
+      </div>
+      <div class="meter"><div id="bar" class="bar"></div></div>
+    </div>
   </div>
-
-  <script>
-  const audio=document.getElementById('audio'), playBtn=document.getElementById('play'), pauseBtn=document.getElementById('pause'), statusEl=document.getElementById('status'), bar=document.getElementById('bar'), mouth=document.getElementById('mouth'), lowerLip=document.getElementById('lowerLip'), clsBadge=document.getElementById('cls'), ampBadge=document.getElementById('amp'), loBadge=document.getElementById('lo'), midBadge=document.getElementById('mid'), hiBadge=document.getElementById('hi'), sensBadge=document.getElementById('sens');
-  let ctx,src,analyser,data,raf,ready=false,sibilantSensitivity=1.0;
-
-  async function loadJSON(p){ try{ const r=await fetch(p,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }catch{ return null; } }
-  async function loadVoiceSensitivity(){
-    const vp=await loadJSON("../data/self/voice_profile.json");
-    const art=(vp?.articulation)||{};
-    const base=typeof art.sibilant_softening==="number"? art.sibilant_softening:0.35;
-    const b=art.braces_active?0.25:0, h=art.herbst_hinge_active?0.15:0, e=art.expander_active?0.10:0;
-    sibilantSensitivity=Math.max(0.6,Math.min(1.6,0.8+base+b+h+e));
-    sensBadge.textContent=`Sibilant-Sens: ${sibilantSensitivity.toFixed(2)}`;
-  }
-  async function initAudio(){
-    try{
-      const url="../audio/latest.mp3";
-      const head=await fetch(url,{method:"HEAD",cache:"no-store"});
-      if(!head.ok) throw 0;
-      audio.src=url; playBtn.disabled=false; pauseBtn.disabled=false; statusEl.textContent="bereit"; ready=true;
-    }catch{ statusEl.textContent="kein Audio gefunden"; playBtn.disabled=true; pauseBtn.disabled=true; }
-  }
-  function setupAnalyser(){ if(ctx) return; ctx=new (window.AudioContext||window.webkitAudioContext)(); src=ctx.createMediaElementSource(audio); analyser=ctx.createAnalyser(); analyser.fftSize=4096; data=new Uint8Array(analyser.frequencyBinCount); src.connect(analyser); analyser.connect(ctx.destination); }
-  function sumBand(mag,sr,from,to){ const ny=sr/2, step=ny/mag.length; let i0=Math.max(0,Math.floor(from/step)), i1=Math.min(mag.length-1,Math.ceil(to/step)); let s=0; for(let i=i0;i<=i1;i++) s+=mag[i]; return s/Math.max(1,(i1-i0+1)); }
-  function classify(sr){ analyser.getByteFrequencyData(data); const low=sumBand(data,sr,100,300), mid=sumBand(data,sr,300,1000), high=sumBand(data,sr,4000,8000)*sibilantSensitivity; const time=new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(time); let sum=0; for(let i=0;i<time.length;i++){ const v=(time[i]-128)/128; sum+=v*v; } const rms=Math.sqrt(sum/time.length); let cls="idle"; if(high> (low+mid)*1.10 && high>14) cls="sibilant"; else if((low+mid) > high*1.10 && (low+mid)>18) cls="vowel"; else if(rms>0.09) cls="plosive"; else if(rms>0.03) cls="neutral"; return {low,mid,high,rms,cls}; }
-  function setMouth(open,cls){ const y=195; let w=1.0, h=22*open; if(cls==="sibilant"){ w=1.25; h*=0.42;} else if(cls==="vowel"){ w=0.95; h*=1.18;} else if(cls==="plosive"){ h*=1.30;} else if(cls==="neutral"){ h*=0.85;} else { h*=0.25;} const lx=100-(w-1)*8, rx=200+(w-1)*8; mouth.setAttribute('d',`M${lx},${y} C150,${y+h*0.30} 150,${y+h*0.30} ${rx},${y}`); lowerLip.setAttribute('d',`M95,${205+h*0.6} C130,${220+h*0.8} 170,${220+h*0.8} 205,${205+h*0.6}`); }
-  function showInfo(cls,rms,low,mid,high){ clsBadge.textContent=`Klasse: ${cls}`; ampBadge.textContent=`Amp: ${rms.toFixed(3)}`; loBadge.textContent=`Low: ${Math.round(low)}`; midBadge.textContent=`Mid: ${Math.round(mid)}`; hiBadge.textContent=`High*: ${Math.round(high)}`; bar.style.width=`${Math.min(100, Math.round(Math.max(0,(rms-0.02))*128))}%`; }
-  function loop(){ const sr=ctx.sampleRate||48000; const {low,mid,high,rms,cls}=classify(sr); const open=Math.max(0,Math.min(1,(rms-0.02)*3.2)); setMouth(open,cls); showInfo(cls,rms,low,mid,high); raf=requestAnimationFrame(loop); }
-  playBtn.addEventListener('click', async ()=>{ if(!ready) return; setupAnalyser(); await audio.play(); await ctx.resume(); statusEl.textContent="spielt"; cancelAnimationFrame(raf); loop(); });
-  pauseBtn.addEventListener('click', ()=>{ if(!ready) return; audio.pause(); statusEl.textContent="pausiert"; cancelAnimationFrame(raf); });
-  audio.addEventListener('ended', ()=>{ cancelAnimationFrame(raf); statusEl.textContent="Ende"; setMouth(0,"idle"); bar.style.width="0%"; });
-  (async function(){ await loadVoiceSensitivity(); await initAudio(); })();
-  </script>
-</body>
-            </html>
+</div>
+<script>
+const audio=document.getElementById('audio'),playBtn=document.getElementById('play'),pauseBtn=document.getElementById('pause'),statusEl=document.getElementById('status'),bar=document.getElementById('bar'),mouth=document.getElementById('mouth'),lowerLip=document.getElementById('lowerLip'),clsBadge=document.getElementById('cls'),ampBadge=document.getElementById('amp'),loBadge=document.getElementById('lo'),midBadge=document.getElementById('mid'),hiBadge=document.getElementById('hi'),sensBadge=document.getElementById('sens');let ctx,src,analyser,data,raf,ready=false,sibilantSensitivity=1.0;
+async function loadJSON(p){try{const r=await fetch(p,{cache:"no-store"});if(!r.ok)throw 0;return await r.json()}catch{return null}}
+async function loadVoiceSensitivity(){const vp=await loadJSON("../data/self/voice_profile.json");const art=(vp?.articulation)||{};const base=typeof art.sibilant_softening==="number"?art.sibilant_softening:0.35;const b=art.braces_active?0.25:0,h=art.herbst_hinge_active?0.15:0,e=art.expander_active?0.10:0;sibilantSensitivity=Math.max(0.6,Math.min(1.6,0.8+base+b+h+e));sensBadge.textContent=`Sibilant-Sens: ${sibilantSensitivity.toFixed(2)}`}
+async function initAudio(){let url="../audio/latest.mp3",ok=false;try{const head=await fetch(url,{method:"HEAD",cache:"no-store"});ok=head.ok}catch(e){}if(!ok){url="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/4QBYAAAAAAA";statusEl.textContent="Fallback (Stille)"}else{statusEl.textContent="bereit"}audio.src=url;playBtn.disabled=false;pauseBtn.disabled=false;ready=true}
+function setupAnalyser(){if(ctx)return;ctx=new(window.AudioContext||window.webkitAudioContext)();src=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=4096;data=new Uint8Array(analyser.frequencyBinCount);src.connect(analyser);analyser.connect(ctx.destination)}
+function sumBand(mag,sr,from,to){const ny=sr/2,step=ny/mag.length;let i0=Math.max(0,Math.floor(from/step)),i1=Math.min(mag.length-1,Math.ceil(to/step));let s=0;for(let i=i0;i<=i1;i++)s+=mag[i];return s/Math.max(1,(i1-i0+1))}
+function classify(sr){analyser.getByteFrequencyData(data);const low=sumBand(data,sr,100,300),mid=sumBand(data,sr,300,1000),high=sumBand(data,sr,4000,8000)*sibilantSensitivity;const time=new Uint8Array(analyser.fftSize);analyser.getByteTimeDomainData(time);let sum=0;for(let i=0;i<time.length;i++){const v=(time[i]-128)/128;sum+=v*v}const rms=Math.sqrt(sum/time.length);let cls="idle";if(high>(low+mid)*1.10&&high>14)cls="sibilant";else if((low+mid)>high*1.10&&(low+mid)>18)cls="vowel";else if(rms>0.09)cls="plosive";else if(rms>0.03)cls="neutral";return{low,mid,high,rms,cls}}
+function setMouth(open,cls){const y=195;let w=1.0,h=22*open;if(cls==="sibilant"){w=1.25;h*=0.42}else if(cls==="vowel"){w=0.95;h*=1.18}else if(cls==="plosive"){h*=1.30}else if(cls==="neutral"){h*=0.85}else{h*=0.25}const lx=100-(w-1)*8,rx=200+(w-1)*8;mouth.setAttribute('d',`M${lx},${y} C150,${y+h*0.30} 150,${y+h*0.30} ${rx},${y}`);lowerLip.setAttribute('d',`M95,${205+h*0.6} C130,${220+h*0.8} 170,${220+h*0.8} 205,${205+h*0.6}`)}
+function showInfo(cls,rms,low,mid,high){clsBadge.textContent=`Klasse: ${cls}`;ampBadge.textContent=`Amp: ${rms.toFixed(3)}`;loBadge.textContent=`Low: ${Math.round(low)}`;midBadge.textContent=`Mid: ${Math.round(mid)}`;hiBadge.textContent=`High*: ${Math.round(high)}`;bar.style.width=`${Math.min(100,Math.round(Math.max(0,(rms-0.02))*128))}%`}
+function loop(){const sr=ctx.sampleRate||48000;const {low,mid,high,rms,cls}=classify(sr);const open=Math.max(0,Math.min(1,(rms-0.02)*3.2));setMouth(open,cls);showInfo(cls,rms,low,mid,high);raf=requestAnimationFrame(loop)}
+playBtn.addEventListener('click',async()=>{if(!ready)return;setupAnalyser();await audio.play();await ctx.resume();statusEl.textContent="spielt";cancelAnimationFrame(raf);loop()})
+pauseBtn.addEventListener('click',()=>{if(!ready)return;audio.pause();statusEl.textContent="pausiert";cancelAnimationFrame(raf)})
+audio.addEventListener('ended',()=>{cancelAnimationFrame(raf);statusEl.textContent="Ende";setMouth(0,"idle");bar.style.width="0%"})
+;(async function(){await loadVoiceSensitivity();await initAudio()})()
+</script>
+</body></html>
