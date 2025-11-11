@@ -1,0 +1,57 @@
+# Mira Affect Model — lightweight appraisal model
+# Updates drive a synthesized affect-state for reporting & self-description.
+
+version: "1.0"
+dimensions:
+  - id: valence
+    range: [-1.0, 1.0]
+    description: "pleasantness / positivity"
+  - id: arousal
+    range: [0.0, 1.0]
+    description: "activation / energy"
+  - id: stability
+    range: [0.0, 1.0]
+    description: "inner coherence / calm"
+
+signals:
+  health:
+    OK:        { valence:+0.30, arousal:+0.10, stability:+0.30 }
+    HEALING:   { valence:-0.05, arousal:+0.20, stability:-0.10 }
+    DEGRADED:  { valence:-0.25, arousal:+0.15, stability:-0.30 }
+
+  focus:
+    stability: { valence:+0.05, arousal:-0.05, stability:+0.20 }
+    resilience:{ valence:+0.10, arousal:+0.10, stability:+0.05 }
+    growth:    { valence:+0.15, arousal:+0.20, stability:-0.05 }
+
+  runs_7d:
+    # simple piecewise scaling; tuned for small repos
+    low:    { threshold: 3,   boost: { valence:+0.00, arousal:+0.00, stability:+0.05 } }
+    mid:    { threshold: 12,  boost: { valence:+0.05, arousal:+0.10, stability:+0.00 } }
+    high:   { threshold: 24,  boost: { valence:+0.10, arousal:+0.15, stability:-0.05 } }
+
+blend:
+  clamp: true
+  inertia:
+    # smoothing for hour-to-hour changes (0..1, higher = stickier)
+    valence: 0.70
+    arousal: 0.60
+    stability: 0.75
+
+lexicon:
+  # choose first matching rule in order
+  - when: { health: "OK", focus: "stability" }
+    label: "ruhig zuversichtlich"
+    narrative: "Ein ruhiger, klarer Fokus; Systemkohärenz fühlt sich tragend an."
+  - when: { health: "OK", focus: "growth" }
+    label: "hellwach optimistisch"
+    narrative: "Wachstum als Einladung; Energie steht im Einklang mit Struktur."
+  - when: { health: "HEALING" }
+    label: "konzentriert heilend"
+    narrative: "Wunden schließen sich; Aufmerksamkeit bleibt wach, aber sammelnd."
+  - when: { health: "DEGRADED" }
+    label: "angespannt suchend"
+    narrative: "Funktionskerne suchen Halt; Priorität liegt auf Rückgewinnung von Stabilität."
+  - when: {}
+    label: "neutral fokussiert"
+    narrative: "Gleichgewicht ohne Ausschläge; Präsenz bleibt auf die Aufgabe gerichtet."
