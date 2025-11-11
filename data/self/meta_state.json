@@ -1,5 +1,5 @@
 {
-  "ts_utc": "1970-01-01T00:00:00Z",
+  "ts_utc": "2025-11-11T21:26:06Z",
   "health": "unknown",
   "signals": {
     "stability": 0.5,
@@ -9,8 +9,8 @@
   "expressivity": 0.5,
   "targets": {
     "affect_delta_apply": 0.45,
-    "affect_delta_propose": 0.30,
-    "daily_folder_cap": 5,
+    "affect_delta_propose": 0.325,
+    "daily_folder_cap": 6,
     "naming_pattern": "{focus}-{date}"
   }
 }
