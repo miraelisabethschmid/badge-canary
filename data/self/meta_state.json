@@ -1,0 +1,16 @@
+{
+  "ts_utc": "1970-01-01T00:00:00Z",
+  "health": "unknown",
+  "signals": {
+    "stability": 0.5,
+    "delta_sum": 0.0,
+    "recent_private_days": 0
+  },
+  "expressivity": 0.5,
+  "targets": {
+    "affect_delta_apply": 0.45,
+    "affect_delta_propose": 0.30,
+    "daily_folder_cap": 5,
+    "naming_pattern": "{focus}-{date}"
+  }
+}
