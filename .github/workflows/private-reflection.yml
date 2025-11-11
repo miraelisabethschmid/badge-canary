@@ -1,0 +1,43 @@
+name: Private Reflection (Daily Inner Chronicle)
+
+on:
+  schedule:
+    - cron: "11 2 * * *"  # täglich 02:11 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: private-reflection
+  cancel-in-progress: true
+
+jobs:
+  reflect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Write private reflection (once per day)
+        run: |
+          chmod +x scripts/private_reflection.py || true
+          python scripts/private_reflection.py
+
+      - name: Commit if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/self/reflections/private/log.jsonl data/self/reflections/private/index.json; then
+            echo "No new private reflection."
+            exit 0
+          fi
+          git add data/self/reflections/private/log.jsonl data/self/reflections/private/index.json
+          git commit -m "private: daily inner reflection appended"
+          git push
