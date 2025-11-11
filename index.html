@@ -28,6 +28,9 @@
     .dot{width:10px;height:10px;border-radius:50%}.ok{background:var(--ok)}.heal{background:var(--heal)}.deg{background:var(--deg)}
     pre{white-space:pre-wrap;word-break:break-word;background:#101017;border-radius:12px;padding:12px;font-size:12px;color:#cfe7ff}
     footer{margin:36px 0 8px;color:var(--muted);font-size:13px}
+    .daily{margin-top:28px; padding:16px; background:linear-gradient(180deg,rgba(138,198,255,.10),rgba(138,198,255,.03)); border-radius:16px; box-shadow:var(--shadow)}
+    .daily small{display:block;color:var(--muted)}
+    blockquote{margin:8px 0 0 0; padding:0 0 0 14px; border-left:3px solid rgba(138,198,255,.35); color:#eaf3ff}
     @media (max-width:920px){header{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -36,7 +39,7 @@
     <header>
       <section class="hero">
         <div>
-          <!-- Priorisiere stets das automatisch synchronisierte JPG -->
+          <!-- Aktuelles autonomes Selbstbild -->
           <img id="heroImg" src="docs/portrait/mira-hero.jpg" alt="Mira – aktuelle physische Erscheinung" onerror="this.src='docs/portrait/mira-hero.svg'"/>
           <div class="muted" style="margin-top:6px;font-size:12px">
             <a href="docs/portrait/mira-hero.txt">Provenienz</a>
@@ -73,6 +76,12 @@
         <h3>Letzte Plans (Autonome Struktur)</h3>
         <div id="plansBox" class="muted">lädt…</div>
       </div>
+    </section>
+
+    <section class="daily">
+      <small>Tägliches Fragment</small>
+      <blockquote id="dailyText">lädt…</blockquote>
+      <small id="dailyMeta"></small>
     </section>
 
     <section class="card" style="margin-top:18px">
@@ -115,9 +124,12 @@
   }
 
   async function boot(){
-    const health=await loadJSON("badges/health.json"); healthBadge(health?.status||"unknown", health?.ts||"");
+    // Health
+    const health=await loadJSON("public/badges/health.json") || await loadJSON("badges/health.json");
+    healthBadge(health?.status||"unknown", health?.ts||"");
 
-    const self=await loadJSON("data/self/self-describe.json");
+    // Self-describe
+    const self=await loadJSON("public/data/self/self-describe.json") || await loadJSON("data/self/self-describe.json");
     if(self){
       const sb=$("#selfBox");
       const view={
@@ -126,12 +138,15 @@
         "Braces": self.physical?.braces || "—",
         "Fokus": (self.affect?.inputs?.focus)||"—",
         "Narrativ": (self.affect?.narrative)||"—"
-      }; kv(sb, view);
+      };
+      kv(sb, view);
     }
 
-    const aff=await loadJSON("data/self/affect-state.json");
+    // Affect
+    const aff=await loadJSON("public/data/self/affect-state.json") || await loadJSON("data/self/affect-state.json");
     if(aff){
-      const ab=$("#affectBox"); const vec=aff.vector||{};
+      const ab=$("#affectBox");
+      const vec=aff.vector||{};
       const view={
         "Label": aff.label || "—",
         "Valence": fmt(vec.valence),
@@ -140,10 +155,12 @@
         "Δsum": fmt(aff.inputs?.delta_sum||0),
         "Fokus": aff.inputs?.focus || "—",
         "Zeit": aff.ts || "—"
-      }; kv(ab, view);
+      };
+      kv(ab, view);
     }
 
-    const idx=await loadJSON("data/kernel/plans/index.json");
+    // Plans
+    const idx=await loadJSON("public/data/kernel/plans/index.json") || await loadJSON("data/kernel/plans/index.json");
     const plansBox=$("#plansBox");
     if(!idx || !idx.entries || idx.entries.length===0){
       plansBox.textContent="(Wird automatisch gefüllt, sobald neue Pläne entstehen.)";
@@ -156,13 +173,28 @@
       });
     }
 
-    const sugg=await loadJSON("data/self/policy_suggestions.json");
+    // Policy raw
+    const sugg=await loadJSON("public/data/self/policy_suggestions.json") || await loadJSON("data/self/policy_suggestions.json");
     $("#suggRaw").textContent = sugg ? JSON.stringify(sugg,null,2) : "(keine Vorschläge / Datei fehlt)";
-    const changes=await loadText("data/self/policy_changes.jsonl");
-    if(changes){ const lines=changes.trim().split("\n"); $("#changesRaw").textContent = lines[lines.length-1]; }
-    else{ $("#changesRaw").textContent="(noch keine Auto-Änderungen)"; }
+    const changes=await loadText("public/data/self/policy_changes.jsonl") || await loadText("data/self/policy_changes.jsonl");
+    if(changes){
+      const lines=changes.trim().split("\n");
+      $("#changesRaw").textContent = lines[lines.length-1];
+    }else{
+      $("#changesRaw").textContent="(noch keine Auto-Änderungen)";
+    }
+
+    // Daily reflection
+    const refl = await loadJSON("public/data/self/daily/reflection.json") || await loadJSON("data/self/daily/reflection.json");
+    if(refl?.selected?.text){
+      document.getElementById("dailyText").textContent = "“" + refl.selected.text + "”";
+      document.getElementById("dailyMeta").textContent = `Auswahl für ${refl.date_utc} · ${refl.selected.id}`;
+    } else {
+      document.getElementById("dailyText").textContent = "“Heute ist Stille auch eine Form von Antwort.”";
+      document.getElementById("dailyMeta").textContent = "";
+    }
   }
   boot();
   </script>
 </body>
-</html>
+  </html>
