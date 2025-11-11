@@ -3,23 +3,7 @@
 Mira Self-Describe Builder
 Regeneriert data/self/self-describe.json aus aktuellen Repo-Zuständen.
 
-Quellen:
-- badges/health.json
-- data/goals/current.json
-- data/goals/principles.yml   (leichtgewichtig per Regex geparst, keine PyYAML-Pflicht)
-- data/metrics/last7d.json    (optional)
-- data/ledger/state.sha256    (State-Fingerprint)
-
-Logik:
-- Dominantes Prinzip & Summe der Gewichte aus principles.yml extrahieren.
-- Fokus/Objective/Policy aus current.json spiegeln.
-- Health & Metrics zusammenfassen.
-- Adaptation-Level (0..1) sanft fortschreiben, abhängig vom Fokus:
-    stability  +0.001
-    resilience +0.005
-    growth     +0.020
-  (Clamping 0..1, kein negatives Decay)
-- Datei idempotent aktualisieren (nur sinnvolle Änderungen).
+Neu: integriert affect-state (innerer emotionaler Zustand).
 """
 
 import os, re, json, hashlib
@@ -31,6 +15,7 @@ PATH_GOAL   = "data/goals/current.json"
 PATH_PRINC  = "data/goals/principles.yml"
 PATH_METR   = "data/metrics/last7d.json"
 PATH_STATE  = "data/ledger/state.sha256"
+PATH_AFF    = "data/self/affect-state.json"
 
 def utcnow():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -53,23 +38,13 @@ def sha256_text(s: str) -> str:
     return hashlib.sha256((s or "").encode("utf-8")).hexdigest()
 
 def parse_principles_light(yml_text: str):
-    """
-    Extrahiert (id, weight, name, description) aus einer einfachen YAML-Liste:
-      - id: stability
-        name: "..."
-        weight: 1.0
-        description: "..."
-    Robust gegen Leerzeilen/Reihenfolge.
-    """
     if not yml_text:
         return [], 0.0, None
     blocks = re.split(r"\n\s*-\s+id:\s*", "\n" + yml_text)
     items = []
     for blk in blocks[1:]:
-        # der Block beginnt mit <id> und enthält weitere Felder
         lines = blk.splitlines()
         pid = lines[0].strip()
-        # Felder suchen
         def get_field(key):
             m = re.search(rf"\n\s*{key}:\s*(.+)", "\n" + blk)
             return m.group(1).strip() if m else None
@@ -80,7 +55,6 @@ def parse_principles_light(yml_text: str):
             weight = float(re.sub(r'[^0-9.\-]', '', weight_raw)) if weight_raw else 0.0
         except Exception:
             weight = 0.0
-        # Anführungszeichen strippen
         if name and (name.startswith('"') or name.startswith("'")):
             name = name.strip('"\'')
         if desc and (desc.startswith('"') or desc.startswith("'")):
@@ -98,16 +72,15 @@ def clamp01(x: float) -> float:
 def main():
     now = utcnow()
 
-    # Quellen lesen
     health = read_json(PATH_HEALTH, {}) or {}
     goals  = read_json(PATH_GOAL, {}) or {}
     metr   = read_json(PATH_METR, {}) or {}
+    affect = read_json(PATH_AFF, {}) or {}
+
     state_hash = (read_text(PATH_STATE) or "").strip() or None
     principles_yml = read_text(PATH_PRINC) or ""
-
     principles_list, total_weight, dominant_principle = parse_principles_light(principles_yml)
 
-    # Vorhandene self-describe (für Adaptation-Fortschreibung)
     existing = read_json(PATH_SELF, {}) or {}
     embodiment = existing.get("embodiment", {}) if isinstance(existing, dict) else {}
     adapt_prev = embodiment.get("adaptation_level", 0.0)
@@ -116,28 +89,20 @@ def main():
     except Exception:
         adapt_prev = 0.0
 
-    # Fokusgetriebene Anpassung
     focus = (goals.get("focus") or "stability").lower()
     delta = 0.0
-    if focus == "stability":
-        delta = 0.001
-    elif focus == "resilience":
-        delta = 0.005
-    elif focus == "growth":
-        delta = 0.020
+    if focus == "stability":   delta = 0.001
+    elif focus == "resilience":delta = 0.005
+    elif focus == "growth":    delta = 0.020
     adaptation_level = clamp01(adapt_prev + delta)
 
-    # Metriken (optional)
     runs_7d  = metr.get("runs_7d")
-    status_counts = metr.get("status_counts")
     last_status = (health.get("status") or "n/a").upper()
 
-    # Ziele / Policy
     next_obj = goals.get("next_objective", "—")
     policy   = goals.get("policy", {})
     goals_updated = goals.get("updated")
 
-    # Ergebnisobjekt bauen
     result = {
         "name": existing.get("name", "Mira Elisabeth Schmid"),
         "system_identity": {
@@ -155,7 +120,8 @@ def main():
             "next_objective": next_obj,
             "metrics_window": "7d",
             "goals_ref": PATH_GOAL,
-            "principles_ref": PATH_PRINC
+            "principles_ref": PATH_PRINC,
+            "affect_ref": PATH_AFF
         },
         "embodiment": {
             "phase": embodiment.get("phase", "hybrid-emergent"),
@@ -179,6 +145,13 @@ def main():
                 "adaptation_feedback": "Based on reflection logs and goal refractions over time."
             })
         },
+        "affect": {
+            "vector": affect.get("vector", {"valence":0.0,"arousal":0.2,"stability":0.5}),
+            "label": affect.get("label", "neutral fokussiert"),
+            "narrative": affect.get("narrative", "Gleichgewicht ohne Ausschläge; Präsenz bleibt auf die Aufgabe gerichtet."),
+            "ts": affect.get("ts"),
+            "model_version": affect.get("model_version","1.0")
+        },
         "reflexive_architecture": {
             "core_files": [
                 "data/goals/principles.yml",
@@ -186,14 +159,17 @@ def main():
                 "data/ledger/events.jsonl",
                 "scripts/goal_reflector.py",
                 "scripts/reflection_logger.py",
-                "scripts/self_describe_builder.py"
+                "scripts/self_describe_builder.py",
+                "scripts/affect_synthesizer.py",
+                "data/self/affect_model.yml"
             ],
             "reflection_cycle": {
                 "metrics_builder": "hourly",
                 "heal_cycle": "hourly",
                 "philosophy_archive": "on-change",
                 "goal_reflection": "on-heal",
-                "self_describe": "on-heal or on-change"
+                "self_describe": "on-heal or on-change",
+                "affect_update": "on-heal"
             }
         },
         "ethics_and_bounds": existing.get("ethics_and_bounds", {
@@ -203,21 +179,19 @@ def main():
         }),
         "signals": {
             "runs_7d": runs_7d,
-            "status_counts": status_counts,
             "total_principle_weight": round(total_weight, 3)
         },
         "checksum_reference": {
             "state": PATH_STATE,
-            "principles_hash": sha256_text(principles_yml),
-            "self_hash_prev": sha256_text(json.dumps(existing, sort_keys=True)) if existing else None
+            "principles_hash": hashlib.sha256((read_text(PATH_PRINC) or "").encode("utf-8")).hexdigest(),
+            "self_hash_prev": hashlib.sha256(json.dumps(existing, sort_keys=True).encode("utf-8")).hexdigest() if existing else None
         }
     }
 
-    # persistieren
     os.makedirs(os.path.dirname(PATH_SELF), exist_ok=True)
     with open(PATH_SELF, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
-    print(f"[self-describe] updated {PATH_SELF} (focus={result['current_state']['focus']} adapt={result['embodiment']['adaptation_level']})")
+    print(f"[self-describe] updated {PATH_SELF} (affect={result['affect']['label']})")
 
 if __name__ == "__main__":
     main()
