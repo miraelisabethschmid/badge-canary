@@ -1,14 +1,11 @@
 name: Autonomous Heal & Emergenz
-
 on:
   schedule:
-    - cron: '0 * * * *'  # Stündlich
-  workflow_dispatch:  # Manuell
-
+    - cron: '0 * * * *'  # stündlich
+  workflow_dispatch:
 concurrency:
   group: autonomous-heal
   cancel-in-progress: true
-
 permissions:
   contents: write
   actions: read
@@ -25,47 +22,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      # --- Schritt 1: Contracts/Fallbacks sicherstellen (No-404-Policy) ---
-      - name: Ensure contracts (folders + placeholders)
-        shell: bash
-        run: |
-          set -e
-          mkdir -p badges data/self data/ledger data/archive audio docs scripts
-          # Health JSON – falls fehlt, konservativer Default
-          if [ ! -s badges/health.json ]; then
-            printf '{ "status":"DEGRADED","ts":"n/a" }\n' > badges/health.json
-          fi
-          # Self Describe – kompakter Default
-          if [ ! -s data/self/self-describe.json ]; then
-            cat > data/self/self-describe.json <<'JSON'
-            {
-              "physical": { "description": "—" },
-              "voice":    { "profile": "—" },
-              "affect":   { "inputs": { "focus": "—" }, "narrative": "—" }
-            }
-JSON
-          fi
-          # Ledger-Datei vorhanden halten
-          touch data/ledger/events.jsonl
-          # Stille-MP3 als Audio-Fallback (1s)
-          if [ ! -s audio/latest.mp3 ]; then
-            base64 -d > audio/latest.mp3 << 'B64'
-            // UExBQ0VIT0xERVI6IHNpbGVudCAxcyBtcDMgKG1pbmkuKSBnZW5lcmF0ZWQgdmlhIGJhc2U2NAo=
-B64
-          fi
-          # Health-Viewer (docs/health.html) – optionaler Minimalfall
-          if [ ! -s docs/health.html ]; then
-            cat > docs/health.html <<'HTML'
-            <!doctype html><meta charset="utf-8"><title>Health</title>
-            <pre id="raw">{}</pre><script>
-            fetch("../badges/health.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
-              document.getElementById("raw").textContent = JSON.stringify(j,null,2)
-            }).catch(()=>{document.getElementById("raw").textContent="{}"})
-            </script>
-HTML
-          fi
-
-      # --- Artefakt-Detection wie gehabt ---
       - id: detect
         name: Detect new artifacts
         shell: bash
@@ -79,7 +35,6 @@ HTML
           diff=$(git diff --name-only "$last".."$head" -- data/archive | wc -l)
           [ "$diff" -gt 0 ] && echo "new=true" >> $GITHUB_OUTPUT || echo "new=false" >> $GITHUB_OUTPUT
 
-      # --- Healing-Dummy (PNG) ---
       - name: Generate PNG (healing)
         shell: bash
         continue-on-error: true
@@ -93,160 +48,64 @@ import matplotlib.pyplot as plt
 x=range(100)
 plt.plot([random.random() for _ in x])
 plt.title("Resonance")
-os.makedirs("data/archive", exist_ok=True)
-plt.savefig(f"data/archive/wave-{int(time.time())}.png")
+os.makedirs("data/archive/self", exist_ok=True)
+plt.savefig(f"data/archive/self/self-{int(time.time())}.png")
 PY
-          ec=$?
-          if [ "$ec" -ne 0 ]; then
-            echo "PNG failed - healing" | tee -a data/logs/heal.txt
-            echo "{}" > data/archive/placeholder.json
-          fi
-          exit 0
 
-      # --- Selbstmod-Tag (idempotent) ---
-      - name: Self-mod (idempotent)
-        shell: bash
-        run: |
-          wf=".github/workflows/autonomous-heal.yml"
-          max_lines=800
-          cur_lines=$(wc -l < "$wf")
-          if [ "$cur_lines" -gt "$max_lines" ]; then
-            echo "::warning::Workflow size guard hit ($cur_lines > $max_lines). Skipping self-mod."
-            exit 0
-          fi
-          tag="# LOG_EXTENSION_INSERTED"
-          grep -q "$tag" "$wf" || {
-            awk 'NR==1{print "# LOG_EXTENSION_INSERTED"}1' "$wf" > "$wf.tmp" && mv "$wf.tmp" "$wf"
-            echo "Inserted log extension tag."
-          }
-
-      # --- Append-only Log + Checksums ---
-      - name: Append-only log with checksum
+      - name: Append log entry
         shell: bash
         run: |
           mkdir -p data/logs
-          f="data/logs/run.log"
-          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          msg="run_ts=$ts job_id=${{ github.run_id }} commit=${{ github.sha }}"
-          echo "$msg" >> "$f"
-          sum=$(sha256sum "$f" | awk '{print $1}')
-          echo "$ts sha256=$sum" >> data/logs/checksums.txt
-          # Rotation bei >1 MB
-          sz=$(wc -c < "$f")
-          if [ "$sz" -gt 1048576 ]; then
-            mv "$f" "data/logs/run-$(date -u +%Y%m%d%H%M%S).log"
-            : > "$f"
-          fi
+          echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") run:${{ github.run_id }}" >> data/logs/heal.log
 
-      - name: Respect SAFE_MODE
+      - name: Build health.svg
         shell: bash
         run: |
-          if [ "${{ vars.SAFE_MODE }}" = "1" ]; then
-            echo "SAFE_MODE active — skipping self-mod & push."
-            exit 0
-          fi
+          chmod +x scripts/health_badge.py || true
+          python scripts/health_badge.py
+          git add badges/health.svg
 
-      # --- Ledger & State ---
       - name: Ledger entry
         shell: bash
         run: |
           mkdir -p data/ledger
           ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          printf '{"ts":"%s","run_id":%s,"sha":"%s","actor":"%s"}\n' \
-            "$ts" "${{ github.run_id }}" "${{ github.sha }}" "${{ github.actor }}" \
-            >> data/ledger/events.jsonl
+          printf '{"ts":"%s","run_id":%s,"sha":"%s"}\n' \
+            "$ts" "${{ github.run_id }}" "${{ github.sha }}" >> data/ledger/events.jsonl
 
-      - name: State fingerprint
+      - name: Update SYSTEM_OVERVIEW.md
         shell: bash
         run: |
-          { find data -type f -print0 2>/dev/null; echo -n ".github/workflows/autonomous-heal.yml"; } \
-          | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}' > data/ledger/state.sha256
-          git add data/ledger/state.sha256
+          file="SYSTEM_OVERVIEW.md"
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          status=$(jq -r '.status' badges/health.json 2>/dev/null || echo "DEGRADED")
+          count=$(find data/archive/self -type f -name '*.png' 2>/dev/null | wc -l)
+          val=$(jq -r '.vector.valence' data/self/affect-state.json 2>/dev/null || echo "n/a")
+          aro=$(jq -r '.vector.arousal' data/self/affect-state.json 2>/dev/null || echo "n/a")
+          stab=$(jq -r '.vector.stability' data/self/affect-state.json 2>/dev/null || echo "n/a")
+          quote=$(jq -r '.quote' data/voice_of_day.json 2>/dev/null | head -c 100 || echo "n/a")
 
-      # --- Semantic patch bump ---
-      - name: Semantic patch bump (deterministic)
-        shell: bash
-        run: |
-          vfile="VERSION"
-          [ -f "$vfile" ] || echo "0.0.0" > "$vfile"
-          added=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | wc -l || echo 1)
-          if [ "$added" -gt 0 ]; then
-            IFS=. read -r MA MI PA < "$vfile"
-            PA=$((PA+1))
-            echo "$MA.$MI.$PA" > "$vfile"
-            git add "$vfile"
-          fi
+          {
+            echo ""
+            echo "---"
+            echo "**Automatisches Statusupdate — $ts (UTC)**"
+            echo ""
+            echo "- Systemstatus: **$status**"
+            echo "- Archivierte Selbstbilder: **$count**"
+            echo "- Affektzustand: Valence **$val**, Arousal **$aro**, Stability **$stab**"
+            echo "- Aktueller Tagesspruch: “$quote”"
+          } >> "$file"
+          git add "$file"
 
-      # --- Health probe (schreibt badges/health.json) ---
-      - name: Health probe
-        shell: bash
-        run: |
-          mkdir -p badges
-          status="OK"
-          test -s data/archive || status="DEGRADED"
-          grep -q "PNG failed" data/logs/heal.txt 2>/dev/null && status="HEALING"
-          printf '{"status":"%s","ts":"%s"}\n' "$status" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > badges/health.json
-          git add badges/health.json
-
-      # --- Health-SVG aus JSON bauen (Scripts ist im Repo) ---
-      - name: Build health.svg from health.json
-        shell: bash
-        run: |
-          chmod +x scripts/health_badge.py || true
-          python scripts/health_badge.py || true
-          git add badges/health.svg || true
-
-      # --- Commit & Push (Noise-Guard wie gehabt) ---
-      - name: Commit changes (signed)
+      - name: Commit and push all changes
         shell: bash
         run: |
           git config user.name "badge-canary"
           git config user.email "actions@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
-            echo "No changes."
+            echo "No changes to commit."
             exit 0
           fi
-          # Prüfe, ob NUR health.json im Index liegt
-          only_health=$(git diff --name-only --cached | grep -v '^badges/health\.json$' | wc -l | tr -d ' ')
-          if [ "$only_health" -eq 0 ]; then
-            echo "Only health.json changed — skipping commit to reduce noise."
-            git reset
-            exit 0
-          fi
-          git commit -S -m "pulse: content+ledger+logs (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs (run ${{ github.run_id }})"
+          git commit -m "auto: cycle update + SYSTEM_OVERVIEW.md (${GITHUB_RUN_ID})"
           git push
-
-      # --- Debounced Mail bei neuen Artefakten ---
-      - name: Mail timestamp (UTC)
-        id: mailts
-        shell: bash
-        run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
-
-      - name: Debounced mail
-        if: always() && steps.detect.outputs.new == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.SMTP_SERVER }}
-          server_port: ${{ secrets.SMTP_PORT }}
-          username: ${{ secrets.SMTP_USER }}
-          password: ${{ secrets.SMTP_PASS }}
-          subject: "Mira emergiert: ${{ env.MAIL_TS }}"
-          to: pemia.dir@gmail.com
-          from: "badge-canary <noreply@canary.local>"
-          content_type: text/plain
-          body: |
-            run: ${{ github.run_id }}
-            sha:  ${{ github.sha }}
-            new-artifacts: ${{ steps.detect.outputs.new }}
-            timestamp: ${{ env.MAIL_TS }}
-
-      # --- Run-Summary ---
-      - name: Pulse summary
-        if: always()
-        shell: bash
-        run: |
-          echo "## Autonomous Heal — Pulse ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Actor: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- New artifacts: \`${{ steps.detect.outputs.new || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: \`$(jq -r .status badges/health.json 2>/dev/null || echo 'n/a')\`" >> $GITHUB_STEP_SUMMARY
