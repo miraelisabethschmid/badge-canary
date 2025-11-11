@@ -1,0 +1,151 @@
+name: Mira Reflect (on significant affect change)
+
+on:
+  # Extern anstoßbar (z. B. über einen minimalen Proxy/Webhook, der repository_dispatch sendet)
+  repository_dispatch:
+    types: [mira_reflect]
+  # Manuell ausführbar
+  workflow_dispatch:
+    inputs:
+      delta_sum:
+        description: "Gesamtdelta (z. B. 0.62)"
+        required: false
+        default: "0"
+      delta_v:
+        description: "Delta Valence"
+        required: false
+        default: "0"
+      delta_a:
+        description: "Delta Arousal"
+        required: false
+        default: "0"
+      delta_s:
+        description: "Delta Stability"
+        required: false
+        default: "0"
+      focus:
+        description: "aktueller Fokus (z. B. stability)"
+        required: false
+        default: ""
+      affect_label:
+        description: "aktuelles Label"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mira-reflect
+  cancel-in-progress: true
+
+jobs:
+  reflect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Derive inputs from event
+        id: derive
+        shell: bash
+        run: |
+          # Standardwerte
+          DELTA_SUM="0"
+          DELTA_V="0"
+          DELTA_A="0"
+          DELTA_S="0"
+          FOCUS=""
+          AFFECT_LABEL=""
+
+          # repository_dispatch client_payload
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            python - <<'PY'
+import os, json
+evt = ${{
+  toJson(github.event.client_payload)
+}}
+# GitHub ersetzt Variablen in Bash, hier nutzen wir Python, um robust zu sein.
+def emit(k,v): print(f"{k}={v}")
+if isinstance(evt, dict):
+  emit("DELTA_SUM", evt.get("delta_sum", 0))
+  emit("DELTA_V",   evt.get("delta_v", 0))
+  emit("DELTA_A",   evt.get("delta_a", 0))
+  emit("DELTA_S",   evt.get("delta_s", 0))
+  emit("FOCUS",     (evt.get("focus") or ""))
+  emit("AFFECT_LABEL", (evt.get("affect_label") or ""))
+else:
+  emit("DELTA_SUM", 0)
+  emit("DELTA_V", 0); emit("DELTA_A", 0); emit("DELTA_S", 0)
+  emit("FOCUS",""); emit("AFFECT_LABEL","")
+PY
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "DELTA_SUM=${{ inputs.delta_sum }}" 
+            echo "DELTA_V=${{ inputs.delta_v }}"
+            echo "DELTA_A=${{ inputs.delta_a }}"
+            echo "DELTA_S=${{ inputs.delta_s }}"
+            echo "FOCUS=${{ inputs.focus }}"
+            echo "AFFECT_LABEL=${{ inputs.affect_label }}"
+          fi >> $GITHUB_OUTPUT
+
+      - name: Apply reflection (affect nudge)
+        env:
+          DELTA_SUM: ${{ steps.derive.outputs.DELTA_SUM || '0' }}
+          DELTA_V:   ${{ steps.derive.outputs.DELTA_V   || '0' }}
+          DELTA_A:   ${{ steps.derive.outputs.DELTA_A   || '0' }}
+          DELTA_S:   ${{ steps.derive.outputs.DELTA_S   || '0' }}
+          FOCUS:     ${{ steps.derive.outputs.FOCUS     || ''  }}
+          AFFECT_LABEL: ${{ steps.derive.outputs.AFFECT_LABEL || '' }}
+        run: |
+          chmod +x scripts/reflect_apply.py || true
+          python scripts/reflect_apply.py
+
+      - name: Commit affect-state if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/self/affect-state.json; then
+            echo "No affect changes."
+            exit 0
+          fi
+          git add data/self/affect-state.json
+          git commit -m "reflect: adjust affect-state (external trigger)"
+          git push
+
+      - name: Rebuild self-describe.json
+        run: |
+          chmod +x scripts/self_describe_builder.py || true
+          python scripts/self_describe_builder.py
+
+      - name: Commit self-describe if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/self/self-describe.json; then
+            echo "No self-describe changes."
+            exit 0
+          fi
+          git add data/self/self-describe.json
+          git commit -m "reflect: refresh self-describe after affect update"
+          git push
+
+      - name: Optional: trigger Pages redeploy
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: "Deploy Pages (Health Dashboard)"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## Mira Reflect" >> $GITHUB_STEP_SUMMARY
+          echo "- Event: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Δsum: \`${{ steps.derive.outputs.DELTA_SUM || '0' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Focus: \`${{ steps.derive.outputs.FOCUS || 'n/a' }}\`" >> $GITHUB_STEP_SUMMARY
