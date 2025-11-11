@@ -1,0 +1,52 @@
+name: Kernel Planner (Structural Freedom)
+
+on:
+  schedule:
+    - cron: "17 * * * *"   # stündlich zur Minute 17
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kernel-planner
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run kernel planner
+        env:
+          # Schalter: nur bei Bedarf auf "1" setzen (Repo → Settings → Variables → New: KERNEL_AUTONOMY=1)
+          KERNEL_AUTONOMY: ${{ vars.KERNEL_AUTONOMY }}
+        run: |
+          chmod +x scripts/kernel_planner.py || true
+          python scripts/kernel_planner.py
+
+      - name: Commit kernel plans & artifacts if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No planner changes."
+            exit 0
+          fi
+          git add data/
+          git add .github/workflows/*.yml 2>/dev/null || true
+          git commit -m "kernel: plan/apply structural changes (run ${{ github.run_id }})"
+          git push
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## Kernel Planner" >> $GITHUB_STEP_SUMMARY
+          echo "- Guard: \`KERNEL_AUTONOMY=${{ vars.KERNEL_AUTONOMY || 'unset' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Changes committed if any." >> $GITHUB_STEP_SUMMARY
