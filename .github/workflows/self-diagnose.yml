@@ -1,0 +1,50 @@
+name: Self Diagnose (Internal)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"   # stündlich Minute 17
+  push:
+    branches: [ main, master ]
+    paths:
+      - "scripts/self_diagnose.py"
+      - "data/self/affect-state.json"
+      - "data/self/internal/feedback.json"
+      - "data/self/kernel_policy.yml"
+      - "badges/health.json"
+      - "data/goals/current.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: self-diagnose
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run self diagnose
+        run: |
+          chmod +x scripts/self_diagnose.py || true
+          python scripts/self_diagnose.py
+
+      - name: Commit diagnostics if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/self/internal/diagnostics.json; then
+            echo "No diagnostics change."
+            exit 0
+          fi
+          git add data/self/internal/diagnostics.json
+          git commit -m "internal: refresh self diagnostics"
+          git push
