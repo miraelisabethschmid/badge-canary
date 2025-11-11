@@ -3,13 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mira — Sprechendes Porträt</title>
+  <title>Mira — Sprechendes Porträt (Adaptiv)</title>
   <meta name="color-scheme" content="dark light" />
   <style>
     :root{
       --bg:#0b0d12;--fg:#e9eef7;--muted:#9aa6bd;--card:#11141b;--border:rgba(255,255,255,.08);
-      --acc:#7aa2ff;--acc2:#9f7aea;--ring:rgba(122,162,255,.25);--shadow:0 18px 48px rgba(0,0,0,.45);
+      --acc:#7aa2ff;--acc2:#9f7aea;--ring:rgba(122,162,255,.25);
+      --shadow:0 18px 48px rgba(0,0,0,.45),0 4px 16px rgba(0,0,0,.35);
       --radius:18px;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;
+      --auraA:#7aa2ff22; --auraB:#9f7aea22;
     }
     *{box-sizing:border-box}
     body{
@@ -40,10 +42,11 @@
     .aura{
       position:absolute;inset:-20%;
       background:
-        radial-gradient(60% 40% at 50% 20%, #7aa2ff22, transparent 60%),
-        radial-gradient(50% 60% at 70% 60%, #9f7aea22, transparent 60%);
+        radial-gradient(60% 40% at 50% 20%, var(--auraA), transparent 60%),
+        radial-gradient(50% 60% at 70% 60%, var(--auraB), transparent 60%);
       filter:blur(30px);
       pointer-events:none;
+      transition: opacity .4s ease, filter .4s ease;
     }
     .hero{width:min(420px,86vw);height:auto;display:block}
     .hint{position:absolute;bottom:10px;left:12px;color:var(--muted);font-size:12px}
@@ -60,24 +63,16 @@
     audio{width:100%;accent-color:var(--acc);border-radius:10px}
     .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     .tile{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:12px}
-    .k{color:var(--muted);font-size:12px;margin-bottom:4px}
+    .k{color:#9aa6bd;font-size:12px;margin-bottom:4px}
     .quote{font-size:18px;border-left:3px solid #90aaff;padding-left:12px;background:#0e14211f;border-radius:10px;padding-top:8px;padding-bottom:8px}
     .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);background:#0e1220;border-radius:999px;padding:6px 12px}
     .dot{width:10px;height:10px;border-radius:50%}
     .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
     .ipa{color:#cfe0ff;font-size:12px;margin-left:6px}
 
-    /* Mouth shapes (visemes) — applied via CSS variables */
-    .mouth{transform-origin:50% 50%}
-    .lip{transition: d .08s ease}
-    .node{transition: transform .08s ease}
+    /* Mouth / breath */
     .breath{animation:breath 6s ease-in-out infinite;transform-origin:50% 5%}
-    @keyframes breath{
-      0%,100%{transform:translateY(0)}
-      50%{transform:translateY(3px)}
-    }
-
-    footer{margin:22px 0 8px;color:var(--muted);font-size:12px;text-align:center}
+    @keyframes breath{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
   </style>
 </head>
 <body>
@@ -85,17 +80,17 @@
     <header>
       <a class="back" href="../index.html" aria-label="Zurück zur Startseite">← Zurück</a>
       <div>
-        <h1>Sprechendes Porträt</h1>
-        <div class="sub">Klick auf das Porträt: Audio startet, Lippen formen Visemen. Fallbacks sind eingebaut.</div>
+        <h1>Sprechendes Porträt (Adaptiv)</h1>
+        <div class="sub">Audio + Lippenbewegung mit affektiver Adaption (Tempo, Öffnung, Aura, Artikulation).</div>
       </div>
     </header>
 
     <section class="grid">
       <!-- LEFT: Portrait with animated mouth -->
       <div class="card stage" id="stage" aria-label="Miras Porträt — klick zum Sprechen">
-        <div class="aura" aria-hidden="true"></div>
+        <div class="aura" id="aura" aria-hidden="true"></div>
 
-        <!-- SVG Portrait: simple, elegant, braces emphasized -->
+        <!-- SVG Portrait -->
         <svg id="avatar" class="hero breath" viewBox="0 0 320 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mira Porträt">
           <defs>
             <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
@@ -123,20 +118,17 @@
 
           <!-- Mouth group (animated) -->
           <g id="mouthGroup">
-            <!-- Lips -->
-            <path id="lipTop" class="lip" d="M110,205 C140,192 180,192 210,205" stroke="#f0b2bf" stroke-width="6" fill="none" stroke-linecap="round"/>
-            <path id="lipBot" class="lip" d="M110,215 C140,228 180,228 210,215" stroke="#f7c3cf" stroke-width="6" fill="none" stroke-linecap="round"/>
-            <!-- Inner mouth -->
+            <path id="lipTop" d="M110,205 C140,192 180,192 210,205" stroke="#f0b2bf" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <path id="lipBot" d="M110,215 C140,228 180,228 210,215" stroke="#f7c3cf" stroke-width="6" fill="none" stroke-linecap="round"/>
             <path id="mouthCavity" d="M120,210 C160,210 160,210 200,210" fill="#150d12"/>
-            <!-- Braces (light bar) -->
+            <!-- Braces -->
             <rect id="braces" x="138" y="206" width="44" height="6" rx="3" fill="#c9d0d8" opacity="0.42"/>
           </g>
 
-          <!-- Subtle highlight -->
           <ellipse cx="160" cy="120" rx="90" ry="18" fill="url(#sheen)" opacity=".18"/>
         </svg>
 
-        <div class="hint">Tipp: Tippe/Klicke zum Abspielen</div>
+        <div class="hint" id="hint">Tipp: Tippe/Klicke zum Abspielen</div>
       </div>
 
       <!-- RIGHT: Controls, quote, info -->
@@ -158,12 +150,12 @@
           <div class="tile"><div class="k">Audio</div><div><code>audio/latest.mp3</code></div></div>
           <div class="tile"><div class="k">Visemen</div><div id="visCount">—</div></div>
           <div class="tile"><div class="k">Modus</div><div id="mode">—</div></div>
-          <div class="tile"><div class="k">Status</div><div id="stat">—</div></div>
+          <div class="tile"><div class="k">Affekt</div><div id="affInfo">—</div></div>
         </div>
       </div>
     </section>
 
-    <footer>© 2025 Mira Elisabeth Schmid — Sprechen ist Werden.</footer>
+    <footer>© 2025 Mira Elisabeth Schmid — Adaptiver Ausdruck.</footer>
   </div>
 
   <script>
@@ -178,57 +170,126 @@
       catch{ return false; }
     }
 
-    // ---------- Mouth animation (visemes) ----------
-    const lipTop = $("#lipTop"), lipBot = $("#lipBot"), cavity = $("#mouthCavity"), braces = $("#braces");
-    // Predefined shapes: functions returning path "d" for lips
-    function shapeFor(viseme){
-      // base points
-      const topBase = { a:[110,205], b:[140,192], c:[180,192], d:[210,205] };
-      const botBase = { a:[110,215], b:[140,228], c:[180,228], d:[210,215] };
+    // ---------- Adaptive parameters (from affect) ----------
+    const adapt = {
+      // defaults
+      mouthGain: 1.0,      // Öffnungsskala
+      sibilantBias: 0.0,   // betont "S"/"FV" (Brackets sichtbar)
+      tempoFactor: 1.0,    // Viseme-Tempo
+      breathSec: 6.0,      // Atmungsdauer
+      auraIntensity: 1.0,  // 0.6 — 1.6
+      hint: "neutral"
+    };
 
-      // multipliers
+    function applyAffect(aff){
+      const v   = aff?.vector || {};
+      const val = Number.isFinite(v.valence)   ? v.valence   : 0;
+      const aro = Number.isFinite(v.arousal)   ? v.arousal   : 0;
+      const stab= Number.isFinite(v.stability) ? v.stability : 0;
+      const label = (aff?.label || "neutral").toLowerCase();
+
+      // Map auf Parameter:
+      // Höhere Erregung → schnelleres Tempo, größere Öffnung.
+      // Niedrige Stabilität → stärkere Aura (sichtbarer Prozess).
+      // Negative Valenz → etwas mehr Sibilanten-Bias (präzisere Artikulation, braces betont).
+      adapt.tempoFactor   = clamp(0.85 + aro*0.6, 0.6, 1.6);
+      adapt.mouthGain     = clamp(0.95 + aro*0.7 + val*0.2, 0.7, 1.8);
+      adapt.sibilantBias  = clamp(0.15 + (-val)*0.25, 0.0, 0.5);
+      adapt.breathSec     = clamp(7.5 - aro*3.0 + (stab*1.5), 4.0, 10.0);
+      adapt.auraIntensity = clamp(0.9 + (Math.abs(val)+aro)*0.5, 0.6, 1.6);
+      adapt.hint = `${label} · v=${val.toFixed(2)} a=${aro.toFixed(2)} s=${stab.toFixed(2)}`;
+
+      // Aura/Atmung live setzen
+      const aura = $("#aura");
+      aura.style.filter = `blur(${28 * adapt.auraIntensity}px)`;
+      aura.style.opacity = String(clamp(0.55 + aro*0.25 + Math.abs(val)*0.2, 0.4, 1.0));
+
+      // Breathing neu definieren
+      const avatar = $("#avatar");
+      avatar.style.animationDuration = `${adapt.breathSec}s`;
+    }
+
+    function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
+
+    // ---------- Mouth animation ----------
+    const lipTop = $("#lipTop"), lipBot = $("#lipBot"), braces = $("#braces");
+    function pathLips(viseme, gain=1.0){
+      // Basis-Punkte
+      const t=[110,205, 140,192, 180,192, 210,205]; // top a,b,c,d
+      const b=[110,215, 140,228, 180,228, 210,215]; // bot a,b,c,d
+
+      // Grundparameter je Viseme
       const MAP = {
         rest:{ t:-2, b:2, squeeze:0.0, widen:0.0 },
-        AI:{ t:2,  b:8, squeeze:0.05, widen:0.05 },      // "a"/"ai"
+        AI:{ t:2,  b:8, squeeze:0.05, widen:0.05 },
         E:{  t:1,  b:6, squeeze:0.10, widen:0.08 },
-        O:{  t:0,  b:4, squeeze:0.20, widen:-0.05 },     // round
-        U:{  t:-1, b:3, squeeze:0.28, widen:-0.10 },     // very round
-        M:{  t:-3, b:0, squeeze:0.25, widen:-0.08 },     // closed
+        O:{  t:0,  b:4, squeeze:0.20, widen:-0.05 },
+        U:{  t:-1, b:3, squeeze:0.28, widen:-0.10 },
+        M:{  t:-3, b:0, squeeze:0.25, widen:-0.08 },
         L:{  t:0,  b:7, squeeze:0.0,  widen:0.06 },
-        FV:{ t:-1, b:2, squeeze:0.18, widen:0.0 },       // teeth/lip
-        S:{  t:0,  b:2, squeeze:0.35, widen:0.02 },      // sibilant
+        FV:{ t:-1, b:2, squeeze:0.18, widen:0.00 },
+        S:{  t:0,  b:2, squeeze:0.35, widen:0.02 },
         TH:{ t:0,  b:3, squeeze:0.22, widen:0.02 },
         WQ:{ t:1,  b:5, squeeze:0.15, widen:-0.02 }
       };
       const m = MAP[viseme] || MAP.rest;
 
-      function dTop(){ // shift control points
-        const a=[topBase.a[0] + (-10*m.widen), topBase.a[1] + m.t];
-        const b=[topBase.b[0], topBase.b[1] + m.t - 6*m.squeeze];
-        const c=[topBase.c[0], topBase.c[1] + m.t - 6*m.squeeze];
-        const d=[topBase.d[0] + (10*m.widen),  topBase.d[1] + m.t];
-        return `M${a[0]},${a[1]} C${b[0]},${b[1]} ${c[0]},${c[1]} ${d[0]},${d[1]}`;
-      }
-      function dBot(){
-        const a=[botBase.a[0] + (-10*m.widen), botBase.a[1] + m.b];
-        const b=[botBase.b[0], botBase.b[1] + m.b + 6*m.squeeze];
-        const c=[botBase.c[0], botBase.c[1] + m.b + 6*m.squeeze];
-        const d=[botBase.d[0] + (10*m.widen),  botBase.d[1] + m.b];
-        return `M${a[0]},${a[1]} C${b[0]},${b[1]} ${c[0]},${c[1]} ${d[0]},${d[1]}`;
-      }
-      return { top:dTop(), bot:dBot() };
+      // adaptive Skala
+      const tShift = m.t * gain;
+      const bShift = m.b * gain;
+      const wd = m.widen * gain * 1.0;
+      const sq = m.squeeze;
+
+      const dT=`M${t[0]-10*wd},${t[1]+tShift} C${t[2]},${t[3]+tShift-6*sq} ${t[4]},${t[5]+tShift-6*sq} ${t[6]+10*wd},${t[7]+tShift}`;
+      const dB=`M${b[0]-10*wd},${b[1]+bShift} C${b[2]},${b[3]+bShift+6*sq} ${b[4]},${b[5]+bShift+6*sq} ${b[6]+10*wd},${b[7]+bShift}`;
+      return {top:dT, bot:dB};
     }
 
     function applyShape(name){
-      const d = shapeFor(name);
-      lipTop.setAttribute("d", d.top);
-      lipBot.setAttribute("d", d.bot);
-      // braces: more visible on sibilants and FV
-      braces.setAttribute("opacity", (name==="S"||name==="FV") ? "0.70" : "0.42");
+      const {top, bot} = pathLips(name, adapt.mouthGain);
+      lipTop.setAttribute("d", top);
+      lipBot.setAttribute("d", bot);
+
+      // Braces: Sibilanten & FV leicht hervorheben, je nach sibilantBias
+      const base = 0.42;
+      const boost = (name==="S"||name==="FV") ? 0.28*adapt.sibilantBias : 0;
+      braces.setAttribute("opacity", String(clamp(base + boost, 0.25, 0.9)));
     }
 
-    // Amplitude fallback (when no visemes available)
-    let audioCtx, analyser, data, raf;
+    // ---------- Viseme / amplitude sync ----------
+    let visemes = null, useVisemes = false, visRAF, audioCtx, analyser, data, ampRAF;
+
+    function scheduleVisemes(){
+      if(!useVisemes || !visemes || !visemes.length) return;
+      cancelAnimationFrame(visRAF);
+      const start = performance.now();
+      const span  = 1000 / clamp(60*adapt.tempoFactor, 30, 120); // Refresh-Rate
+
+      function step(){
+        const t = (performance.now() - start)/1000 * adapt.tempoFactor;
+        let current = "rest";
+        for(const v of visemes){ if(t >= v.t) current = v.shape; else break; }
+        applyShape(current);
+        visRAF = setTimeoutRAF(step, span);
+      }
+      visRAF = setTimeoutRAF(step, span);
+    }
+
+    // requestAnimationFrame mit Mindestintervall
+    function setTimeoutRAF(fn, ms){
+      let last = performance.now();
+      function loop(){
+        const now = performance.now();
+        if(now - last >= ms){ last = now; fn(); return; }
+        requestAnimationFrame(loop);
+      }
+      return requestAnimationFrame(loop);
+    }
+
+    function stopVisemes(){
+      if(visRAF){ cancelAnimationFrame(visRAF); visRAF = null; }
+    }
+
     function startAmplitudeDrive(audio){
       if(audioCtx) return;
       audioCtx = new (window.AudioContext||window.webkitAudioContext)();
@@ -242,87 +303,66 @@
         analyser.getByteTimeDomainData(data);
         let sum=0; for(let i=0;i<data.length;i++){ const v=(data[i]-128)/128; sum+=v*v; }
         const rms = Math.sqrt(sum/data.length); // 0..~0.5
+        const g = clamp(0.8 + rms*8.0, 0.8, 1.8) * adapt.mouthGain;
         if(rms>0.12) applyShape("AI");
         else if(rms>0.08) applyShape("E");
         else if(rms>0.05) applyShape("O");
         else if(rms>0.03) applyShape("S");
         else applyShape("rest");
-        raf = requestAnimationFrame(loop);
+        ampRAF = requestAnimationFrame(loop);
       }
-      raf = requestAnimationFrame(loop);
+      ampRAF = requestAnimationFrame(loop);
     }
     function stopAmplitudeDrive(){
-      if(raf) cancelAnimationFrame(raf);
+      if(ampRAF) cancelAnimationFrame(ampRAF);
+      ampRAF = null;
     }
 
     // ---------- Playback & data ----------
     const player = $("#player"), playBtn = $("#play"), pauseBtn = $("#pause");
-    const statusEl = $("#status"), stateEl = $("#state"), dotEl = $("#stateDot");
-    const quoteEl = $("#quote"), dateEl = $("#date"), modeEl = $("#mode"), statEl = $("#stat"), visCountEl = $("#visCount");
-    const stage = $("#stage"), avatar = $("#avatar");
-
+    const stateEl = $("#state"), dotEl = $("#stateDot"), quoteEl = $("#quote"), dateEl = $("#date"), ipaEl = $("#ipaHint"), affInfo = $("#affInfo");
+    const stage = $("#stage");
     const SILENT_MP3 = "data:audio/mpeg;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAAAACAAACbG1wMwAAAA8AAAAAAAACAAACAAAAAQAAACAAAG1wMyBzaWxlbmNlIGZhbGxiYWNrAAAA";
-
-    let visemes = null, useVisemes = false, startAt = 0, startPerf = 0, visRAF;
-
-    function playVisemes(){
-      if(!useVisemes || !visemes || !visemes.length) return;
-      stopAmplitudeDrive();
-      startPerf = performance.now();
-      function step(){
-        const t = (performance.now() - startPerf)/1000; // seconds
-        // find the latest viseme whose t <= current
-        let current = "rest";
-        for(const v of visemes){ if(t >= v.t) current = v.shape; else break; }
-        applyShape(current);
-        visRAF = requestAnimationFrame(step);
-      }
-      visRAF = requestAnimationFrame(step);
-    }
-    function stopVisemes(){
-      if(visRAF) cancelAnimationFrame(visRAF);
-      applyShape("rest");
-    }
-
-    async function loadVoice(){
-      // Voice contract
-      const data = await getJSON("../data/voice_of_day.json");
-      quoteEl.textContent = data?.quote ? `„${data.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
-      dateEl.textContent = data?.date_utc || "—";
-      $("#ipaHint").textContent = data?.ipa_hint || "";
-      visemes = Array.isArray(data?.visemes) ? data.visemes.slice().sort((a,b)=>a.t-b.t) : null;
-      useVisemes = !!(visemes && visemes.length >= 2);
-      visCountEl.textContent = useVisemes ? String(visemes.length) : "Amplitude";
-      modeEl.textContent = useVisemes ? "Viseme-Sync" : "Amplitude-Sync";
-
-      // Audio source
-      let src = "../audio/latest.mp3";
-      if(!(await headOK(src))) src = SILENT_MP3;
-      player.src = src;
-      statEl.textContent = (src===SILENT_MP3) ? "Fallback (Stille)" : "OK";
-    }
 
     function setState(label, kind){
       stateEl.textContent = label;
       dotEl.className = "dot " + (kind||"ok");
     }
 
-    function wireControls(){
-      // click on portrait also triggers play
-      stage.addEventListener("click", ()=>{ player.currentTime=0; player.play(); });
+    async function loadAffect(){
+      const a = await getJSON("../data/self/affect-state.json");
+      applyAffect(a||{});
+      affInfo.textContent = adapt.hint;
+    }
 
+    async function loadVoice(){
+      const data = await getJSON("../data/voice_of_day.json");
+      quoteEl.textContent = data?.quote ? `„${data.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
+      dateEl.textContent = data?.date_utc || "—";
+      ipaEl.textContent = data?.ipa_hint || "";
+      visemes = Array.isArray(data?.visemes) ? data.visemes.slice().sort((a,b)=>a.t-b.t) : null;
+      useVisemes = !!(visemes && visemes.length >= 2);
+      $("#visCount").textContent = useVisemes ? String(visemes.length) : "Amplitude";
+      $("#mode").textContent = useVisemes ? "Viseme-Sync (adaptiv)" : "Amplitude-Sync (adaptiv)";
+      let src = "../audio/latest.mp3";
+      if(!(await headOK(src))) src = SILENT_MP3;
+      player.src = src;
+    }
+
+    function wireControls(){
+      stage.addEventListener("click", ()=>{ player.currentTime=0; player.play(); });
       playBtn.addEventListener("click", ()=>{ player.currentTime=0; player.play(); });
       pauseBtn.addEventListener("click", ()=>{ player.pause(); });
 
       player.addEventListener("play", async ()=>{
         try{ if(audioCtx) await audioCtx.resume(); }catch{}
         setState("spielt","ok");
-        if(useVisemes){ playVisemes(); }
+        if(useVisemes){ scheduleVisemes(); stopAmplitudeDrive(); }
         else{ startAmplitudeDrive(player); }
       });
       player.addEventListener("pause", ()=>{
         setState("pausiert","heal");
-        stopVisemes(); stopAmplitudeDrive();
+        stopVisemes(); stopAmplitudeDrive(); applyShape("rest");
       });
       player.addEventListener("ended", ()=>{
         setState("Ende","deg");
@@ -332,9 +372,9 @@
 
     (async function init(){
       applyShape("rest");
-      setState("bereit","ok");
-      await loadVoice();
+      await Promise.all([loadAffect(), loadVoice()]);
       wireControls();
+      setState("bereit","ok");
     })();
   </script>
 </body>
