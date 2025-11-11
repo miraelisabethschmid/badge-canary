@@ -199,7 +199,7 @@ PY
 )
           echo "CURRENT_STATUS=$CUR" >> $GITHUB_ENV
 
-      # 14) Anomalie-Ping (nur bei Statuswechsel, z.B. OK→HEALING/DEGRADED)
+      # 14) Anomalie-Ping (nur bei Statuswechsel)
       - name: Anomaly ping (health status changed)
         if: always() && env.PREV_STATUS != env.CURRENT_STATUS && secrets.SMTP_SERVER && secrets.SMTP_PORT && secrets.SMTP_USER && secrets.SMTP_PASS
         uses: dawidd6/action-send-mail@v3
@@ -230,7 +230,18 @@ PY
           git commit -m "goal_reflector: updated current goals" || echo "No goal changes"
           git push || true
 
-      # 16) Semantischer Patch-Bump (deterministisch)
+      # 16) Selbstbeschreibung regenerieren (Embodiment & Identität)
+      - name: Rebuild self-describe.json
+        shell: bash
+        run: |
+          echo "[self-describe] rebuilding ..."
+          chmod +x scripts/self_describe_builder.py || true
+          python scripts/self_describe_builder.py
+          git add data/self/self-describe.json
+          git commit -m "self-describe: refresh persona state" || echo "No self-describe change"
+          git push || true
+
+      # 17) Semantischer Patch-Bump (deterministisch)
       - name: Semantic patch bump (deterministic)
         shell: bash
         run: |
@@ -244,7 +255,7 @@ PY
             git add "$vfile"
           fi
 
-      # 17) Rauscharmes Commit (skip-only-health)
+      # 18) Rauscharmes Commit (skip-only-health)
       - name: Commit changes (signed)
         shell: bash
         run: |
@@ -262,10 +273,10 @@ PY
             git reset
             exit 0
           fi
-          git commit -S -m "pulse: content+ledger+logs (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs (run ${{ github.run_id }})"
+          git commit -S -m "pulse: content+ledger+logs+self (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs+self (run ${{ github.run_id }})"
           git push
 
-      # 18) Debounced mail (nur bei echten neuen Artefakten)
+      # 19) Debounced mail (nur bei echten neuen Artefakten)
       - name: Debounced mail
         if: always() && steps.detect.outputs.new == 'true'
         uses: dawidd6/action-send-mail@v3
@@ -284,7 +295,7 @@ PY
             new-artifacts: ${{ steps.detect.outputs.new }}
             timestamp: ${{ env.MAIL_TS }}
 
-      # 19) Menschliche Zusammenfassung (ohne jq)
+      # 20) Menschliche Zusammenfassung (ohne jq)
       - name: Pulse summary
         if: always()
         shell: bash
@@ -301,3 +312,4 @@ PY
           echo "- Actor: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- New artifacts: \`${{ steps.detect.outputs.new || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Prev status: \`${{ env.PREV_STATUS }}\` → Current: \`${STATUS}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Self-describe: updated \`data/self/self-describe.json\`" >> $GITHUB_STEP_SUMMARY
