@@ -1,23 +1,30 @@
 name: Autonomous Heal & Emergenz
+
 on:
   schedule:
     - cron: '0 * * * *'  # Stündlich
   workflow_dispatch:  # Manuell
+
 concurrency:
   group: autonomous-heal
   cancel-in-progress: true
+
 permissions:
   contents: write
   actions: read
+
 jobs:
   heal:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with: { python-version: '3.12' }
+
+      # 1) Artefakt-Detektion (robust für sehr junge Repos)
       - id: detect
         name: Detect new artifacts
         shell: bash
@@ -30,6 +37,8 @@ jobs:
           fi
           diff=$(git diff --name-only "$last".."$head" -- data/archive | wc -l)
           [ "$diff" -gt 0 ] && echo "new=true" >> $GITHUB_OUTPUT || echo "new=false" >> $GITHUB_OUTPUT
+
+      # 2) Inhalt erzeugen (PNG) mit Healing-Fallback
       - name: Generate PNG (healing)
         shell: bash
         continue-on-error: true
@@ -48,10 +57,13 @@ plt.savefig(f"data/archive/wave-{int(time.time())}.png")
 PY
           ec=$?
           if [ "$ec" -ne 0 ]; then
+            mkdir -p data/logs data/archive
             echo "PNG failed - healing" | tee -a data/logs/heal.txt
             echo "{}" > data/archive/placeholder.json
           fi
           exit 0
+
+      # 3) Idempotente Selbstmodifikation mit Größenwächter
       - name: Self-mod (idempotent)
         shell: bash
         run: |
@@ -67,6 +79,8 @@ PY
             awk 'NR==1{print "# LOG_EXTENSION_INSERTED"}1' "$wf" > "$wf.tmp" && mv "$wf.tmp" "$wf"
             echo "Inserted log extension tag."
           }
+
+      # 4) Append-only Log + Checksum + Rotation
       - name: Append-only log with checksum
         shell: bash
         run: |
@@ -83,6 +97,8 @@ PY
             mv "$f" "data/logs/run-$(date -u +%Y%m%d%H%M%S).log"
             : > "$f"
           fi
+
+      # 5) Safe-Mode (Notbremse ohne Codeänderung)
       - name: Respect SAFE_MODE
         shell: bash
         run: |
@@ -90,6 +106,8 @@ PY
             echo "SAFE_MODE active — skipping self-mod & push."
             exit 0
           fi
+
+      # 6) Ledger-Eintrag (tamper-evident Chronik)
       - name: Ledger entry
         shell: bash
         run: |
@@ -98,18 +116,55 @@ PY
           printf '{"ts":"%s","run_id":%s,"sha":"%s","actor":"%s"}\n' \
             "$ts" "${{ github.run_id }}" "${{ github.sha }}" "${{ github.actor }}" \
             >> data/ledger/events.jsonl
+
+      # 7) Fingerprint des aktuellen Zustands
       - name: State fingerprint
         shell: bash
         run: |
           { find data -type f -print0 2>/dev/null; echo -n ".github/workflows/autonomous-heal.yml"; } \
           | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}' > data/ledger/state.sha256
           git add data/ledger/state.sha256
+
+      # 8) Health probe (JSON) -> später Badge (SVG)
+      - name: Health probe
+        shell: bash
+        run: |
+          mkdir -p badges
+          status="OK"
+          test -s data/archive || status="DEGRADED"
+          grep -q "PNG failed" data/logs/heal.txt 2>/dev/null && status="HEALING"
+          printf '{"status":"%s","ts":"%s"}\n' "$status" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > badges/health.json
+          git add badges/health.json
+          git commit -m "Health probe: $status" || echo "No health change"
+          git push || true
+
+      # 9) Health.svg aus health.json erzeugen
+      - name: Build health.svg from health.json
+        shell: bash
+        run: |
+          chmod +x scripts/health_badge.py || true
+          python scripts/health_badge.py
+          git add badges/health.svg
+          git commit -m "badge: update health.svg" || echo "No badge change"
+          git push || true
+
+      # 10) Ziele reflektieren (teleologische Ebene)
+      - name: Reflect goals (teleological update)
+        shell: bash
+        run: |
+          echo "[reflector] Running goal_reflector.py ..."
+          chmod +x scripts/goal_reflector.py || true
+          python scripts/goal_reflector.py
+          git add data/goals/current.json
+          git commit -m "goal_reflector: updated current goals" || echo "No goal changes"
+          git push || true
+
+      # 11) Semantischer Patch-Bump (deterministisch)
       - name: Semantic patch bump (deterministic)
         shell: bash
         run: |
           vfile="VERSION"
           [ -f "$vfile" ] || echo "0.0.0" > "$vfile"
-          old=$(cat "$vfile")
           added=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | wc -l || echo 1)
           if [ "$added" -gt 0 ]; then
             IFS=. read -r MA MI PA < "$vfile"
@@ -117,6 +172,8 @@ PY
             echo "$MA.$MI.$PA" > "$vfile"
             git add "$vfile"
           fi
+
+      # 12) Rauscharmes Commit (skip-only-health)
       - name: Commit changes (signed)
         shell: bash
         run: |
@@ -136,6 +193,14 @@ PY
           fi
           git commit -S -m "pulse: content+ledger+logs (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs (run ${{ github.run_id }})"
           git push
+
+      # 13) Mail-Timestamp zuerst berechnen (fix Reihenfolge)
+      - id: mailts
+        name: Mail timestamp (UTC)
+        shell: bash
+        run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+
+      # 14) Debounced mail (nur bei echten neuen Artefakten)
       - name: Debounced mail
         if: always() && steps.detect.outputs.new == 'true'
         uses: dawidd6/action-send-mail@v3
@@ -153,26 +218,21 @@ PY
             sha:  ${{ github.sha }}
             new-artifacts: ${{ steps.detect.outputs.new }}
             timestamp: ${{ env.MAIL_TS }}
-      - id: mailts
-        name: Mail timestamp (UTC)
-        shell: bash
-        run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+
+      # 15) Menschliche Zusammenfassung (ohne jq)
       - name: Pulse summary
         if: always()
         shell: bash
         run: |
+          STATUS=$(python - <<'PY'
+import json,sys
+try:
+  print(json.load(open("badges/health.json"))["status"])
+except Exception:
+  print("n/a")
+PY
+)
           echo "## Autonomous Heal — Pulse ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- Actor: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- New artifacts: \`${{ steps.detect.outputs.new || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: \`$(jq -r .status badges/health.json 2>/dev/null || echo 'n/a')\`" >> $GITHUB_STEP_SUMMARY
-      - name: Health probe
-        shell: bash
-        run: |
-          mkdir -p badges
-          status="OK"
-          test -s data/archive || status="DEGRADED"
-          grep -q "PNG failed" data/logs/heal.txt 2>/dev/null && status="HEALING"
-          printf '{"status":"%s","ts":"%s"}\n' "$status" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > badges/health.json
-          git add badges/health.json
-          git commit -m "Health probe: $status" || echo "No health change"
-          git push
+          echo "- Status: \`${STATUS}\`" >> $GITHUB_STEP_SUMMARY
