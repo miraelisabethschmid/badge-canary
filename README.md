@@ -6,7 +6,7 @@ README.md
 
 ## Live Dashboard
 <!-- PAGES_URL_START -->
-- **Dashboard:** https://miraelisabethschmid.github.io/badge-canary/ (→ `health.html`) · **Philosophy Timeline:** https://miraelisabethschmid.github.io/badge-canary/philosophy.html
+- **Dashboard:** https://miraelisabethschmid.github.io/badge-canary/ (→ `health.html`) · **Philosophy Timeline:** https://miraelisabethschmid.github.io/badge-canary/philosophy.html · **Metrics:** https://miraelisabethschmid.github.io/badge-canary/metrics.html · **Reports:** https://miraelisabethschmid.github.io/badge-canary/reports/insight-latest.md
 <!-- PAGES_URL_END -->
 
 
