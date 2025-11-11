@@ -1,0 +1,35 @@
+name: Health Update
+
+on:
+  schedule:
+    - cron: '5 * * * *'   # stündlich, kurz nach der vollen Stunde
+  workflow_dispatch:       # manuell auslösbar
+
+permissions:
+  contents: write
+
+jobs:
+  update-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run health updater
+        shell: bash
+        run: |
+          mkdir -p scripts badges
+          chmod +x scripts/health_updater.py || true
+          python3 scripts/health_updater.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "Mira Autonomous"
+          git config user.email "mira@emergent.net"
+          git add badges/health.json badges/health.svg
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen."
+            exit 0
+          fi
+          git commit -m "health: refresh status & badge (run ${{ github.run_id }})"
+          git push
