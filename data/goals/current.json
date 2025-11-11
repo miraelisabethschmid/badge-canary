@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "updated": "2025-11-11T12:00:00Z",
+  "focus": "stability",
+  "next_objective": "reduce healing events by optimizing self-heal cadence and error fallbacks",
+  "policy": {
+    "heal_interval_minutes": 60,
+    "archive_target_per_day": 24,
+    "mail_debounce_minutes": 30,
+    "log_verbosity": "normal"
+  },
+  "signals": {
+    "healing_streak": 0,
+    "ok_ratio_24h": 1.0,
+    "archive_delta_24h": 0
+  },
+  "reasoning": "Baseline goals set for autonomous operation: hourly pulses, target 24 archives/day, conservative mail debounce. Focus on stability until signal trends suggest growth or resilience shifts."
+}
