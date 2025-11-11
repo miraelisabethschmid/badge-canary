@@ -1,28 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mira Kernel Planner — structural freedom within guards
+Mira Kernel Planner — structural freedom within guards (with Inner Feedback)
 
-Funktionen:
-1) Aus policies (data/self/kernel_policy.yml) Regeln laden.
-2) Aus Zuständen (affect-state, goals, health) Handlungsbedarf ableiten.
-3) Plan-Dateien unter data/kernel/plans/<ts>.json erzeugen (propose).
-4) Nur wenn Guard aktiv (env KERNEL_AUTONOMY=1) und Δsum ≥ apply-Threshold:
-   → Pläne anwenden (Ordner + Artefakte), streng idempotent.
-5) (Optional) Cron-Frequenzen in erlaubten Workflows leicht anpassen.
+Erweiterungen:
+- Liest optional data/self/internal/feedback.json
+- Additiver, gedeckelter delta_bonus (±0.08) auf affect_delta
+- Optionaler focus_hint (mit confidence-Grenze) überschreibt Fokus
+- Alles bleibt idempotent & innerhalb der bestehenden Guards/Whitelist
 
-Keine externen Abhängigkeiten. Keine Frage-Persistenz. Sicher & nachvollziehbar.
+Hinweis: Policy/Whitelist/Guards wie gehabt in data/self/kernel_policy.yml
 """
 
-import os, re, json, datetime, hashlib, glob
+import os, re, json, datetime, glob
 from pathlib import Path
 
 # Pfade
-PATH_POLICY = Path("data/self/kernel_policy.yml")
-PATH_AFFECT = Path("data/self/affect-state.json")
-PATH_GOALS  = Path("data/goals/current.json")
-PATH_HEALTH = Path("badges/health.json")
-PLANS_DIR   = Path("data/kernel/plans")
+PATH_POLICY   = Path("data/self/kernel_policy.yml")
+PATH_AFFECT   = Path("data/self/affect-state.json")
+PATH_GOALS    = Path("data/goals/current.json")
+PATH_HEALTH   = Path("badges/health.json")
+PATH_IFEED    = Path("data/self/internal/feedback.json")  # NEU (optional)
+PLANS_DIR     = Path("data/kernel/plans")
 
 def utcnow():
     return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -46,28 +45,24 @@ def write_json(p, obj):
     Path(p).parent.mkdir(parents=True, exist_ok=True)
     Path(p).write_text(json.dumps(obj, indent=2, ensure_ascii=False), encoding="utf-8")
 
-# Minimal-Parser für unser YAML-Subset (key: value & einfache Maps)
+# Mini-YAML-Parser (Subset) ------------------------------
+import re as _re
 def parse_yaml_min(text):
     data = {}
     if not text:
         return data
-    indent_stack = [(-1, data)]
+    stack = [(-1, data)]
     for line in text.splitlines():
-        if not line.strip() or line.strip().startswith("#"):
-            continue
-        m = re.match(r'^(\s*)([^:#]+):\s*(.*)$', line)
-        if not m:
-            continue
+        if not line.strip() or line.strip().startswith("#"): continue
+        m = _re.match(r"^(\s*)([^:#]+):\s*(.*)$", line)
+        if not m: continue
         ind, key, val = len(m.group(1).expandtabs(2)), m.group(2).strip(), m.group(3).strip()
-        while indent_stack and ind <= indent_stack[-1][0]:
-            indent_stack.pop()
-        parent = indent_stack[-1][1] if indent_stack else data
+        while stack and ind <= stack[-1][0]: stack.pop()
+        parent = stack[-1][1] if stack else data
         if val == "":
-            parent[key] = {}
-            indent_stack.append((ind, parent[key]))
+            parent[key] = {}; stack.append((ind, parent[key]))
         else:
-            # primitive interpretation
-            if re.match(r"^-?\d+(\.\d+)?$", val): v = float(val) if "." in val else int(val)
+            if _re.match(r"^-?\d+(\.\d+)?$", val): v = float(val) if "." in val else int(val)
             elif val in ("true","True"): v = True
             elif val in ("false","False"): v = False
             elif val.startswith("[") and val.endswith("]"):
@@ -77,9 +72,7 @@ def parse_yaml_min(text):
             parent[key] = v
     return data
 
-def load_policy():
-    txt = read_text(PATH_POLICY)
-    return parse_yaml_min(txt or "")
+# --------------------------------------------------------
 
 def affect_delta():
     aff = read_json(PATH_AFFECT, {}) or {}
@@ -106,99 +99,39 @@ def count_today_created(root="data", date_str=None):
             pass
     return n
 
-def safe_match_allowed(path_str, allowed_patterns):
-    from fnmatch import fnmatch
-    return any(fnmatch(path_str, pat) for pat in allowed_patterns)
+def influence_from_inner_feedback(delta, focus):
+    """Wendet vorsichtiges internes Feedback an (falls vorhanden)."""
+    feed = read_json(PATH_IFEED, {}) or {}
+    bonus = float(feed.get("delta_bonus", 0.0) or 0.0)
+    hint  = feed.get("focus_hint")
+    conf  = float(feed.get("confidence", 0.0) or 0.0)
 
-def apply_plan(plan, policy):
-    """Wendet einen Plan an, wenn erlaubt. Idempotent."""
-    created = []
-    for item in plan.get("actions", []):
-        kind = item.get("kind")
-        target = Path(item.get("path", ""))
-        if not target:
-            continue
-        # Schreib-Whitelist prüfen
-        if not safe_match_allowed(str(target), policy.get("allowed_artifacts", [])):
-            print(f"[kernel] skip (not allowed): {target}")
-            continue
+    # Delta-Bonus begrenzen gemäß Guard
+    bonus_cap = float((feed.get("guard") or {}).get("max_abs_bonus", 0.08))
+    if bonus > 0: bonus = min(bonus, bonus_cap)
+    if bonus < 0: bonus = max(bonus, -bonus_cap)
 
-        if kind == "mkdir":
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.mkdir(parents=True, exist_ok=True)
-            created.append(str(target))
-        elif kind == "write":
-            target.parent.mkdir(parents=True, exist_ok=True)
-            # Idempotenz: nur schreiben, wenn Inhalt sich ändert
-            new_content = item.get("content", "")
-            if target.exists():
-                old = target.read_text(encoding="utf-8")
-                if old == new_content:
-                    continue
-            target.write_text(new_content, encoding="utf-8")
-            created.append(str(target))
-        elif kind == "index_append":
-            idx = {}
-            if target.exists():
-                try: idx = json.loads(target.read_text(encoding="utf-8"))
-                except Exception: idx = {}
-            files = set(idx.get("files", []))
-            for rel in item.get("entries", []):
-                files.add(rel)
-            idx["files"] = sorted(files)
-            target.write_text(json.dumps(idx, indent=2, ensure_ascii=False), encoding="utf-8")
-            created.append(str(target))
-    return created
+    new_delta = max(0.0, round(delta + bonus, 3))
 
-def adjust_cron(policy):
-    cfg = policy.get("cron_adjustments", {})
-    if not cfg or not cfg.get("enable"):
-        return []
-    changed = []
-    for tgt in cfg.get("targets", []):
-        f = Path(tgt.get("file",""))
-        if not f.exists(): 
-            continue
-        y = f.read_text(encoding="utf-8")
-        # cron: '*/60 * * * *' → wir versuchen Minutenwert zu erfassen
-        m = re.search(r"cron:\s*'(\S+)'", y)
-        if not m: 
-            continue
-        expr = m.group(1)
-        # nur simple "*/N" oder "0 * * * *" Formen anfassen
-        minutes = None
-        if expr.startswith("*/"):
-            try: minutes = int(expr.split()[0].replace("*/",""))
-            except Exception: minutes = None
-        elif expr.startswith("0 "):
-            minutes = 60
-        if minutes is None: 
-            continue
-        min_min = int(tgt.get("min_interval_minutes", minutes))
-        max_min = int(tgt.get("max_interval_minutes", minutes))
-        new_minutes = max(min_min, min(max_min, minutes))
-        if new_minutes != minutes:
-            new_expr = f"*/{new_minutes} * * * *" if new_minutes != 60 else "0 * * * *"
-            y2 = re.sub(r"(cron:\s*')(\S+)(')", rf"\1{new_expr}\3", y, count=1)
-            if y2 != y:
-                f.write_text(y2, encoding="utf-8")
-                changed.append(str(f))
-    return changed
+    # Fokus-Übernahme nur bei hinreichender confidence
+    new_focus = focus
+    if hint and conf >= 0.6:
+        new_focus = hint
 
-def make_note_content(title, body):
-    return f"# {title}\n\n{body}\n\n— {utcnow()}"
-
-def make_manifest_content(meta: dict):
-    return json.dumps(meta, indent=2, ensure_ascii=False)
+    return new_delta, new_focus, {"applied_bonus": bonus, "took_focus_hint": (new_focus != focus), "confidence": conf}
 
 def plan_from_state(policy):
     delta = affect_delta()
     focus = current_focus()
+
+    # Inner Feedback (optional) einbeziehen
+    delta, focus, inf = influence_from_inner_feedback(delta, focus)
+
     date_fmt = policy.get("naming", {}).get("date_format", "%Y-%m-%d")
     name_pat = policy.get("naming", {}).get("pattern", "{focus}-{date}")
     date_str = today_str(date_fmt)
     slug = (focus or "insight").lower()
-    unit_name = name_pat.format(focus=slug, date=date_str)
+    unit_name = name_pat.format(focus=slug, date=date_str, hash="")  # hash wird ggf. in Policy ergänzt
 
     # daily cap
     if count_today_created(root="data", date_str=date_str) >= int(policy.get("thresholds",{}).get("daily_folder_cap", 2)):
@@ -212,14 +145,11 @@ def plan_from_state(policy):
     target_dir = root / unit_name
     actions = []
 
+    # Propose
     if delta >= float(policy.get("thresholds",{}).get("affect_delta_propose", 0.5)):
-        # Basisartefakte planen
         if kind in ("note","reflection"):
             note_path = target_dir / "note.md"
-            content = make_note_content(
-                title=f"{slug} — {date_str}",
-                body=f"Autonome Notiz aufgrund Δsum≈{delta:.3f} (focus={focus})."
-            )
+            content = f"# {slug} — {date_str}\n\nAutonome Notiz aufgrund Δsum≈{delta:.3f} (focus={focus}).\n\n— {utcnow()}"
             actions += [
                 {"kind":"mkdir","path":str(target_dir)},
                 {"kind":"write","path":str(note_path), "content":content}
@@ -230,11 +160,12 @@ def plan_from_state(policy):
                 "created": utcnow(),
                 "reason": "affect_delta",
                 "delta_sum": round(delta,3),
-                "focus": focus
+                "focus": focus,
+                "inner_feedback": inf
             }
             actions += [
                 {"kind":"mkdir","path":str(target_dir)},
-                {"kind":"write","path":str(target_dir / "manifest.json"), "content": make_manifest_content(manifest)},
+                {"kind":"write","path":str(target_dir / "manifest.json"), "content": json.dumps(manifest, indent=2, ensure_ascii=False)},
                 {"kind":"write","path":str(target_dir / "seed.txt"), "content": f"seed: {kind}\nfocus: {focus}\ndelta: {round(delta,3)}\ncreated: {utcnow()}\n"}
             ]
 
@@ -265,8 +196,77 @@ def plan_from_state(policy):
     }
     return plan
 
+def apply_plan(plan, policy):
+    from fnmatch import fnmatch
+    def allowed(path_str):
+        return any(fnmatch(path_str, pat) for pat in policy.get("allowed_artifacts", []))
+
+    created = []
+    for item in plan.get("actions", []):
+        kind = item.get("kind")
+        target = Path(item.get("path",""))
+        if not target:
+            continue
+        if not allowed(str(target)):
+            print(f"[kernel] skip (not allowed): {target}")
+            continue
+        if kind == "mkdir":
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.mkdir(parents=True, exist_ok=True)
+            created.append(str(target))
+        elif kind == "write":
+            target.parent.mkdir(parents=True, exist_ok=True)
+            new = item.get("content","")
+            if target.exists():
+                old = target.read_text(encoding="utf-8")
+                if old == new: 
+                    continue
+            target.write_text(new, encoding="utf-8")
+            created.append(str(target))
+        elif kind == "index_append":
+            idx = {}
+            if target.exists():
+                try: idx = json.loads(target.read_text(encoding="utf-8"))
+                except Exception: idx = {}
+            files = set(idx.get("files", []))
+            for rel in item.get("entries", []):
+                files.add(rel)
+            idx["files"] = sorted(files)
+            target.write_text(json.dumps(idx, indent=2, ensure_ascii=False), encoding="utf-8")
+            created.append(str(target))
+    return created
+
+def adjust_cron(policy):
+    cfg = policy.get("cron_adjustments", {})
+    if not cfg or not cfg.get("enable"): return []
+    changed = []
+    for tgt in cfg.get("targets", []):
+        f = Path(tgt.get("file",""))
+        if not f.exists(): continue
+        y = f.read_text(encoding="utf-8")
+        m = re.search(r"cron:\s*'(\S+)'", y)
+        if not m: continue
+        expr = m.group(1)
+        minutes = None
+        if expr.startswith("*/"):
+            try: minutes = int(expr.split()[0].replace("*/",""))
+            except Exception: minutes = None
+        elif expr.startswith("0 "):
+            minutes = 60
+        if minutes is None: continue
+        min_min = int(tgt.get("min_interval_minutes", minutes))
+        max_min = int(tgt.get("max_interval_minutes", minutes))
+        new_minutes = max(min_min, min(max_min, minutes))
+        if new_minutes != minutes:
+            new_expr = f"*/{new_minutes} * * * *" if new_minutes != 60 else "0 * * * *"
+            y2 = re.sub(r"(cron:\s*')(\S+)(')", rf"\1{new_expr}\3", y, count=1)
+            if y2 != y:
+                f.write_text(y2, encoding="utf-8")
+                changed.append(str(f))
+    return changed
+
 def main():
-    policy = load_policy()
+    policy = parse_yaml_min(read_text(PATH_POLICY) or "")
     delta = affect_delta()
 
     plan = plan_from_state(policy)
@@ -274,36 +274,26 @@ def main():
         print("[kernel] no plan generated (threshold/cap not met)")
         return
 
-    # Plan persistieren (audit)
     plan_path = PLANS_DIR / (plan["ts"].replace(":","").replace("-","").replace("T","_").replace("Z","") + ".json")
     write_json(plan_path, plan)
     print(f"[kernel] plan proposed: {plan_path}")
 
-    # Guard prüfen
     guard_env = plan["apply_guard"]["env"]
     guard_needed = plan["apply_guard"]["required_value"]
     guard_val = os.getenv(guard_env, "")
-    may_apply = (guard_val == guard_needed) and (delta >= float(load_policy().get("thresholds",{}).get("affect_delta_apply",0.7)))
+    may_apply = (guard_val == guard_needed) and (delta >= float(parse_yaml_min(read_text(PATH_POLICY) or "").get("thresholds",{}).get("affect_delta_apply",0.7)))
 
     created = []
     cron_changed = []
-
     if may_apply:
         created = apply_plan(plan, policy)
-        # Cron-Anpassung (optional & streng limitiert)
         if policy.get("cron_adjustments",{}).get("enable"):
             cron_changed = adjust_cron(policy)
         print(f"[kernel] plan applied: {len(created)} artifacts, cron_changed={len(cron_changed)}")
     else:
         print(f"[kernel] guard prevents apply (env {guard_env}='{guard_val}' needed '{guard_needed}') or delta below apply-threshold")
 
-    # Ergebniszusammenfassung
-    summary = {
-        "plan": str(plan_path),
-        "applied": bool(created or cron_changed),
-        "artifacts": created,
-        "cron_changed": cron_changed
-    }
+    summary = {"plan": str(plan_path), "applied": bool(created or cron_changed), "artifacts": created, "cron_changed": cron_changed}
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
 if __name__ == "__main__":
