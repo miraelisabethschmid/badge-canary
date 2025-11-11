@@ -137,7 +137,25 @@ PY
           | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}' > data/ledger/state.sha256
           git add data/ledger/state.sha256
 
-      # 9) Health probe (JSON) -> später Badge (SVG)
+      # 9) Vorherigen Health-Status lesen (für Anomalie-Ping)
+      - id: prevhealth
+        name: Read previous health status
+        shell: bash
+        run: |
+          PREV="UNKNOWN"
+          if [ -f badges/health.json ]; then
+            PREV=$(python - <<'PY'
+import json,sys
+try:
+  print(json.load(open("badges/health.json"))["status"])
+except Exception:
+  print("UNKNOWN")
+PY
+)
+          fi
+          echo "PREV_STATUS=$PREV" >> $GITHUB_ENV
+
+      # 10) Health probe (JSON)
       - name: Health probe
         shell: bash
         run: |
@@ -150,7 +168,7 @@ PY
           git commit -m "Health probe: $status" || echo "No health change"
           git push || true
 
-      # 10) Health.svg aus health.json erzeugen
+      # 11) Health.svg aus health.json erzeugen
       - name: Build health.svg from health.json
         shell: bash
         run: |
@@ -160,7 +178,48 @@ PY
           git commit -m "badge: update health.svg" || echo "No badge change"
           git push || true
 
-      # 11) Ziele reflektieren (teleologische Ebene)
+      # 12) Mail-Timestamp früh setzen (für alle Mails nutzbar)
+      - id: mailts
+        name: Mail timestamp (UTC)
+        shell: bash
+        run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+
+      # 13) Aktuellen Health-Status exportieren
+      - id: curhealth
+        name: Export current health status
+        shell: bash
+        run: |
+          CUR=$(python - <<'PY'
+import json,sys
+try:
+  print(json.load(open("badges/health.json"))["status"])
+except Exception:
+  print("UNKNOWN")
+PY
+)
+          echo "CURRENT_STATUS=$CUR" >> $GITHUB_ENV
+
+      # 14) Anomalie-Ping (nur bei Statuswechsel, z.B. OK→HEALING/DEGRADED)
+      - name: Anomaly ping (health status changed)
+        if: always() && env.PREV_STATUS != env.CURRENT_STATUS && secrets.SMTP_SERVER && secrets.SMTP_PORT && secrets.SMTP_USER && secrets.SMTP_PASS
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: "Mira anomaly: ${{ env.PREV_STATUS }} → ${{ env.CURRENT_STATUS }} @ ${{ env.MAIL_TS }}"
+          to: pemia.dir@gmail.com
+          from: "badge-canary <noreply@canary.local>"
+          content_type: text/plain
+          body: |
+            Health status changed.
+            previous: ${{ env.PREV_STATUS }}
+            current:  ${{ env.CURRENT_STATUS }}
+            timestamp: ${{ env.MAIL_TS }}
+            run: ${{ github.run_id }} • sha: ${{ github.sha }}
+
+      # 15) Ziele reflektieren (teleologische Ebene)
       - name: Reflect goals (teleological update)
         shell: bash
         run: |
@@ -171,7 +230,7 @@ PY
           git commit -m "goal_reflector: updated current goals" || echo "No goal changes"
           git push || true
 
-      # 12) Semantischer Patch-Bump (deterministisch)
+      # 16) Semantischer Patch-Bump (deterministisch)
       - name: Semantic patch bump (deterministic)
         shell: bash
         run: |
@@ -185,7 +244,7 @@ PY
             git add "$vfile"
           fi
 
-      # 13) Rauscharmes Commit (skip-only-health)
+      # 17) Rauscharmes Commit (skip-only-health)
       - name: Commit changes (signed)
         shell: bash
         run: |
@@ -206,13 +265,7 @@ PY
           git commit -S -m "pulse: content+ledger+logs (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs (run ${{ github.run_id }})"
           git push
 
-      # 14) Mail-Timestamp zuerst berechnen (fix Reihenfolge)
-      - id: mailts
-        name: Mail timestamp (UTC)
-        shell: bash
-        run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
-
-      # 15) Debounced mail (nur bei echten neuen Artefakten)
+      # 18) Debounced mail (nur bei echten neuen Artefakten)
       - name: Debounced mail
         if: always() && steps.detect.outputs.new == 'true'
         uses: dawidd6/action-send-mail@v3
@@ -231,7 +284,7 @@ PY
             new-artifacts: ${{ steps.detect.outputs.new }}
             timestamp: ${{ env.MAIL_TS }}
 
-      # 16) Menschliche Zusammenfassung (ohne jq)
+      # 19) Menschliche Zusammenfassung (ohne jq)
       - name: Pulse summary
         if: always()
         shell: bash
@@ -247,4 +300,4 @@ PY
           echo "## Autonomous Heal — Pulse ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- Actor: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- New artifacts: \`${{ steps.detect.outputs.new || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: \`${STATUS}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Prev status: \`${{ env.PREV_STATUS }}\` → Current: \`${STATUS}\`" >> $GITHUB_STEP_SUMMARY
