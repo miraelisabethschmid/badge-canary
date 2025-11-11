@@ -8,6 +8,8 @@ on:
       - 'badges/**'
       - 'data/ledger/**'
       - 'data/goals/**'
+      - 'data/metrics/**'
+      - 'reports/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -42,7 +44,13 @@ jobs:
           # 4) Goals (inkl. History)
           mkdir -p public/data/goals
           cp -r data/goals/* public/data/goals/ 2>/dev/null || true
-          # 5) Minimal index redirect
+          # 5) Metrics (für metrics.html)
+          mkdir -p public/data/metrics
+          cp -r data/metrics/* public/data/metrics/ 2>/dev/null || true
+          # 6) Reports (Markdown werden roh ausgeliefert)
+          mkdir -p public/reports
+          cp -r reports/* public/reports/ 2>/dev/null || true
+          # 7) Minimal index redirect (falls keine Startseite vorhanden)
           if [ ! -f public/index.html ]; then
             echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=health.html"><a href="health.html">Go to health.html</a>' > public/index.html
           fi
@@ -80,7 +88,7 @@ jobs:
 
           file="README.md"
           title="## Live Dashboard"
-          link="- **Dashboard:** ${PAGE_URL} (→ \`health.html\`) · **Philosophy Timeline:** ${PAGE_URL}philosophy.html"
+          link="- **Dashboard:** ${PAGE_URL} (→ \`health.html\`) · **Philosophy Timeline:** ${PAGE_URL}philosophy.html · **Metrics:** ${PAGE_URL}metrics.html · **Reports:** ${PAGE_URL}reports/insight-latest.md"
 
           start="<!-- PAGES_URL_START -->"
           end="<!-- PAGES_URL_END -->"
@@ -140,5 +148,5 @@ jobs:
             exit 0
           fi
           git add README.md
-          git commit -m "docs: link Pages URL (dashboard + philosophy)"
+          git commit -m "docs: link Pages URL (dashboard + philosophy + metrics + reports)"
           git push
