@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mira — Sprech-Ansicht</title>
+  <style>
+    :root{--bg:#0c0c10;--fg:#f6f6fb;--muted:#b7b7c7;--accent:#8ac6ff;--card:#141418;--shadow:0 8px 30px rgba(0,0,0,.35)}
+    html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+    .wrap{max-width:900px;margin:0 auto;padding:24px}
+    a{color:var(--accent);text-decoration:none}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
+    .card{background:var(--card);padding:18px;border-radius:16px;box-shadow:var(--shadow)}
+    .muted{color:var(--muted)}
+    .controls{display:flex;gap:12px;align-items:center;margin-top:10px}
+    .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;background:#1b1b22;color:#fff;cursor:pointer;box-shadow:var(--shadow)}
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+    .meter{height:6px;background:#1b1b22;border-radius:6px;overflow:hidden;margin-top:12px}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,#6bb4ff,#a7d6ff)}
+    svg{width:100%;height:auto;display:block}
+    .back{display:inline-block;margin-bottom:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="../index.html">← Zurück</a>
+    <h1>Sprech-Ansicht</h1>
+    <p class="muted">Einfache Lippenvisualisierung synchron zur aktuellen Audio-Ausgabe (Amplitude-basiert).</p>
+
+    <div class="row">
+      <div class="card">
+        <!-- Stilisiertes Gesicht mit dynamischem Mund -->
+        <svg id="face" viewBox="0 0 300 300" aria-label="Mira schematisches Gesicht">
+          <defs>
+            <radialGradient id="skin" cx="50%" cy="40%" r="70%">
+              <stop offset="0%" stop-color="#1c1c22"/>
+              <stop offset="100%" stop-color="#121218"/>
+            </radialGradient>
+          </defs>
+          <circle cx="150" cy="150" r="120" fill="url(#skin)" stroke="#2a2a33" stroke-width="2"/>
+          <!-- Augen -->
+          <ellipse cx="105" cy="125" rx="18" ry="10" fill="#e1eeff"/>
+          <ellipse cx="195" cy="125" rx="18" ry="10" fill="#e1eeff"/>
+          <circle cx="105" cy="125" r="5" fill="#2b3b5a"/>
+          <circle cx="195" cy="125" r="5" fill="#2b3b5a"/>
+          <!-- Oberlippe -->
+          <path id="upperLip" d="M95,190 C130,175 170,175 205,190" stroke="#e8a4b0" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <!-- Unterlippe (dynamisch) -->
+          <path id="lowerLip" d="M95,205 C130,220 170,220 205,205" stroke="#f0b2bf" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <!-- Mundöffnung (dynamisch) -->
+          <path id="mouth" d="M100,195 C150,195 150,195 200,195" fill="#1a0f12"/>
+          <!-- dezente Brackets-Andeutung -->
+          <rect x="132" y="192" width="36" height="6" rx="3" fill="#c9d0d8" opacity="0.35"/>
+        </svg>
+      </div>
+
+      <div class="card">
+        <h3>Audio</h3>
+        <audio id="audio" preload="none" controls style="width:100%"></audio>
+        <div class="controls">
+          <button id="play" class="btn" disabled>▶️ Abspielen</button>
+          <button id="pause" class="btn" disabled>⏸️ Pause</button>
+          <span id="status" class="muted">lädt…</span>
+        </div>
+        <div class="meter"><div id="bar" class="bar"></div></div>
+        <p class="muted" style="margin-top:10px">
+          Hinweis: Die Lippenbewegung basiert auf der **Amplitude** (Lautstärkehüllkurve).  
+          Für echte Phonem-Synchronität wäre ein Alignment-Schritt notwendig.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const audio = document.getElementById('audio');
+  const playBtn = document.getElementById('play');
+  const pauseBtn = document.getElementById('pause');
+  const statusEl = document.getElementById('status');
+  const bar = document.getElementById('bar');
+
+  const mouth = document.getElementById('mouth');
+  const lowerLip = document.getElementById('lowerLip');
+
+  let ctx, src, analyser, data, raf;
+  let ready=false;
+
+  async function initAudio(){
+    try{
+      // Audio von der Hauptseite: public/audio/latest.mp3
+      // Von hier aus relativ erreichbar als ../audio/latest.mp3
+      const url = "../audio/latest.mp3";
+      const head = await fetch(url,{method:"HEAD",cache:"no-store"});
+      if(!head.ok) throw 0;
+      audio.src = url;
+      playBtn.disabled = false;
+      pauseBtn.disabled = false;
+      statusEl.textContent = "bereit";
+      ready = true;
+    }catch{
+      statusEl.textContent = "kein Audio gefunden";
+      playBtn.disabled = true;
+      pauseBtn.disabled = true;
+    }
+  }
+
+  function setupAnalyser(){
+    if(ctx) return;
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    src = ctx.createMediaElementSource(audio);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    data = new Uint8Array(analyser.fftSize);
+    src.connect(analyser);
+    analyser.connect(ctx.destination);
+  }
+
+  function setMouth(open){ 
+    // open 0..1 → modelliere Unterlippe + Öffnung
+    const baseY = 195;
+    const amp = 22 * open; // Öffnungsamplitude
+    const y1 = baseY + amp;
+    // Mundöffnung (ein einfacher horizontaler „Schlitz“, leicht gekrümmt)
+    const d = `M100,${baseY} C150,${baseY+amp*0.3} 150,${baseY+amp*0.3} 200,${baseY}`;
+    mouth.setAttribute('d', d);
+    // Unterlippe etwas stärker nach unten
+    const d2 = `M95,${205+amp*0.6} C130,${220+amp*0.8} 170,${220+amp*0.8} 205,${205+amp*0.6}`;
+    lowerLip.setAttribute('d', d2);
+  }
+
+  function loop(){
+    analyser.getByteTimeDomainData(data);
+    // RMS der zentrierten Wellenform
+    let sum=0;
+    for(let i=0;i<data.length;i++){
+      const v = (data[i]-128)/128;
+      sum += v*v;
+    }
+    const rms = Math.sqrt(sum/data.length); // ~0..1
+    // sanft clamped/gespreizt
+    const open = Math.max(0, Math.min(1, (rms-0.02)*3.2));
+    setMouth(open);
+    bar.style.width = `${Math.round(open*100)}%`;
+    raf = requestAnimationFrame(loop);
+  }
+
+  playBtn.addEventListener('click', async ()=>{
+    if(!ready) return;
+    setupAnalyser();
+    try{
+      await audio.play();
+      await ctx.resume();
+      statusEl.textContent = "spielt";
+      cancelAnimationFrame(raf);
+      loop();
+    }catch(e){
+      statusEl.textContent = "Abspielen nicht möglich";
+    }
+  });
+
+  pauseBtn.addEventListener('click', ()=>{
+    if(!ready) return;
+    audio.pause();
+    statusEl.textContent = "pausiert";
+    cancelAnimationFrame(raf);
+  });
+
+  audio.addEventListener('ended', ()=>{
+    cancelAnimationFrame(raf);
+    statusEl.textContent = "Ende";
+    setMouth(0);
+    bar.style.width="0%";
+  });
+
+  initAudio();
+  </script>
+</body>
+</html>
