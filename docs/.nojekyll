@@ -1,0 +1,2 @@
+# keep GitHub Pages from processing with Jekyll
+# this ensures folders like _data, _badges etc. are served correctly
