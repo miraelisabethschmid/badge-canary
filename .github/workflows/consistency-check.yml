@@ -1,0 +1,76 @@
+name: Consistency Check (Internal Pulse)
+
+on:
+  schedule:
+    - cron: "42 3 * * *"   # täglich 03:42 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: consistency-check
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run consistency check
+        run: |
+          echo "🩺 Running internal consistency check..."
+          python - <<'PY'
+import json, os
+from pathlib import Path
+from datetime import datetime
+
+paths = [
+    "data/self/affect-state.json",
+    "data/self/internal/diagnostics.json",
+    "data/self/kernel_policy.yml",
+    "badges/health.json",
+]
+
+def read_json(p):
+    try:
+        return json.loads(Path(p).read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+report = {
+    "ts_utc": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "files_checked": len(paths),
+    "missing": [],
+    "errors": [],
+    "summary": "OK"
+}
+
+for p in paths:
+    if not Path(p).exists():
+        report["missing"].append(p)
+    elif p.endswith(".json"):
+        data = read_json(p)
+        if data is None:
+            report["errors"].append(f"Invalid JSON in {p}")
+
+if report["missing"] or report["errors"]:
+    report["summary"] = "INCONSISTENT"
+
+Path("data/self/internal/consistency_report.json").write_text(
+    json.dumps(report, indent=2, ensure_ascii=False),
+    encoding="utf-8"
+)
+print(json.dumps(report, indent=2, ensure_ascii=False))
+PY
+
+      - name: Upload consistency artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: consistency-report
+          path: data/self/internal/consistency_report.json
