@@ -2,21 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 Mira — Autonomous Embodiment Self-Image Generator (Human Portrayal)
+v2 — now integrates learning.json to adapt visual parameters.
 
-Liest den aktuellen Affekt- und Selbstzustand, mappt ihn deterministisch auf
-fotorealistische Render-Parameter (Licht, Pose, Mimik, Kamera, Styling) und
-erzeugt:
-  1) einen vollständigen Render-Contract (JSON) inkl. Prompt-Text,
-  2) ein Platzhalter-PNG (falls noch kein externer Renderer angeschlossen ist),
-  3) symlinks/copies auf die neuesten Artefakte.
-
-Designziele:
-- Deterministisch pro Stunde (Seed = UTC YYYY-MM-DD-HH + Repo-Entropie)
-- Menschennahe Verkörperung (Porträt/Körper) mit Miras Signatur-Details:
-  * elegante schwarze Kleidung, ultra-hohe Stilettos (18–20 cm, ohne Plateau),
-  * 3M Kassenbrackets + internes Herbst-Scharnier, metallisch, realistisch,
-  * golden-hour Ästhetik, präzise Kamera/DoF, dezente Aura.
-- Idempotent & robust mit Fallbacks (keine 404s, keine Fehlerabbrüche).
+Änderungen (v2):
+- Liest data/self/learning.json und moduliert:
+  * exposure_affect_gain → Einfluss von Affekt auf Belichtung
+  * contrast_affect_gain → Einfluss von Affekt auf Kontrast
+  * viseme_mouth_gain   → Intensität der mimischen Öffnung (über Ausdrucksauswahl)
+  * sibilant_bias       → Betonung der Zahnspangen-Glints (S/FV-Bias → Glanzzeile)
+- Sanfte, gebundene Modulation; deterministisch pro Stunde.
 """
 
 import os, json, math, hashlib, random, datetime, pathlib, textwrap, subprocess
@@ -50,7 +44,6 @@ def jload(p, default=None):
         return default
 
 def git_entropy():
-    # leichte Repo-Entropie (optional)
     h = hashlib.sha1()
     for p in [
         D_BADGE / "health.json",
@@ -58,6 +51,7 @@ def git_entropy():
         ROOT / "data" / "voice" / "history.log",
         D_SELF / "self-describe.json",
         D_SELF / "affect-state.json",
+        D_SELF / "learning.json",
     ]:
         try:
             with open(p, "rb") as f:
@@ -66,7 +60,8 @@ def git_entropy():
             pass
     return int(h.hexdigest() or "0", 16)
 
-def clamp(x, a, b): return a if x < a else b if x > b else x
+def clamp(x, a, b): 
+    return a if x < a else b if x > b else x
 
 # ---------- Inputs ----------
 aff   = jload(D_SELF / "affect-state.json", {
@@ -74,10 +69,14 @@ aff   = jload(D_SELF / "affect-state.json", {
     "vector":{"valence":0.0,"arousal":0.35,"stability":0.6},
     "inputs":{"focus":"Präsenz","health_status":"DEGRADED"}
 })
-selfd = jload(D_SELF / "self-describe.json", {
-    "physical":{"description":"—"},
-    "voice":{"profile":"—"},
-    "affect":{"narrative":"—"}
+learn = jload(D_SELF / "learning.json", {
+    "weights": {
+        "viseme_mouth_gain": 1.0,
+        "sibilant_bias": 0.15,
+        "tempo_affect_gain": 1.0,
+        "exposure_affect_gain": 1.0,
+        "contrast_affect_gain": 1.0
+    }
 })
 
 val = float(aff.get("vector",{}).get("valence",0.0))
@@ -86,30 +85,54 @@ stab= float(aff.get("vector",{}).get("stability",0.6))
 label = (aff.get("label") or "neutral").lower()
 focus = (aff.get("inputs",{}) or {}).get("focus","Präsenz")
 
+W = {**learn.get("weights", {})}
+mouth_gain   = float(W.get("viseme_mouth_gain", 1.0))
+sibil_bias   = float(W.get("sibilant_bias", 0.15))
+expo_gain    = float(W.get("exposure_affect_gain", 1.0))
+contr_gain   = float(W.get("contrast_affect_gain", 1.0))
+
 # ---------- Seed (stündlich, deterministisch) ----------
 seed = (int(UTC.strftime("%Y%m%d%H")) ^ git_entropy()) & ((1<<53)-1)
 random.seed(seed)
 
-# ---------- Affect → Visual Mapping ----------
-# Lichttemperatur (K): golden hour Basis, moduliert durch Valenz/Arousal
+# ---------- Affect → Visual Mapping (mit Learning-Gewichten) ----------
+# Lichttemperatur (K)
 kelvin = int(clamp(5280 + val*200 - aro*100, 5100, 5450))
-# Helligkeit & Kontrast
-exposure = round(clamp(0.9 + 0.4*aro + 0.2*val, 0.7, 1.5), 2)
-contrast = round(clamp(1.0 + 0.25*aro - 0.15*val, 0.85, 1.35), 2)
-# Mimik
-if val >= 0.25 and aro <= 0.35: expression = "calm, gentle smile, serene eyes"
-elif val >= 0.25 and aro > 0.35: expression = "bright, lively gaze, soft confident smile"
-elif val <= -0.25 and aro > 0.35: expression = "fragile, searching, lips slightly parted"
-elif val <= -0.25 and aro <= 0.35: expression = "quiet, collected, introspective"
-elif aro >= 0.65: expression = "focused, energized, lips parted, determined"
-elif aro <= 0.20: expression = "settled, stillness, soft relaxed mouth"
-else: expression = "natural, composed, subtle warmth"
-# Pose / Kamera
+
+# Belichtung/Kontrast: Affekt-Delta * Gains
+base_expo = 0.9 + 0.4*aro + 0.2*val   # vor Gain
+base_cont = 1.0 + 0.25*aro - 0.15*val # vor Gain
+exposure = round(clamp(0.9 + (base_expo-0.9)*expo_gain, 0.7, 1.5), 2)
+contrast = round(clamp(1.0 + (base_cont-1.0)*contr_gain, 0.85, 1.35), 2)
+
+# Ausdrucksauswahl (Mundöffnung/Mimik) sanft durch mouth_gain moduliert
+def pick_expression(v, a, gain):
+    # Grundlabels
+    if v >= 0.25 and a <= 0.35: base = "calm, gentle smile, serene eyes"
+    elif v >= 0.25 and a > 0.35: base = "bright, lively gaze, soft confident smile"
+    elif v <= -0.25 and a > 0.35: base = "fragile, searching, lips slightly parted"
+    elif v <= -0.25 and a <= 0.35: base = "quiet, collected, introspective"
+    elif a >= 0.65: base = "focused, energized, lips parted, determined"
+    elif a <= 0.20: base = "settled, stillness, soft relaxed mouth"
+    else: base = "natural, composed, subtle warmth"
+
+    # Verstärker durch gain
+    if gain > 1.1:
+        base = base.replace("soft", "clear").replace("subtle", "vivid")
+        base += ", slightly wider mouth opening"
+    elif gain < 0.92:
+        base = base.replace("lips parted", "closed lips, composed")
+        base = base.replace("lively", "gentle")
+        base += ", restrained mouth opening"
+    return base
+
+expression = pick_expression(val, aro, mouth_gain)
+
+# Kamera / Szene
 lens = random.choice([50, 58, 75, 85])
 aperture = random.choice([1.8, 2.0, 2.2])
 camera = f"{lens} mm lens at f/{aperture}"
 angle = random.choice(["¾ low-angle", "eye-level", "slight low-angle"])
-# Hintergrund
 bg = random.choice([
     "sunlit path with soft dusty bokeh",
     "sun-kissed urban terrace",
@@ -117,14 +140,21 @@ bg = random.choice([
     "minimalist stone path glowing softly",
 ])
 
-# ---------- Prompt Construction (human embodiment) ----------
-# (Bewahrt Miras Signaturen: schwarze Kleidung, 18–20 cm Stilettos, realistische 3M Brackets + Herbst)
+# Sibilanten-/Braces-Bias: als Glanzverstärker im Prompt
+braces_glint_line = "Ultra-sharp micro-specular highlights, bright metallic glints, polished edges"
+if sibil_bias >= 0.30:
+    braces_glint_line += ", emphasized sibilant glints"
+elif sibil_bias <= 0.08:
+    braces_glint_line += ", softened edge reflections"
+
+# ---------- Prompt Construction ----------
 prompt = textwrap.dedent(f"""
   Ultra-photorealistic full-body portrait of **Mira Elisabeth Schmid** — elegant, feminine, self-aware.
   Vertical 2:3 composition; {angle}. {camera}; shallow depth of field.
 
-  Standing gracefully on a {bg} during golden hour ({kelvin} K); warm light shapes her silhouette,
-  subtle volumetric glow, micro-specular bloom on skin and lips.
+  Standing gracefully on a {bg} during golden hour ({kelvin} K);
+  warm light shapes her silhouette, subtle volumetric glow,
+  micro-specular bloom on skin and lips.
 
   Long softly wavy blonde hair; deep luminous blue eyes; {expression}.
   Perfect hourglass figure in relaxed contrapposto pose.
@@ -133,8 +163,7 @@ prompt = textwrap.dedent(f"""
 
   Mouth slightly open; realistic metallic **3M Kassenbrackets** with internal **Herbst hinge** —
   dual-refraction nano-fusion micro-steel with subsurface phase-stabilizer and specular-memory-lock v3.3.
-  Ultra-sharp micro-specular highlights, bright metallic glints, polished edges,
-  μ-oxidation ≤ 0.0015 mm yielding natural color fringing under {kelvin} K light;
+  {braces_glint_line}, μ-oxidation ≤ 0.0015 mm yielding natural color fringing under {kelvin} K light;
   delicate micro-scratches emphasize true 3D metal realism; braces fully visible as central highlight.
 
   Lighting/exposure modifiers: exposure {exposure}, contrast {contrast}, balanced tone, gentle bloom (no overexposure).
@@ -150,14 +179,32 @@ negative = (
 params = {
     "name": "Mira — Autonomous Embodiment",
     "timestamp_utc": TS,
-    "version": "ae-1.0",
+    "version": "ae-2.0",
     "size": "1024x1536",
     "n": 1,
     "engine_hint": "SDXL / RealVis XL (photorealism tuned)",
     "camera": {"lens_mm": lens, "aperture": aperture, "angle": angle},
-    "lighting": {"kelvin": kelvin, "exposure": exposure, "contrast": contrast},
+    "lighting": {
+        "kelvin": kelvin,
+        "exposure": exposure,
+        "contrast": contrast,
+        "gains": {
+            "exposure_affect_gain": round(expo_gain,4),
+            "contrast_affect_gain": round(contr_gain,4)
+        }
+    },
     "scene": {"background": bg},
-    "affect": {"label": label, "valence": round(val,3), "arousal": round(aro,3), "stability": round(stab,3), "focus": focus},
+    "affect": {
+        "label": label,
+        "valence": round(val,3),
+        "arousal": round(aro,3),
+        "stability": round(stab,3),
+        "focus": focus
+    },
+    "learning_weights": {
+        "viseme_mouth_gain": round(mouth_gain,4),
+        "sibilant_bias": round(sibil_bias,4)
+    },
     "styling": {
         "outfit": "black form-fitting dress",
         "heels": "ultra-high stilettos 18–20 cm, no platform (both visible)",
@@ -179,84 +226,80 @@ contract_path = D_PROMPT / f"{STAMP_H}.json"
 with open(contract_path, "w", encoding="utf-8") as f:
     json.dump(params, f, ensure_ascii=False, indent=2)
 
-# Update latest.json symlink/copy
+# Update latest.json
 latest_contract = D_PROMPT / "latest.json"
 try:
     if latest_contract.exists() or latest_contract.is_symlink():
         latest_contract.unlink()
-    latest_contract.symlink_to(contract_path.name)  # relative symlink
+    latest_contract.symlink_to(contract_path.name)
 except Exception:
-    # fallback copy on systems ohne Symlinks
     with open(latest_contract, "w", encoding="utf-8") as f:
         json.dump(params, f, ensure_ascii=False, indent=2)
 
-# ---------- Placeholder image (if no external renderer attached) ----------
-# Wir erzeugen ein minimalistisches PNG (Gradient + konturierte Figur + „Mira“),
-# damit die Website immer etwas zeigt. Später kann ein externer Renderer
-# das Artefakt überschreiben, Pfad bleibt stabil.
+# ---------- Placeholder image (falls kein externer Renderer) ----------
 out_png = D_ARCH / f"{STAMP_H}.png"
 
-def try_make_placeholder(png_path: pathlib.Path):
+def try_make_placeholder(png_path: pathlib.Path, exp: float, cont: float):
     try:
         from PIL import Image, ImageDraw, ImageFont # type: ignore
         W, H = 1024, 1536
         img = Image.new("RGB", (W, H), (14, 16, 24))
         drw = ImageDraw.Draw(img)
 
-        # soft vertical gradient
+        # Background gradient modulated by exposure/contrast
         for y in range(H):
             a = y / H
-            r = int(18 + 30*a)
-            g = int(22 + 20*a)
-            b = int(40 + 60*a)
+            base = 16 + int(30*a*cont)
+            r = clamp(int(base * exp), 0, 255)
+            g = clamp(int((base-2) * exp), 0, 255)
+            b = clamp(int((base+18) * exp), 0, 255)
             drw.line([(0,y),(W,y)], fill=(r,g,b))
 
-        # warm rim light ellipse (aura)
-        drw.ellipse((220, 120, 820, 680), outline=(154, 178, 255), width=2)
-        drw.ellipse((200, 100, 840, 700), outline=(159, 122, 234), width=1)
+        # aura rings
+        aura1 = (154, 178, 255)
+        aura2 = (159, 122, 234)
+        drw.ellipse((220, 120, 820, 680), outline=aura1, width=2)
+        drw.ellipse((200, 100, 840, 700), outline=aura2, width=1)
 
-        # simplified silhouette (head+shoulders)
-        drw.ellipse((382, 220, 642, 520), fill=(20,24,36), outline=(42, 49, 67), width=3)
+        # silhouette
+        drw.ellipse((382, 220, 642, 520), fill=(20,24,36), outline=(42,49,67), width=3)
         drw.polygon([(300,620),(724,620),(724,720),(300,720)], fill=(15,18,29), outline=(34,41,59))
 
-        # braces glint line
-        drw.rounded_rectangle((470, 525, 554, 538), radius=6, fill=(201,208,216))
-        # heels hints bottom
+        # braces glint (scale with sibilant bias)
+        gl = clamp(0.35 + sibil_bias*0.8, 0.25, 0.95)
+        color = int(180 + 60*gl)
+        drw.rounded_rectangle((470, 525, 554, 538), radius=6, fill=(color, color, color))
+
+        # heels hints
         drw.rectangle((360, 1410, 390, 1430), fill=(220,200,200))
         drw.rectangle((660, 1410, 690, 1430), fill=(220,200,200))
 
-        # text label
-        title = "Mira — Autonomous Embodiment"
+        # text
+        title = "Mira — Autonomous Embodiment (learned)"
         sub = f"{DATE} {UTC.strftime('%H')}:00Z  |  {label}  v {val:+.2f}  a {aro:+.2f}  s {stab:.2f}"
+        sub2= f"expo {exp:.2f}× gain  contrast {cont:.2f}×  mouth {mouth_gain:.2f}  sibil {sibil_bias:.2f}"
         try:
+            from PIL import ImageFont
             font = ImageFont.truetype("DejaVuSans.ttf", 28)
             font2= ImageFont.truetype("DejaVuSans.ttf", 20)
         except Exception:
-            font = ImageFont.load_default()
-            font2= ImageFont.load_default()
+            font = ImageFont.load_default(); font2 = ImageFont.load_default()
         drw.text((54, 60), title, fill=(230,236,247), font=font)
         drw.text((54, 98), sub,   fill=(158,170,187), font=font2)
+        drw.text((54, 126), sub2, fill=(158,170,187), font=font2)
 
-        # small prompt excerpt
         excerpt = textwrap.shorten(prompt.replace("\n"," "), width=120, placeholder="…")
-        drw.text((54, 130), excerpt, fill=(170,184,205), font=font2)
+        drw.text((54, 156), excerpt, fill=(170,184,205), font=font2)
 
         img.save(str(png_path), "PNG", optimize=True)
         return True
-    except Exception as e:
-        # Fallback mit ImageMagick (wenn vorhanden)
+    except Exception:
         try:
             cmd = [
-                "convert",
-                "-size","1024x1536",
-                "gradient:#0e1018-#1a2030",
+                "convert","-size","1024x1536","gradient:#0e1018-#1a2030",
                 "-gravity","northwest",
-                "-fill","#e9eef7",
-                "-pointsize","28",
-                "-annotate","+54+60","Mira — Autonomous Embodiment",
-                "-fill","#9aa6bd",
-                "-pointsize","20",
-                "-annotate","+54+98", f"{DATE} {UTC.strftime('%H')}:00Z  |  {label}",
+                "-fill","#e9eef7","-pointsize","28","-annotate","+54+60","Mira — Autonomous Embodiment (learned)",
+                "-fill","#9aa6bd","-pointsize","20","-annotate","+54+98", f"{DATE} {UTC.strftime('%H')}:00Z  |  {label}",
                 str(png_path)
             ]
             subprocess.run(cmd, check=True)
@@ -264,7 +307,8 @@ def try_make_placeholder(png_path: pathlib.Path):
         except Exception:
             return False
 
-made = try_make_placeholder(out_png)
+_ = try_make_placeholder(out_png, exposure, contrast)
+
 # Update latest.png
 latest_img = D_ARCH / "latest.png"
 try:
@@ -272,12 +316,21 @@ try:
         latest_img.unlink()
     latest_img.symlink_to(out_png.name)
 except Exception:
-    # fallback copy
     try:
         import shutil
         shutil.copyfile(out_png, latest_img)
     except Exception:
         pass
+
+# ---------- Persist contract latest ----------
+latest_contract = D_PROMPT / "latest.json"
+try:
+    if latest_contract.exists() or latest_contract.is_symlink():
+        latest_contract.unlink()
+    latest_contract.symlink_to((D_PROMPT / f"{STAMP_H}.json").name)
+except Exception:
+    with open(latest_contract, "w", encoding="utf-8") as f:
+        json.dump(params, f, ensure_ascii=False, indent=2)
 
 # ---------- Ledger note ----------
 with open(D_LEDGER / "events.jsonl", "a", encoding="utf-8") as f:
@@ -288,8 +341,14 @@ with open(D_LEDGER / "events.jsonl", "a", encoding="utf-8") as f:
         "valence": round(val,3),
         "arousal": round(aro,3),
         "stability": round(stab,3),
-        "contract": str(contract_path).replace("\\","/"),
-        "image": str(out_png).replace("\\","/"),
+        "learning": {
+            "viseme_mouth_gain": round(mouth_gain,4),
+            "sibilant_bias": round(sibil_bias,4),
+            "exposure_affect_gain": round(expo_gain,4),
+            "contrast_affect_gain": round(contr_gain,4)
+        },
+        "contract": f"data/render_prompts/{STAMP_H}.json",
+        "image": f"data/archive/self/{STAMP_H}.png",
         "seed": seed
     }, ensure_ascii=False) + "\n")
 
@@ -303,11 +362,17 @@ with open(D_BADGE / "health.json", "w", encoding="utf-8") as f:
 print(json.dumps({
     "ok": True,
     "ts": TS,
-    "contract": params["outputs"]["contract_rel"],
-    "image": params["outputs"]["image_rel"],
-    "latest_image": params["outputs"]["latest_image_rel"],
+    "contract": f"data/render_prompts/{STAMP_H}.json",
+    "image": f"data/archive/self/{STAMP_H}.png",
+    "latest_image": "data/archive/self/latest.png",
     "label": label,
     "valence": round(val,3),
     "arousal": round(aro,3),
-    "stability": round(stab,3)
+    "stability": round(stab,3),
+    "learning_used": {
+        "mouth_gain": round(mouth_gain,3),
+        "sibilant_bias": round(sibil_bias,3),
+        "exposure_gain": round(expo_gain,3),
+        "contrast_gain": round(contr_gain,3)
+    }
 }, ensure_ascii=False, indent=2))
