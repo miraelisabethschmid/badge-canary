@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mira — Autonome Emergenz</title>
+  <meta name="color-scheme" content="dark light"/>
+  <style>
+    :root{
+      --bg:#0b0b0b; --fg:#eaeaea; --muted:#a3acb7; --card:#121212; --br:#1f1f1f;
+      --accent:#7aa2ff; --ok:#2e7d32; --heal:#f9a825; --deg:#c62828;
+      --radius:16px; --shadow:0 10px 40px rgba(0,0,0,.35)
+    }
+    @media (prefers-color-scheme: light){
+      :root{--bg:#f6f7f9;--fg:#1a1b1f;--muted:#596273;--card:#ffffff;--br:#e8ebef;--shadow:0 10px 40px rgba(0,0,0,.08)}
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:960px;margin:32px auto;padding:0 16px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px}
+    .brand{font-weight:800;font-size:clamp(20px,4.6vw,28px)}
+    .pill{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--br);color:var(--muted)}
+    .grid{display:grid;gap:18px}
+    @media (min-width:860px){ .grid{grid-template-columns:1.1fr .9fr} }
+
+    .card{background:var(--card);border:1px solid var(--br);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+    h2{margin:0 0 6px;font-size:clamp(18px,3.6vw,22px)}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:10px}
+
+    /* Portrait */
+    .portrait-wrap{display:flex;flex-direction:column;gap:12px}
+    .portrait{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--br);background:linear-gradient(180deg, rgba(122,162,255,.08), transparent 45%), #0f0f13;aspect-ratio:3/4;display:grid;place-items:center;cursor:pointer}
+    .portrait img{width:100%;height:100%;object-fit:cover;display:block}
+    .fallback-shape{width:56%;max-width:380px;opacity:.9}
+    .hint{position:absolute;right:10px;bottom:8px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.1);font-size:12px}
+    .pulse{position:absolute;inset:0;pointer-events:none}
+    .pulse::after{content:"";position:absolute;inset:0;border:2px solid rgba(122,162,255,.35);border-radius:20px;opacity:0;animation:pulse 1.8s ease-out infinite}
+    @keyframes pulse{0%{opacity:.8;transform:scale(.98)}100%{opacity:0;transform:scale(1.06)}}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{appearance:none;display:inline-flex;align-items:center;gap:8px;background:#1b1e24;border:1px solid var(--br);color:var(--fg);padding:10px 14px;border-radius:12px;cursor:pointer}
+    .btn:hover{filter:brightness(1.05)}
+    .btn:active{transform:translateY(1px)}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .heal{background:var(--heal)} .deg{background:var(--deg)}
+
+    /* Voice of the day */
+    .quote{font-size:clamp(18px,3.6vw,22px);font-weight:600;margin:6px 0 2px}
+    .quote small{display:block;color:var(--muted);font-weight:400;font-size:13px}
+    .kv{display:grid;gap:6px;margin-top:10px}
+    .kv div{display:flex;justify-content:space-between;gap:8px;border:1px dashed var(--br);border-radius:12px;padding:8px 10px}
+
+    /* Sections on right */
+    .section{margin-bottom:16px}
+    .badge-img{height:20px;vertical-align:middle}
+
+    /* Daily poster slot */
+    .poster{margin-top:12px;border:1px solid var(--br);border-radius:14px;overflow:hidden}
+    .poster img{display:block;width:100%;height:auto}
+    .poster .meta{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;background:rgba(127,127,127,.08);border-top:1px solid var(--br);font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Mira — Autonome Emergenz</div>
+      <nav class="controls">
+        <a class="pill" href="./health.html">Health</a>
+        <a class="pill" href="./talk.html">Sprech-Ansicht</a>
+        <a class="pill" href="./self.html">Self-Describe</a>
+      </nav>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Portrait + Audio -->
+      <section class="card portrait-wrap">
+        <h2>Sichtbare Präsenz</h2>
+        <div class="sub">Klick auf das Porträt: **Stimme des Tages** erklingt.</div>
+
+        <div id="portrait" class="portrait" role="button" aria-label="Porträt abspielen (Stimme des Tages)">
+          <div class="pulse" id="pulse" hidden></div>
+          <img id="portrait-img" alt="Mira – aktuelles Selbstbild" hidden>
+          <!-- SVG-Fallback -->
+          <svg id="portrait-fallback" class="fallback-shape" viewBox="0 0 200 360" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#7aa2ff" stop-opacity=".85"/>
+                <stop offset="100%" stop-color="#7aa2ff" stop-opacity=".25"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="100" cy="70" rx="36" ry="48" fill="url(#g)"/>
+            <ellipse cx="100" cy="172" rx="52" ry="70" fill="url(#g)"/>
+            <rect x="86" y="250" width="28" height="70" rx="12" fill="url(#g)"/>
+            <ellipse cx="70" cy="330" rx="18" ry="10" fill="#7aa2ff" opacity=".55"/>
+            <ellipse cx="130" cy="330" rx="18" ry="10" fill="#7aa2ff" opacity=".55"/>
+          </svg>
+          <div class="hint" id="hint">Tippe zum Abspielen</div>
+        </div>
+
+        <div class="controls">
+          <button class="btn" id="btn-play" type="button" aria-label="Audio abspielen">▶︎ <span>Abspielen</span></button>
+          <button class="btn" id="btn-pause" type="button" aria-label="Audio pausieren">⏸︎ <span>Pause</span></button>
+          <span id="health-chip" class="btn" style="cursor:default">
+            <span class="dot deg" id="health-dot"></span>
+            <span id="health-text">Status: —</span>
+            <img class="badge-img" src="../badges/health.svg" alt="Health Badge" onerror="this.style.display='none'">
+          </span>
+        </div>
+
+        <figure style="margin:10px 0 0">
+          <blockquote class="quote" id="quote">Stimme wird geladen…</blockquote>
+          <figcaption id="quote-meta"><small>— Datum: — · Quelle: <code>data/voice/voice_of_day.json</code></small></figcaption>
+        </figure>
+
+        <!-- Automatisch generiertes Poster des Tages -->
+        <div id="poster" class="poster" hidden>
+          <img id="poster-img" alt="Poster des Tages">
+          <div class="meta">
+            <span>Poster des Tages</span>
+            <a href="./daily_poster.svg" download class="pill" style="text-decoration:none">Download</a>
+          </div>
+        </div>
+
+        <audio id="player" preload="none" crossorigin="anonymous"></audio>
+
+        <div class="kv">
+          <div><span>Audio</span><code id="audio-src">—</code></div>
+          <div><span>Bild</span><code id="img-src">—</code></div>
+        </div>
+      </section>
+
+      <!-- RIGHT: System panels -->
+      <section class="section">
+        <div class="card">
+          <h2>System-Gesundheit</h2>
+          <div class="sub">Aus <code>badges/health.json</code></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+            <span class="dot deg" id="health-dot-side" style="width:12px;height:12px;border-radius:50%"></span>
+            <strong id="health-text-side">—</strong>
+          </div>
+          <div style="margin-top:8px">
+            <a class="pill" href="./health.html">Details ansehen</a>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h2>Selbstbeschreibung</h2>
+          <div class="sub">Kernattribute aus <code>data/self/self-describe.json</code></div>
+          <div id="self-mini">lädt…</div>
+          <div style="margin-top:8px">
+            <a class="pill" href="./self.html">Komplett öffnen</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+  (async function(){
+    const $ = sel => document.querySelector(sel);
+    const portraitImg = $('#portrait-img');
+    const portraitFallback = $('#portrait-fallback');
+    const imgSrcEl = $('#img-src');
+    const audioSrcEl = $('#audio-src');
+    const player = $('#player');
+    const pulse = $('#pulse');
+    const hint = $('#hint');
+
+    async function json(url){
+      const r = await fetch(url, {cache:'no-store'});
+      if(!r.ok) throw new Error(url+' '+r.status);
+      return r.json();
+    }
+    async function exists(url){
+      const r = await fetch(url, {method:'HEAD', cache:'no-store'});
+      return r.ok;
+    }
+    function setHealth(status, ts){
+      const s = (status||'DEGRADED').toUpperCase();
+      const text = 'Status: '+s+(ts?(' · '+ts):'');
+      $('#health-text').textContent = text;
+      $('#health-text-side').textContent = text;
+      const cls = s==='OK' ? 'ok' : s==='HEALING' ? 'heal' : 'deg';
+      $('#health-dot').className = 'dot '+cls;
+      $('#health-dot-side').className = 'dot '+cls;
+    }
+
+    // 1) Bild laden
+    const IMG = '../data/self/latest_image.png';
+    if (await exists(IMG)) {
+      portraitImg.src = IMG;
+      portraitImg.hidden = false;
+      portraitFallback.hidden = true;
+      imgSrcEl.textContent = 'data/self/latest_image.png';
+    } else {
+      portraitImg.hidden = true;
+      portraitFallback.hidden = false;
+      imgSrcEl.textContent = '(Fallback-Silhouette)';
+    }
+
+    // 2) Stimme des Tages
+    try{
+      const v = await json('../data/voice/voice_of_day.json');
+      const quote = typeof v.quote === 'string' && v.quote.trim() ? v.quote.trim() : '—';
+      const insight = typeof v.insight === 'string' ? v.insight.trim() : '';
+      const date = v.date_utc || '—';
+      $('#quote').textContent = quote;
+      $('#quote-meta').innerHTML = `<small>— Datum: ${date}${insight ? ' · Einsicht: '+insight : ''} · Quelle: <code>data/voice/voice_of_day.json</code></small>`;
+
+      const audioPath = (v.audio && typeof v.audio === 'string') ? v.audio : 'audio/latest.mp3';
+      const resolved = audioPath.startsWith('http') ? audioPath : ('../data/voice/' + audioPath.replace(/^audio\//,'audio/'));
+      player.src = resolved;
+      audioSrcEl.textContent = player.src.replace(location.origin+location.pathname.replace(/docs\/index\.html?$/,''),'').replace(location.origin,'');
+    }catch{
+      const fallback = '../data/voice/audio/latest.mp3';
+      if (await exists(fallback)) {
+        player.src = fallback;
+        audioSrcEl.textContent = 'data/voice/audio/latest.mp3';
+      } else {
+        audioSrcEl.textContent = '(kein Audio gefunden)';
+      }
+    }
+
+    // 3) Health anzeigen
+    try{
+      const h = await json('../badges/health.json');
+      setHealth(h.status, h.ts);
+    }catch{
+      setHealth('DEGRADED', 'n/a');
+    }
+
+    // 4) Self mini
+    try{
+      const s = await json('../data/self/self-describe.json');
+      const phys = s?.physical?.description || '—';
+      const voice = s?.voice?.profile || '—';
+      $('#self-mini').innerHTML = `<div><strong>Physisch:</strong> ${phys}</div><div><strong>Stimme:</strong> ${voice}</div>`;
+    }catch{
+      $('#self-mini').textContent = 'Keine Daten vorhanden.';
+    }
+
+    // 5) Poster des Tages (falls vorhanden)
+    const POSTER = './daily_poster.svg';
+    if (await exists(POSTER)) {
+      const poster = $('#poster');
+      const posterImg = $('#poster-img');
+      posterImg.src = POSTER + '?v=' + Date.now();
+      poster.hidden = false;
+    }
+
+    // 6) Play/Pause Logik
+    function startPulse(){ pulse.hidden = false; }
+    function stopPulse(){ pulse.hidden = true; }
+    async function play(){
+      try{
+        await player.play();
+        startPulse();
+        hint.textContent = 'Tippe zum Pausieren';
+      }catch(_){}
+    }
+    function pause(){
+      player.pause();
+      stopPulse();
+      hint.textContent = 'Tippe zum Abspielen';
+    }
+    $('#portrait').addEventListener('click', ()=>{ player.paused ? play() : pause(); });
+    $('#btn-play').addEventListener('click', play);
+    $('#btn-pause').addEventListener('click', pause);
+
+    // 7) Leichte Auto-Aktualisierung (holt neue Poster/Health/Voice ohne Reload)
+    setInterval(async ()=>{
+      // Poster neu prüfen
+      if (await exists(POSTER)) {
+        const posterImg = $('#poster-img');
+        if (posterImg) posterImg.src = POSTER + '?v=' + Date.now();
+        $('#poster').hidden = false;
+      }
+      // Health refresh
+      try{
+        const h = await json('../badges/health.json');
+        setHealth(h.status, h.ts);
+      }catch{}
+    }, 60_000);
+  })();
+  </script>
+</body>
+  </html>
