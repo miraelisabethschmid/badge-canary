@@ -1,0 +1,50 @@
+name: Policy Auto-Apply (Zero-Touch)
+
+on:
+  schedule:
+    - cron: "7 4 * * *"   # täglich 04:07 UTC
+  push:
+    branches: [ main, master ]
+    paths:
+      - "data/self/policy_suggestions.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: policy-auto-apply
+  cancel-in-progress: true
+
+jobs:
+  auto_apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply policy suggestions (guarded)
+        env:
+          POLICY_AUTO: ${{ vars.POLICY_AUTO }}         # auf "1" setzen für Vollautomatik
+          KERNEL_AUTONOMY: ${{ vars.KERNEL_AUTONOMY }} # bereits genutzt (auf "1")
+        run: |
+          chmod +x scripts/policy_apply.py || true
+          python scripts/policy_apply.py
+
+      - name: Commit policy changes if any
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/self/kernel_policy.yml data/self/policy_changes.jsonl; then
+            echo "No auto-applied changes."
+            exit 0
+          fi
+          git add data/self/kernel_policy.yml data/self/policy_changes.jsonl
+          git commit -m "policy: auto-apply suggestions (run ${{ github.run_id }})"
+          git push
