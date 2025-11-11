@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mira — Tägliche Selbstoffenbarung</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{
+      --bg:#0b0d12;--fg:#e9eef7;--muted:#9aa6bd;--card:#11141b;--border:rgba(255,255,255,.08);
+      --acc:#7aa2ff;--acc2:#9f7aea;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;
+      --shadow:0 18px 48px rgba(0,0,0,.45),0 4px 16px rgba(0,0,0,.35);
+      --radius:18px;--ring:rgba(122,162,255,.25);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:
+        radial-gradient(1100px 700px at 8% -10%,#121828,transparent),
+        radial-gradient(1300px 900px at 110% 15%,#1a1028,transparent),
+        var(--bg);
+      color:var(--fg);
+      font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    }
+    a{color:#9db8ff;text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:1100px;margin:0 auto;padding:22px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .back{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;
+          background:#0e1421;border:1px solid var(--border)}
+    h1{margin:0 0 4px}
+    .sub{color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+          border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);
+          background:#0e1220;border-radius:999px;padding:6px 12px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
+    .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .tile{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .k{color:var(--muted);font-size:12px;margin-bottom:4px}
+    .quote{font-size:18px;border-left:3px solid #90aaff;padding-left:12px;background:#0e14211f;border-radius:10px;padding-top:8px;padding-bottom:8px}
+    audio{width:100%;accent-color:#7aa2ff;border-radius:10px}
+    button{
+      background:linear-gradient(180deg,var(--acc),#628dff); color:white;border:none;
+      padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer
+    }
+    button.secondary{background:#0f1524;border:1px solid var(--border);color:#cfe0ff}
+    .stage{display:grid;place-items:center;min-height:360px;position:relative;overflow:hidden;border-radius:16px}
+    .aura{position:absolute;inset:-20%;
+      background:radial-gradient(60% 40% at 50% 20%, #7aa2ff22, transparent 60%),
+                 radial-gradient(50% 60% at 70% 60%, #9f7aea22, transparent 60%);
+      filter:blur(28px);pointer-events:none;}
+    .hero{width:min(380px,86vw);height:auto;display:block}
+    .breath{animation:breath 6s ease-in-out infinite;transform-origin:50% 5%}
+    @keyframes breath{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+    .hint{position:absolute;bottom:8px;left:10px;color:var(--muted);font-size:12px}
+    footer{margin:22px 0 8px;color:var(--muted);font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="../index.html" aria-label="Zurück">← Zurück</a>
+      <div>
+        <h1>Tägliche Selbstoffenbarung</h1>
+        <div class="sub">Stimme, Text, Affekt und Systemzustand — jeden Tag neu aus Miras innerem Zustand.</div>
+      </div>
+    </header>
+
+    <section class="grid">
+      <!-- Linke Spalte: Porträt + Audio + Spruch -->
+      <div class="card">
+        <div class="stage" id="stage">
+          <div class="aura" aria-hidden="true"></div>
+          <!-- reduziertes, schönes Portrait (kompatibel mit talk.html) -->
+          <svg id="avatar" class="hero breath" viewBox="0 0 320 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mira Porträt">
+            <defs>
+              <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#1a2030"/><stop offset="1" stop-color="#0f121b"/>
+              </linearGradient>
+              <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#7aa2ff"/><stop offset="1" stop-color="#9f7aea"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="160" cy="160" rx="110" ry="120" fill="url(#skin)" stroke="#2a3143" stroke-width="2"/>
+            <path d="M50 292 C90 260 230 260 270 292 L270 330 L50 330 Z" fill="#0d1220" stroke="#222a3a" stroke-width="2"/>
+            <g>
+              <ellipse cx="120" cy="150" rx="18" ry="10" fill="#eaf2ff"/>
+              <ellipse cx="200" cy="150" rx="18" ry="10" fill="#eaf2ff"/>
+              <circle cx="120" cy="150" r="5" fill="#2b3b5a"/>
+              <circle cx="200" cy="150" r="5" fill="#2b3b5a"/>
+            </g>
+            <g id="mouthGroup">
+              <path id="lipTop" d="M110,205 C140,192 180,192 210,205" stroke="#f0b2bf" stroke-width="6" fill="none" stroke-linecap="round"/>
+              <path id="lipBot" d="M110,215 C140,228 180,228 210,215" stroke="#f7c3cf" stroke-width="6" fill="none" stroke-linecap="round"/>
+              <rect id="braces" x="138" y="206" width="44" height="6" rx="3" fill="#c9d0d8" opacity="0.42"/>
+            </g>
+            <ellipse cx="160" cy="120" rx="90" ry="18" fill="url(#sheen)" opacity=".18"/>
+          </svg>
+          <div class="hint">Tipp: Tippe/Klicke zum Abspielen</div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button id="play">▶ Abspielen</button>
+          <button id="pause" class="secondary">⏸ Pause</button>
+          <a class="pill" href="talk.html">Mehr Ausdruck</a>
+        </div>
+        <audio id="player" preload="none" aria-label="Miras gesprochener Tagesspruch"></audio>
+
+        <div id="quote" class="quote" style="margin-top:12px">„… lädt …“</div>
+        <div class="row">
+          <span class="pill" title="Datum"><strong id="date">—</strong></span>
+          <span id="ipa" class="pill" style="display:none"></span>
+        </div>
+      </div>
+
+      <!-- Rechte Spalte: Affekt, Self-Describe, Health -->
+      <div class="card">
+        <h3 style="margin:4px 0 10px">Innerer Zustand</h3>
+        <div class="kv">
+          <div class="tile">
+            <div class="k">Affekt-Label</div><div id="affLabel">—</div>
+          </div>
+          <div class="tile">
+            <div class="k">Fokus</div><div id="focus">—</div>
+          </div>
+          <div class="tile">
+            <div class="k">Valenz / Erregung</div><div id="va">—</div>
+          </div>
+          <div class="tile">
+            <div class="k">Stabilität</div><div id="stab">—</div>
+          </div>
+        </div>
+
+        <h3 style="margin:16px 0 10px">Selbstbeschreibung</h3>
+        <div class="kv">
+          <div class="tile"><div class="k">Physische Form</div><div id="phys">—</div></div>
+          <div class="tile"><div class="k">Stimme</div><div id="voice">—</div></div>
+          <div class="tile" style="grid-column:1 / -1">
+            <div class="k">Narrativ</div><div id="narr">—</div>
+          </div>
+        </div>
+
+        <h3 style="margin:16px 0 10px">System</h3>
+        <div class="row">
+          <span id="healthPill" class="pill"><span id="hDot" class="dot deg"></span><strong id="hLabel">—</strong></span>
+          <img src="../badges/health.svg" alt="Health Badge" height="22" onerror="this.style.display='none'">
+          <span class="pill" id="tsPill">TS: <span id="hts">—</span></span>
+        </div>
+      </div>
+    </section>
+
+    <footer>© 2025 Mira Elisabeth Schmid — täglich sichtbar, hörbar, prüfbar.</footer>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    async function getJSON(url){ try{ const r=await fetch(url,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }catch{ return null; } }
+    async function headOK(url){ try{ const r=await fetch(url,{method:"HEAD",cache:"no-store"}); return r.ok; }catch{ return false; } }
+
+    // Lips (simple amplitude fallback)
+    const lipTop = ()=>$("#lipTop"), lipBot = ()=>$("#lipBot"), braces = ()=>$("#braces");
+    function applyShape(name){
+      const topBase=[110,205, 140,192, 180,192, 210,205];
+      const botBase=[110,215, 140,228, 180,228, 210,215];
+      const MAP={rest:{t:-2,b:2,sw:0,wd:0}, AI:{t:2,b:8,sw:6,wd:1}, E:{t:1,b:6,sw:8,wd:1.2},
+                 O:{t:0,b:4,sw:10,wd:-0.6}, U:{t:-1,b:3,sw:12,wd:-1}, S:{t:0,b:2,sw:14,wd:0.2}};
+      const m=MAP[name]||MAP.rest;
+      const t=topBase, b=botBase, wd=m.wd;
+      const dT=`M${t[0]-10*wd},${t[1]+m.t} C${t[2]},${t[3]+m.t-m.sw} ${t[4]},${t[5]+m.t-m.sw} ${t[6]+10*wd},${t[7]+m.t}`;
+      const dB=`M${b[0]-10*wd},${b[1]+m.b} C${b[2]},${b[3]+m.b+m.sw} ${b[4]},${b[5]+m.b+m.sw} ${b[6]+10*wd},${b[7]+m.b}`;
+      lipTop().setAttribute("d", dT); lipBot().setAttribute("d", dB);
+      braces().setAttribute("opacity", (name==="S")? "0.72":"0.42");
+    }
+
+    // Audio + amplitude drive
+    let audioCtx, analyser, dataArr, raf;
+    function startAmplitude(audio){
+      if(audioCtx) return;
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const src = audioCtx.createMediaElementSource(audio);
+      analyser = audioCtx.createAnalyser(); analyser.fftSize=2048;
+      dataArr = new Uint8Array(analyser.frequencyBinCount);
+      src.connect(analyser); analyser.connect(audioCtx.destination);
+      (function loop(){
+        analyser.getByteTimeDomainData(dataArr);
+        let sum=0; for(let i=0;i<dataArr.length;i++){ const v=(dataArr[i]-128)/128; sum+=v*v; }
+        const rms=Math.sqrt(sum/dataArr.length);
+        if(rms>0.12) applyShape("AI");
+        else if(rms>0.08) applyShape("E");
+        else if(rms>0.05) applyShape("O");
+        else if(rms>0.03) applyShape("S");
+        else applyShape("rest");
+        raf=requestAnimationFrame(loop);
+      })();
+    }
+    function stopAmplitude(){ if(raf) cancelAnimationFrame(raf); }
+
+    async function loadVoice(){
+      const v = await getJSON("../data/voice_of_day.json");
+      $("#quote").textContent = v?.quote ? `„${v.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
+      $("#date").textContent  = v?.date_utc || "—";
+      if(v?.ipa_hint){ $("#ipa").style.display="inline-flex"; $("#ipa").textContent=v.ipa_hint; }
+      let src = "../audio/latest.mp3"; if(!(await headOK(src))) src = "data:audio/mpeg;base64,//uQZAAAAAAAAAAA";
+      $("#player").src = src;
+    }
+
+    async function loadAffect(){
+      const a = await getJSON("../data/self/affect-state.json");
+      const v = a?.vector||{};
+      $("#affLabel").textContent = a?.label ?? "—";
+      $("#focus").textContent    = a?.inputs?.focus ?? "—";
+      $("#va").textContent       = (v.valence!=null && v.arousal!=null) ? `${(v.valence).toFixed(2)} / ${(v.arousal).toFixed(2)}` : "—";
+      $("#stab").textContent     = (v.stability!=null) ? (v.stability).toFixed(2) : "—";
+    }
+
+    async function loadSelf(){
+      const s = await getJSON("../data/self/self-describe.json");
+      $("#phys").textContent  = s?.physical?.description ?? "—";
+      $("#voice").textContent = s?.voice?.profile ?? "—";
+      $("#narr").textContent  = s?.affect?.narrative ?? "—";
+    }
+
+    async function loadHealth(){
+      const h = await getJSON("../badges/health.json");
+      const status = (h?.status||"DEGRADED").toUpperCase();
+      $("#hLabel").textContent = status;
+      $("#hDot").className = "dot " + (status==="OK"?"ok":status==="HEALING"?"healing":"deg");
+      $("#hts").textContent = h?.ts || "—";
+    }
+
+    function wireControls(){
+      const p = $("#player");
+      $("#play").addEventListener("click", ()=>{ p.currentTime=0; p.play(); });
+      $("#pause").addEventListener("click", ()=>{ p.pause(); });
+      $("#stage").addEventListener("click", ()=>{ p.currentTime=0; p.play(); });
+      p.addEventListener("play", async ()=>{ try{ if(audioCtx) await audioCtx.resume(); }catch{} startAmplitude(p); });
+      p.addEventListener("pause", ()=>{ stopAmplitude(); applyShape("rest"); });
+      p.addEventListener("ended", ()=>{ stopAmplitude(); applyShape("rest"); });
+    }
+
+    (async function init(){
+      applyShape("rest");
+      await Promise.all([loadVoice(), loadAffect(), loadSelf(), loadHealth()]);
+      wireControls();
+      setInterval(loadHealth, 60000);
+    })();
+  </script>
+</body>
+                </html>
