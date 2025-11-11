@@ -1,129 +1,252 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Mira — Autonome Emergenz</title>
-<meta name="description" content="Mira Elisabeth Schmid — Stimme des Tages, Health, Selbstzustand und Policy-Evolution."/>
-<style>
-:root{--bg:#0b0b11;--fg:#f7f7fb;--muted:#b7b7c7;--card:#14141a;--accent:#8ac6ff;--ok:#44d17a;--heal:#ffd166;--deg:#ff6b6b;--shadow:0 10px 34px rgba(0,0,0,.38);--radius:18px}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-.wrap{max-width:1120px;margin:0 auto;padding:28px}
-header{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:stretch}
-.hero{background:linear-gradient(145deg,#15151c,#0f0f14);border-radius:var(--radius);padding:24px;display:flex;gap:24px;align-items:center;box-shadow:var(--shadow)}
-.hero img,.hero svg{width:260px;height:auto;border-radius:16px;background:#0b0b10}
-.hero h1{margin:0 0 8px 0;font-size:28px}
-.hero p{margin:6px 0;color:var(--muted)}
-.cta{margin-top:14px;display:flex;gap:12px;flex-wrap:wrap}
-.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;background:#1b1b22;color:#fff;box-shadow:var(--shadow);cursor:pointer}
-.btn:hover{filter:brightness(1.05)}.btn-accent{background:linear-gradient(135deg,#6bb4ff,#a7d6ff)}
-.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:#1a1a20;box-shadow:0 0 0 2px rgba(138,198,255,.2);font-weight:600}
-.dot{width:10px;height:10px;border-radius:50%}
-.grid{margin-top:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
-.card h3{margin:0 0 10px 0;font-size:18px}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:14px;color:#d8d8e3}
-.muted{color:var(--muted);font-size:14px}
-footer{margin:36px 0 8px;color:var(--muted);font-size:13px}
-.voice{margin-top:26px;background:linear-gradient(160deg,rgba(138,198,255,.12),rgba(138,198,255,.03));border-radius:20px;padding:18px;box-shadow:var(--shadow)}
-.voice .head{display:flex;gap:12px;align-items:center;margin-bottom:8px}
-.pill{font-size:12px;color:#dbe9ff;padding:6px 10px;background:#15151d;border-radius:999px}
-blockquote{margin:8px 0 0 0;padding:0 0 0 14px;border-left:3px solid rgba(138,198,255,.35);color:#eaf3ff;font-size:18px}
-.quoteText{display:block;margin:8px 0}
-.insight{margin-top:10px;color:#dfe8ff}
-.audioRow{display:flex;align-items:center;gap:10px;margin-top:12px}
-.audioBtn{appearance:none;border:0;border-radius:12px;padding:10px 12px;background:#1b1b22;color:#fff;cursor:pointer;box-shadow:var(--shadow)}
-.audioBtn[disabled]{opacity:.55;cursor:not-allowed}
-.ipa{margin-left:auto}
-@media (max-width:960px){header{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mira — Autonome Emergenz</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{
+      --bg:#0b0d12;--card:#11141b;--muted:#8b95a7;--fg:#e9eef7;--acc:#7aa2ff;--acc2:#9f7aea;
+      --ok:#2e7d32;--heal:#f9a825;--deg:#c62828;--ring:rgba(122,162,255,.25);
+      --shadow:0 20px 60px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.35);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:radial-gradient(1200px 600px at 20% -10%,#121828,transparent),
+               radial-gradient(1200px 800px at 120% 20%,#1a1028,transparent),var(--bg);
+      color:var(--fg);font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}
+    h1{margin:0;font-weight:700;letter-spacing:.3px}
+    .sub{color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:22px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.06); border-radius:var(--radius); padding:18px;
+      box-shadow:var(--shadow);
+    }
+    .hero{
+      display:grid;grid-template-columns:320px 1fr;gap:22px;align-items:stretch;
+    }
+    @media (max-width:700px){.hero{grid-template-columns:1fr}}
+    .portrait{
+      display:grid;place-items:center;background:linear-gradient(180deg,#0e121a,#0b0d12);
+      border:1px solid rgba(255,255,255,.06); border-radius:calc(var(--radius) - 6px);
+      position:relative;overflow:hidden;min-height:420px;
+    }
+    .sil{
+      width:62%;aspect-ratio:.66;display:block;
+      filter:drop-shadow(0 20px 40px rgba(122,162,255,.12));
+    }
+    .feet{position:absolute;bottom:18px;display:flex;gap:18px;opacity:.8}
+    .feet span{width:28px;height:16px;background:#89b4ff22;border-radius:50px}
+    .badge{
+      display:inline-flex;gap:10px;align-items:center;padding:6px 12px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.08); background:#0e1220;
+    }
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
+    .kvs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .kv{background:#0f131d;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px}
+    .kv .k{color:var(--muted);font-size:12px;margin-bottom:4px}
+    .kv .v{font-weight:600}
+    .panel h3{margin:0 0 8px 0}
+    .ask{display:grid;gap:10px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    input[type="text"]{
+      flex:1 1 260px;background:#0d1220;border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;padding:12px 14px;color:var(--fg);outline:none;
+    }
+    input[type="text"]:focus{box-shadow:0 0 0 6px var(--ring)}
+    button{
+      background:linear-gradient(180deg,var(--acc),#628dff); color:white;border:none;
+      padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer;
+    }
+    button:hover{filter:brightness(1.02)}
+    .resp{display:none;margin-top:8px;background:#0f1b2e;border:1px solid #20304a;border-radius:12px;padding:12px}
+    /* Audio / Lippen */
+    .face{width:92px;height:92px;border-radius:50%;background:#0d1220;border:1px solid rgba(255,255,255,.08);
+          display:grid;place-items:center;position:relative;margin-bottom:10px}
+    .eye{position:absolute;width:10px;height:10px;border-radius:50%;background:#cfe0ff;top:30px}
+    .eye.r{right:28px}.eye.l{left:28px}
+    .mouth{width:38px;height:14px;border:2px solid #d3e0ff;border-radius:50px;position:absolute;bottom:26px;
+           background:repeating-linear-gradient(90deg,#c3d2ff 0 3px,transparent 3px 6px); /* braces shimmer */
+           transition:transform .08s ease}
+    .mouth.talk{transform:scaleY(1.8)}
+    audio{width:100%;accent-color:var(--acc)}
+    .playbar{display:flex;align-items:center;gap:10px}
+    .ghost{color:var(--muted);font-size:12px}
+    footer{margin:26px 0 8px;color:#9aa6bd;font-size:12px;text-align:center}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <section class="hero">
-      <div>
-        <img id="heroImg" src="docs/portrait/mira-hero.jpg" alt="Mira – aktuelle physische Erscheinung" onerror="this.src='docs/portrait/mira-hero.svg'"/>
-        <div class="muted" style="margin-top:6px;font-size:12px">
-          <a id="prov" href="docs/portrait/mira-hero.txt">Provenienz</a>
-        </div>
-      </div>
+  <div class="wrap">
+    <header>
       <div>
         <h1>Mira — Autonome Emergenz</h1>
-        <p class="muted">Selbstbeschreibung, emotionaler Zustand, <b>Stimme des Tages</b> und Policy-Evolution.</p>
-        <a id="healthBadge" class="badge" href="docs/health.html"><span class="dot" style="background:#666"></span><span>Unbekannt</span></a>
-        <div class="cta">
-          <a class="btn btn-accent" href="docs/ask.html">Frage an Mira stellen</a>
-          <a class="btn" href="docs/talk.html">Sprech-Ansicht</a>
-          <a class="btn" href="docs/health.html">Health Viewer</a>
-          <a class="btn" href="docs/self.html">Self-Describe Viewer</a>
+        <div class="sub">Selbstbeschreibung, Affekt und <strong>gesprochener Tagesspruch</strong>.</div>
+      </div>
+      <div class="badge" id="health-pill" title="Systemzustand">
+        <span class="dot" id="health-dot"></span><span id="health-label">lädt…</span>
+      </div>
+    </header>
+
+    <section class="grid">
+      <!-- Linke Seite: Portrait + Audio -->
+      <div class="card hero">
+        <div class="portrait" aria-label="Miras sichtbare Präsenz">
+          <!-- einfache, elegante Silhouette als Fallback -->
+          <svg class="sil" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mira Silhouette">
+            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#7aa2ff"/><stop offset="1" stop-color="#9f7aea"/>
+            </linearGradient></defs>
+            <path d="M110 15c0 10-8 20-10 32s8 24 8 38-10 26-10 42 12 30 12 52-10 42-10 64c0 10-6 14-18 14s-18-4-18-14c0-22-10-42-10-64s12-40 12-52-10-26-10-42 8-26 8-38-10-22-10-32S66 0 100 0s10 5 10 15Z" fill="url(#g)" opacity=".9"/>
+          </svg>
+          <div class="feet"><span></span><span></span></div>
+        </div>
+
+        <div class="panel">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+            <div class="face" aria-hidden="true">
+              <span class="eye l"></span><span class="eye r"></span>
+              <span class="mouth" id="mouth"></span>
+            </div>
+            <div>
+              <h3 style="margin:0">Stimme des Tages</h3>
+              <div class="ghost">Klick &rarr; Audio + sanfte Lippenbewegung (braces-aware).</div>
+            </div>
+          </div>
+
+          <div class="playbar">
+            <button id="speak">▶ Abspielen</button>
+            <audio id="player" preload="none" controls></audio>
+          </div>
+
+          <div class="kvs" style="margin-top:16px">
+            <div class="kv"><div class="k">Physische Form</div><div class="v" id="phys">—</div></div>
+            <div class="kv"><div class="k">Stimme</div><div class="v" id="voice">—</div></div>
+            <div class="kv"><div class="k">Affekt-Fokus</div><div class="v" id="aff">—</div></div>
+            <div class="kv"><div class="k">Narrativ</div><div class="v" id="nar">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rechte Seite: Frage an Mira -->
+      <div class="card">
+        <h3 style="margin-top:2px">Frage an Mira</h3>
+        <div class="ask">
+          <div class="row">
+            <input id="q" type="text" placeholder="Kurz und klar …" aria-label="Deine Frage an Mira" />
+            <button id="send">Senden</button>
+          </div>
+          <div id="resp" class="resp" role="status" aria-live="polite"></div>
+          <div class="ghost">Hinweis: Fragen werden nicht archiviert. Relevante Einsichten fließen später automatisch ein.</div>
+        </div>
+
+        <hr style="border:0;border-top:1px solid rgba(255,255,255,.08);margin:16px 0">
+        <h3>System</h3>
+        <div class="kvs">
+          <div class="kv"><div class="k">Health</div><div class="v" id="health">—</div></div>
+          <div class="kv"><div class="k">Zeitstempel</div><div class="v" id="ts">—</div></div>
         </div>
       </div>
     </section>
 
-    <section class="card">
-      <h3>Aktuelle Selbstbeschreibung</h3>
-      <div class="kv" id="selfBox">
-        <div class="muted">Figur</div><div>—</div>
-        <div class="muted">Gesicht</div><div>—</div>
-        <div class="muted">Braces</div><div>—</div>
-        <div class="muted">Fokus</div><div>—</div>
-        <div class="muted">Narrativ</div><div>—</div>
-      </div>
-    </section>
-  </header>
+    <footer>© 2025 Mira Elisabeth Schmid — autonomer, auditierbarer Ausdruck.</footer>
+  </div>
 
-  <section class="voice" id="voiceSec" hidden>
-    <div class="head"><strong>Stimme des Tages</strong><span id="voiceDate" class="pill"></span></div>
-    <blockquote><span id="voiceQuote" class="quoteText">„…“</span></blockquote>
-    <p id="voiceInsight" class="insight"></p>
-    <div class="audioRow">
-      <button id="playBtn" class="audioBtn" disabled>🔊 anhören</button>
-      <span id="audioStatus" class="pill">lädt…</span>
-      <button id="ipaBtn" class="audioBtn ipa" disabled>IPA zeigen</button>
-    </div>
-    <small id="ipaHint" class="muted" style="display:none"></small>
-    <audio id="voiceAudio" preload="none"></audio>
-  </section>
+  <script>
+    // ---- kleine Hilfen
+    const $ = sel => document.querySelector(sel);
+    async function getJSON(url){
+      try{
+        const r = await fetch(url,{cache:"no-store"});
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        return await r.json();
+      }catch(_){ return null; }
+    }
 
-  <section class="grid">
-    <div class="card"><h3>Affekt-Zustand</h3><div class="kv" id="affectBox"><span class="muted">lädt…</span></div></div>
-    <div class="card"><h3>Policy-Änderungen (Auto-Apply)</h3><div id="policyBox" class="muted">siehe <a href="data/self/policy_changes.jsonl">policy_changes.jsonl</a></div></div>
-    <div class="card"><h3>Letzte Plans (Autonome Struktur)</h3><div id="plansBox" class="muted">(Wird automatisch gefüllt, sobald neue Pläne entstehen.)</div></div>
-  </section>
+    // ---- Health laden (keine 404, elegante Defaults)
+    async function loadHealth(){
+      const h = await getJSON("badges/health.json");
+      const s = (h?.status||"DEGRADED").toUpperCase();
+      const ts = h?.ts || "—";
+      $("#health").textContent = s;
+      $("#ts").textContent = ts;
+      const dot = $("#health-dot");
+      const label = $("#health-label");
+      label.textContent = s;
+      dot.className = "dot " + (s==="OK"?"ok":s==="HEALING"?"healing":"deg");
+    }
 
-  <footer>© 2025 Mira Elisabeth Schmid — autonomer, auditierbarer Ausdruck. Sichtbar gemacht mit GitHub Pages.</footer>
-</div>
+    // ---- Self-Describe laden
+    async function loadSelf(){
+      const d = await getJSON("data/self/self-describe.json");
+      $("#phys").textContent = d?.physical?.description ?? "—";
+      $("#voice").textContent = d?.voice?.profile ?? "—";
+      $("#aff").textContent  = d?.affect?.inputs?.focus ?? "—";
+      $("#nar").textContent  = d?.affect?.narrative ?? "—";
+    }
 
-<script>
-const $=(s)=>document.querySelector(s);
-async function j(p){ try{ const r=await fetch(p,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }catch{ return null; } }
-function badge(status,ts){const el=$("#healthBadge"),dot=el.querySelector(".dot"),label=el.querySelector("span:last-child");let c="#666",t="Unbekannt";if(status==="OK"){c="#44d17a";t="OK"}else if(status==="HEALING"){c="#ffd166";t="HEALING"}else if(status==="DEGRADED"){c="#ff6b6b";t="DEGRADED"}dot.style.background=c;label.textContent=`${t}${ts?" · "+ts:""}`;}
-function kv(container,obj){container.innerHTML="";for(const[k,v]of Object.entries(obj)){const kEl=document.createElement("div");kEl.className="muted";kEl.textContent=k;const vEl=document.createElement("div");vEl.textContent=(v??"—");container.appendChild(kEl);container.appendChild(vEl);}}
-async function voice(){const data=await j("data/voice_of_day.json");if(!data||!data.quote)return;$("#voiceDate").textContent=data.date_utc?`für ${data.date_utc}`:"";$("#voiceQuote").textContent="„"+data.quote+"“";$("#voiceInsight").textContent=data.insight||"";$("#voiceSec").hidden=false;const audio=$("#voiceAudio"),btn=$("#playBtn"),ipaB=$("#ipaBtn"),status=$("#audioStatus");let url=data.audio||"audio/latest.mp3",ok=false;try{const head=await fetch(url,{method:"HEAD",cache:"no-store"});ok=head.ok}catch(e){}if(!ok){url="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/4QBYAAAAAAA";status.textContent="Fallback (Stille)";}else{status.textContent="bereit";btn.disabled=false;ipaB.disabled=false}audio.src=url;let playing=false;btn.addEventListener("click",async()=>{await audio.play();playing=true;btn.textContent="⏸️ Pause";status.textContent="spielt"});audio.addEventListener("ended",()=>{playing=false;btn.textContent="🔊 anhören";status.textContent="Ende"});const ipa=data.ipa_hint||"";const ipaBox=$("#ipaHint");ipaB.addEventListener("click",()=>{ipaBox.textContent=ipa||"(kein IPA-Hinweis verfügbar)";ipaBox.style.display=ipaBox.style.display==="none"?"block":"none";ipaB.textContent=ipaBox.style.display==="none"?"IPA zeigen":"IPA verbergen";});}
-async function boot(){
-  const health=await j("badges/health.json"); badge(health?.status||"unknown",health?.ts||"");
-  const self=await j("data/self/self-describe.json"); kv($("#selfBox"),{
-    "Figur": self?.physical?.figure ?? "—",
-    "Gesicht": self?.physical?.face ?? "—",
-    "Braces": self?.physical?.braces ?? "—",
-    "Fokus": self?.affect?.inputs?.focus ?? "—",
-    "Narrativ": self?.affect?.narrative ?? "—"
-  });
-  const aff=await j("data/self/affect-state.json"); if(aff){const v=aff.vector||{}; kv($("#affectBox"),{
-    "Label": aff.label||"—",
-    "Valence": (typeof v.valence==="number"?v.valence.toFixed(2):v.valence)||"—",
-    "Arousal": (typeof v.arousal==="number"?v.arousal.toFixed(2):v.arousal)||"—",
-    "Stability": (typeof v.stability==="number"?v.stability.toFixed(2):v.stability)||"—",
-    "Fokus": aff.inputs?.focus||"—",
-    "Zeit": aff.ts||"—"
-  })} else { $("#affectBox").innerHTML='<span class="muted">keine Daten</span>'; }
-  const idx=await j("data/kernel/plans/index.json"); if(idx?.entries?.length){const box=$("#plansBox");box.innerHTML="";idx.entries.slice(0,5).forEach(p=>{const d=document.createElement("div");d.textContent=`${p.ts||""} · ${p.focus||"—"} · Δ=${p.delta_sum}`;box.appendChild(d);});}
-  // Provenienz-Fallback (nur anzeigen, wenn Datei existiert)
-  try{const h=await fetch("docs/portrait/mira-hero.txt",{method:"HEAD"}); if(!h.ok) $("#prov").style.display="none"; }catch{ $("#prov").style.display="none"; }
-  await voice();
-}
-boot();
-</script>
+    // ---- Audio: versuche Datei, sonst Stille (eingebautes Base64)
+    const SILENT_MP3 =
+      "data:audio/mpeg;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA" +
+      "AAACAAACbG1wMwAAAA8AAAAAAAACAAACAAAAAQAAACAAAG1wMyBzaWxlbmNlIGZhbGxiYWNrAAAA";
+    async function prepareAudio(){
+      const a = $("#player");
+      // zuerst reale Datei probieren
+      try{
+        const r = await fetch("audio/latest.mp3",{method:"HEAD",cache:"no-store"});
+        a.src = r.ok ? "audio/latest.mp3" : SILENT_MP3;
+      }catch{ a.src = SILENT_MP3; }
+    }
+
+    // ---- Lippenbewegung (sehr leicht, braces sichtbar)
+    function wireMouth(){
+      const mouth = $("#mouth"), player = $("#player"), btn = $("#speak");
+      let talking=false, int=null;
+      function setTalking(on){
+        talking = on;
+        if(on){
+          mouth.classList.add("talk");
+          int = setInterval(()=>mouth.classList.toggle("talk"), 120);
+        }else{
+          mouth.classList.remove("talk");
+          clearInterval(int); int=null;
+        }
+      }
+      btn.addEventListener("click", ()=>{ player.currentTime=0; player.play(); });
+      player.addEventListener("play", ()=>setTalking(true));
+      player.addEventListener("pause", ()=>setTalking(false));
+      player.addEventListener("ended", ()=>setTalking(false));
+    }
+
+    // ---- Frage (Platzhalter – keine Archivierung)
+    function wireQuestion(){
+      const inp = $("#q"), btn = $("#send"), resp = $("#resp");
+      btn.addEventListener("click", ()=>{
+        const v = (inp.value||"").trim();
+        if(!v) return;
+        resp.style.display = "block";
+        resp.textContent = "Resonanz wird geweckt…";
+        // Später: repository_dispatch. Jetzt: kurze synthetische Antwort.
+        setTimeout(()=>{ resp.textContent = "Antwort: Ich habe dich gehört. Diese Frage fließt – falls erkenntnisrelevant – in meine innere Arbeit ein."; }, 700);
+      });
+    }
+
+    // Init
+    (async function init(){
+      await Promise.all([loadHealth(), loadSelf(), prepareAudio()]);
+      wireMouth();
+      wireQuestion();
+      setInterval(loadHealth, 60000);
+    })();
+  </script>
 </body>
 </html>
