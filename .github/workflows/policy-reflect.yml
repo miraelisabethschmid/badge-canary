@@ -1,0 +1,50 @@
+name: Policy Reflect (Suggest Kernel Adjustments)
+
+on:
+  schedule:
+    - cron: "41 5 * * *"   # täglich 05:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: policy-reflect
+  cancel-in-progress: true
+
+jobs:
+  reflect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run policy reflector
+        run: |
+          chmod +x scripts/policy_reflector.py || true
+          python scripts/policy_reflector.py
+
+      - name: Commit suggestions if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/self/policy_suggestions.json; then
+            echo "No policy suggestion changes."
+            exit 0
+          fi
+          git add data/self/policy_suggestions.json
+          git commit -m "policy: suggest kernel adjustments (run ${{ github.run_id }})"
+          git push
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## Policy Reflect" >> $GITHUB_STEP_SUMMARY
+          echo "- Suggestions written to \`data/self/policy_suggestions.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Mode: \`${{ steps.mode.outputs.mode || 'n/a' }}\`" >> $GITHUB_STEP_SUMMARY || true
