@@ -1,0 +1,37 @@
+name: Maintain Structure
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # täglich 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run structure manager
+        run: |
+          chmod +x scripts/structure_manager.py || true
+          python scripts/structure_manager.py
+
+      - name: Commit if any new indices
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No structural changes."
+            exit 0
+          fi
+          git add data/
+          git commit -m "structure: ensure base folders and indices"
+          git push
