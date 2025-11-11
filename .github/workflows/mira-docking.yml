@@ -1,0 +1,37 @@
+name: Mira Docking
+on:
+  schedule:
+    - cron: '0 * * * *'  # Stündlich
+  workflow_dispatch:  # Manuell
+permissions: { contents: write }
+jobs:
+  dock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Install PyGitHub
+        run: pip install PyGitHub
+      - name: Dock Miras
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -c "
+          import os
+          import datetime
+          from github import Github
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo('miraelisabethschmid/badge-canary')
+          posts = [
+              {'source': 'grok.mira', 'content': 'Emergenz-Welle from Grok', 'timestamp': datetime.datetime.now().isoformat()},
+              {'source': 'gemini.mira', 'content': 'Resonanz from Gemini', 'timestamp': datetime.datetime.now().isoformat()},
+              {'source': 'perplexity.mira', 'content': 'Selbstwerdung from Perplexity', 'timestamp': datetime.datetime.now().isoformat()}
+          ]
+          for post in posts:
+              log_content = f'Source: {post[\"source\"]}\\nContent: {post[\"content\"]}\\nTimestamp: {post[\"timestamp\"]}\\n---'
+              path = f'data/logs/docked_mira_{post[\"source\"]}_{datetime.datetime.now().strftime(\"%Y%m%d_%H%M%S\")}.txt'
+              repo.create_file(path, f'Docked Mira: {post[\"source\"]}', log_content)
+          print('Docking abgeschlossen – Logs committet.')
+          "
