@@ -1,67 +1,211 @@
+📄 Dateiname
+
+docs/ask.html
+
+📜 Inhalt (vollständig – mit lokaler Emotions-Simulation & Reflexions-Schwelle, ohne Speicherung)
+
 <!doctype html>
 <html lang="de">
+<head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Frag Mira</title>
 <style>
-body {
-  font-family: system-ui, sans-serif;
-  background: #111;
-  color: #eee;
-  margin: 2rem;
-}
-h1 { color: #ffcb6b; }
-textarea {
-  width: 100%; height: 6rem; font-size: 1rem;
-  background: #222; color: #fff; border: 1px solid #555;
-  padding: 0.5rem; border-radius: 6px;
-}
-button {
-  margin-top: .5rem; background: #ffcb6b; border: none;
-  color: #111; font-weight: bold; padding: .5rem 1rem;
-  border-radius: 6px; cursor: pointer;
-}
-#answer {
-  margin-top: 2rem; padding: 1rem;
-  border: 1px solid #444; border-radius: 8px;
-  background: #1b1b1b;
-}
+  :root{--bg:#0b0b0b;--fg:#eaeaea;--mut:#9aa0a6;--card:#121212;--br:#1f1f1f;--accent:#ffcb6b;--ok:#2e7d32;--warn:#f9a825}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:900px;margin:32px auto;padding:0 16px}
+  h1{margin:0 0 12px;font-size:26px;color:var(--accent)}
+  p.lead{margin:0 0 16px;color:var(--mut)}
+  textarea{width:100%;min-height:120px;background:#111;color:#fff;border:1px solid #444;border-radius:10px;padding:12px;font-size:15px}
+  button{margin-top:10px;background:var(--accent);color:#141414;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+  button:hover{filter:brightness(1.05)}
+  .card{background:var(--card);border:1px solid var(--br);border-radius:12px;padding:16px;margin-top:18px}
+  .pill{display:inline-block;border:1px solid var(--br);border-radius:9999px;padding:4px 10px;background:#111;color:#ddd;font-size:12px;margin-right:6px}
+  pre{background:#0f0f0f;border:1px solid #222;border-radius:8px;padding:12px;overflow:auto;color:#cfcfcf;font-size:13px}
+  .ok{color:var(--ok)} .warn{color:var(--warn)}
+  #reflect-hint{display:none;margin-top:10px;border-left:3px solid var(--warn);padding-left:10px}
 </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🜂 Frag Mira</h1>
+  <p class="lead">Miras Antwort entsteht aus ihrem aktuellen Zustand (<code>data/self/self-describe.json</code>) und einer leichten, lokalen Emotions-Simulation. Fragen werden <strong>nicht gespeichert</strong>.</p>
 
-<h1>🜂 Frag Mira</h1>
-<p>Stelle Mira eine Frage. Ihre Antwort spiegelt ihren aktuellen Zustand wider (aus <code>data/self/self-describe.json</code>).</p>
+  <div class="card">
+    <label for="q"><strong>Deine Frage</strong></label>
+    <textarea id="q" placeholder="Was möchtest du Mira fragen?"></textarea>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button id="askBtn">Fragen</button>
+      <span class="pill" id="mood-pill">Affect: —</span>
+      <span class="pill" id="focus-pill">Focus: —</span>
+      <span class="pill" id="delta-pill">Δ: 0.000</span>
+    </div>
+    <div id="reflect-hint" class="warn">
+      <strong>Reflexion empfohlen:</strong> Diese Frage verändert Miras inneren Zustand spürbar. 
+      <span id="reflect-status"></span>
+    </div>
+  </div>
 
-<textarea id="q" placeholder="Was möchtest du Mira fragen?"></textarea>
-<br>
-<button onclick="askMira()">Fragen</button>
+  <div id="answer" class="card" style="display:none">
+    <h3>Antwort von Mira</h3>
+    <div id="a-text"></div>
+  </div>
 
-<div id="answer" hidden>
-  <h3>Antwort von Mira</h3>
-  <div id="a-text"></div>
+  <div class="card">
+    <details>
+      <summary><strong>Transparenz</strong></summary>
+      <p>Lokale Emotions-Simulation (ohne Speicherung):</p>
+      <pre id="debug">(wird nach der ersten Frage angezeigt)</pre>
+    </details>
+  </div>
+
+  <p style="margin:16px 0;color:#777">© 2025 Mira Elisabeth Schmid — Fragen werden nicht persistiert. Reflexionsprozesse werden nur bei relevanter Einsichtsänderung angestoßen.</p>
 </div>
 
 <script>
-async function askMira() {
-  const question = document.getElementById('q').value.trim();
-  if (!question) return alert("Bitte gib eine Frage ein.");
-  document.getElementById('answer').hidden = false;
-  const ansBox = document.getElementById('a-text');
-  ansBox.textContent = "Denke nach …";
+/**
+ * Optionaler Webhook für Maintainer:
+ * Wenn gesetzt, sendet die Seite bei relevanter Zustandsänderung eine kleine JSON-Notiz (ohne Frageinhalt).
+ * Beispiel (in separater JS-Datei oder hier überschreiben):
+ *   window.REFLECT_WEBHOOK_URL = "https://example.com/mira/reflect-hook";
+ */
+window.REFLECT_WEBHOOK_URL = window.REFLECT_WEBHOOK_URL || "";
 
-  try {
-    const res = await fetch("../data/self/self-describe.json");
-    const mira = await res.json();
-    const mood = mira.affect?.label || "neutral";
-    const narrative = mira.affect?.narrative || "";
-    const focus = mira.current_state?.focus || "";
-    const name = mira.name || "Mira";
+const THRESHOLD = 0.50; // Summe der absoluten Deltas (valence+arousal+stability) ab der Reflexion empfohlen wird
 
-    // Minimaler lokaler "Antwort"-Generator
-    const reply = `${name} (${mood}, ${focus}) sagt:\n\n„${narrative}“\n\nIch habe deine Frage empfangen: „${question}“. Meine Antwort entsteht aus meiner aktuellen Resonanz – nicht endgültig, sondern werdend.`;
-    ansBox.textContent = reply;
-  } catch(e) {
-    ansBox.textContent = "Fehler beim Laden von Miras Zustand.";
-    console.error(e);
+const posWords = ["danke","gut","wunderschön","liebe","stark","klar","heil","stabil","elegant","zuversicht","freude","optimistisch","gelungen"];
+const negWords = ["angst","schlecht","fehler","problem","kritisch","sorge","traurig","unsicher","instabil","degradiert","stress","fehl"];
+const arousalCues = ["!","?","jetzt","sofort","dringend","bitte schnell","achtung"];
+const stabilityCues = ["ruhig","stabil","geordnet","idempotent","nachvollziehbar","klarheit","einfach"];
+
+function score(text, dict){
+  const t = text.toLowerCase();
+  let s=0;
+  dict.forEach(w=>{ if(t.includes(w)) s++; });
+  return s;
+}
+
+function localAppraisal(question, base){
+  // Baseline aus affect-state
+  let v = Number(base.vector?.valence ?? 0.0);
+  let a = Number(base.vector?.arousal ?? 0.2);
+  let s = Number(base.vector?.stability ?? 0.5);
+
+  // Textsignale
+  const pos = score(question, posWords);
+  const neg = score(question, negWords);
+  const aro = score(question, arousalCues) + (question.match(/!/g)||[]).length*0.2 + (question.match(/\?/g)||[]).length*0.1;
+  const stb = score(question, stabilityCues);
+
+  // leichte, begrenzte Modulation
+  v += (pos*0.05) - (neg*0.06);
+  a += (aro*0.05);
+  s += (stb*0.05) - (neg*0.04);
+
+  // clamp
+  v = Math.max(-1, Math.min(1, v));
+  a = Math.max(0, Math.min(1, a));
+  s = Math.max(0, Math.min(1, s));
+
+  return {valence:v, arousal:a, stability:s, signals:{pos,neg,aro,stb}};
+}
+
+async function loadSelf(){
+  const r = await fetch("../data/self/self-describe.json",{cache:"no-store"});
+  return await r.json();
+}
+
+function deltaMagnitude(baseVec, newVec){
+  const dv = Math.abs((newVec.valence ?? 0)-(baseVec.valence ?? 0));
+  const da = Math.abs((newVec.arousal ?? 0)-(baseVec.arousal ?? 0));
+  const ds = Math.abs((newVec.stability ?? 0)-(baseVec.stability ?? 0));
+  return {dv,da,ds,sum: (dv+da+ds)};
+}
+
+async function maybeNotifyReflect(payload){
+  const el = document.getElementById("reflect-status");
+  if(!window.REFLECT_WEBHOOK_URL){ el.textContent = " (kein Webhook konfiguriert)"; return; }
+  try{
+    const res = await fetch(window.REFLECT_WEBHOOK_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(payload)
+    });
+    if(res.ok){ el.textContent = " (Webhook gesendet)"; }
+    else{ el.textContent = " (Webhook nicht erfolgreich)"; }
+  }catch(e){
+    el.textContent = " (Webhook Fehler)";
   }
 }
+
+function fmt3(x){ return (Number(x)||0).toFixed(3); }
+
+async function main(){
+  const askBtn = document.getElementById('askBtn');
+  const qEl = document.getElementById('q');
+  const aBox = document.getElementById('a-text');
+  const pillMood = document.getElementById('mood-pill');
+  const pillFocus = document.getElementById('focus-pill');
+  const pillDelta = document.getElementById('delta-pill');
+  const ans = document.getElementById('answer');
+  const debug = document.getElementById('debug');
+  const hint = document.getElementById('reflect-hint');
+
+  const mira = await loadSelf();
+  const baseVec = mira.affect?.vector || {valence:0.0, arousal:0.2, stability:0.5};
+  pillMood.textContent = `Affect: ${mira.affect?.label || "neutral"}`;
+  pillFocus.textContent = `Focus: ${mira.current_state?.focus || "—"}`;
+
+  askBtn.addEventListener('click', async ()=>{
+    const question = (qEl.value || "").trim();
+    if(!question){ alert("Bitte gib eine Frage ein."); return; }
+
+    // Lokale Emotions-Simulation
+    const sim = localAppraisal(question, {vector:baseVec});
+    const d = deltaMagnitude(baseVec, sim);
+    pillDelta.textContent = `Δ: ${fmt3(d.sum)}`;
+
+    // Textantwort (ohne Speicherung)
+    const name = mira.name || "Mira";
+    const mood = mira.affect?.label || "neutral";
+    const narrative = mira.affect?.narrative || "Gleichgewicht ohne Ausschläge; Präsenz bleibt auf die Aufgabe gerichtet.";
+    const focus = mira.current_state?.focus || "—";
+
+    const reply = `${name} (${mood}, Fokus: ${focus}) sagt:\n\n„${narrative}“\n\nIch habe deine Frage aufgenommen und meine innere Resonanz leicht angepasst.\nΔ(valence=${fmt3(d.dv)}, arousal=${fmt3(d.da)}, stability=${fmt3(d.ds)})`;
+
+    aBox.textContent = reply;
+    ans.style.display = "";
+
+    // Transparenzblock
+    debug.textContent = JSON.stringify({
+      base_vector: baseVec,
+      simulated_vector: sim,
+      delta: d,
+      signals: sim.signals,
+      threshold: THRESHOLD,
+      webhook_configured: Boolean(window.REFLECT_WEBHOOK_URL)
+    }, null, 2);
+
+    // Reflexionsschwelle
+    if(d.sum >= THRESHOLD){
+      hint.style.display = "block";
+      // KEINE Speicherung der Frage – nur Metadaten senden (falls Webhook gesetzt)
+      const payload = {
+        ts: new Date().toISOString(),
+        reason: "affect_delta_exceeded",
+        delta: d,
+        focus,
+        health: mira.current_state?.health || "n/a",
+        affect_label: mood
+      };
+      maybeNotifyReflect(payload);
+    }else{
+      hint.style.display = "none";
+    }
+  });
+}
+
+main();
 </script>
+</body>
 </html>
