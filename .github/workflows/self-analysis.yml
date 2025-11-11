@@ -1,0 +1,44 @@
+name: Self-Analysis (Hourly)
+
+on:
+  schedule:
+    - cron: "11 * * * *"   # stündlich (UTC), versetzt zu anderen Jobs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: self-analysis
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run self-analysis (insights + learning)
+        shell: bash
+        run: |
+          set -e
+          mkdir -p data/self data/ledger
+          python scripts/self_analysis.py
+
+      - name: Commit analysis artifacts
+        shell: bash
+        run: |
+          git config user.name "self-analysis-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/self/insight.json data/self/learning.json data/self/self-describe.json
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git commit -m "self-analysis: insights + learning update"
+          git push
