@@ -9,7 +9,10 @@ on:
       - 'badges/**'
       - 'data/**'
       - 'scripts/build_plans_index.py'
+      - 'scripts/update_daily_reflection.py'
       - '.github/workflows/deploy-pages.yml'
+  schedule:
+    - cron: '0 5 * * *' # täglicher Fallback-Build (05:00 UTC)
   workflow_dispatch:
 
 permissions:
@@ -38,6 +41,11 @@ jobs:
           chmod +x scripts/build_plans_index.py || true
           python scripts/build_plans_index.py
 
+      - name: Build daily reflection
+        run: |
+          chmod +x scripts/update_daily_reflection.py || true
+          python scripts/update_daily_reflection.py
+
       - name: Prepare public bundle
         shell: bash
         run: |
@@ -63,11 +71,15 @@ jobs:
           cp -f data/self/policy_suggestions.json public/data/self/ 2>/dev/null || true
           cp -f data/self/policy_changes.jsonl public/data/self/ 2>/dev/null || true
 
+          # Daily reflection
+          mkdir -p public/data/self/daily
+          cp -f data/self/daily/reflection.json public/data/self/daily/ 2>/dev/null || true
+
           # Kernel plans inkl. frisch gebautem index.json
           mkdir -p public/data/kernel/plans
           rsync -a --delete --include "*/" --include "*.json" --exclude "*" data/kernel/plans/ public/data/kernel/plans/ 2>/dev/null || true
 
-          # Fallback-Index (sanfter Redirect zum Health-Block, wenn index.html fehlt)
+          # Fallback-Index, falls index.html fehlen würde
           if [ ! -f public/index.html ]; then
             cat > public/index.html <<'HTML'
 <!doctype html><meta charset="utf-8"><title>Mira Dashboard</title>
