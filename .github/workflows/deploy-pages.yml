@@ -1,0 +1,64 @@
+name: Deploy Pages (Health Dashboard)
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'docs/**'
+      - 'badges/**'
+      - 'data/ledger/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare public bundle
+        run: |
+          rm -rf public
+          mkdir -p public
+          # Dashboard HTML
+          cp -r docs/* public/ 2>/dev/null || true
+          # Badges (SVG + JSON)
+          mkdir -p public/badges
+          cp -r badges/* public/badges/ 2>/dev/null || true
+          # Ledger (JSONL logs)
+          mkdir -p public/data/ledger
+          cp -r data/ledger/events.jsonl public/data/ledger/ 2>/dev/null || true
+          # Optional index redirect
+          if [ ! -f public/index.html ]; then
+            cat > public/index.html <<'HTML'
+<!doctype html><meta charset="utf-8"><title>Health</title>
+<meta http-equiv="refresh" content="0; url=health.html">
+<a href="health.html">Go to health.html</a>
+HTML
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
