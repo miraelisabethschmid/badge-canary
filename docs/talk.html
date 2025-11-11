@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Mira — Sprech-Ansicht (Phonem-Heuristik)</title>
+  <title>Mira — Sprech-Ansicht (Phonem-Heuristik, Voice-Aware)</title>
   <style>
     :root{--bg:#0c0c10;--fg:#f6f6fb;--muted:#b7b7c7;--accent:#8ac6ff;--card:#141418;--shadow:0 8px 30px rgba(0,0,0,.35)}
     html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
@@ -27,7 +27,7 @@
   <div class="wrap">
     <a class="back" href="../index.html">← Zurück</a>
     <h1>Sprech-Ansicht</h1>
-    <p class="muted">Phonem-nahe Lippenvisualisierung: Vokale/Frikative/Plosive werden heuristisch aus der MP3 geschätzt (Web Audio Bänder).</p>
+    <p class="muted">Phonem-nahe Lippenvisualisierung mit **Voice-Profil**: Sibilant-Sensitivität wird aus <code>data/self/voice_profile.json</code> gelesen (Zahnspange/Herbst/Expander).</p>
 
     <div class="row">
       <div class="card">
@@ -61,6 +61,7 @@
           <span class="badge" id="lo">Low: —</span>
           <span class="badge" id="mid">Mid: —</span>
           <span class="badge" id="hi">High: —</span>
+          <span class="badge" id="sens">Sibilant-Sens: —</span>
         </div>
       </div>
 
@@ -74,31 +75,54 @@
         </div>
         <div class="meter"><div id="bar" class="bar"></div></div>
         <p class="muted" style="margin-top:10px">
-          Heuristik: <b>Vokal</b> = viel Low/Mid, wenig High · <b>Sibilant</b> = viel High · <b>Plosiv</b> = kurzer breitbandiger Spike.
+          Heuristik: <b>Vokal</b> = viel Low/Mid, wenig High · <b>Sibilant</b> = viel High (stärker gewichtet bei Zahnspange/Herbst) · <b>Plosiv</b> = kurzer breitbandiger Spike.
         </p>
       </div>
     </div>
   </div>
 
   <script>
+  // --- Elements
   const audio = document.getElementById('audio');
   const playBtn = document.getElementById('play');
   const pauseBtn = document.getElementById('pause');
   const statusEl = document.getElementById('status');
   const bar = document.getElementById('bar');
-
   const mouth = document.getElementById('mouth');
   const lowerLip = document.getElementById('lowerLip');
-
   const clsBadge = document.getElementById('cls');
   const ampBadge = document.getElementById('amp');
   const loBadge = document.getElementById('lo');
   const midBadge = document.getElementById('mid');
   const hiBadge = document.getElementById('hi');
+  const sensBadge = document.getElementById('sens');
 
+  // --- Audio graph
   let ctx, src, analyser, data, raf;
   let ready=false;
 
+  // --- Voice-aware Sensitivity
+  let sibilantSensitivity = 1.0; // dynamisch aus voice_profile.json
+
+  // Lade Voice-Profile (aus /public/… oder /data/…)
+  async function loadJSON(path){ try{ const r=await fetch(path,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }catch{ return null; } }
+  async function loadVoiceSensitivity(){
+    const vp = await loadJSON("../data/self/voice_profile.json") || await loadJSON("/data/self/voice_profile.json");
+    // Fallback: versuche in Pages-Bundle (public/)
+    const vp2 = vp || await loadJSON("../public/data/self/voice_profile.json") || await loadJSON("/public/data/self/voice_profile.json");
+    const prof = vp2 || {};
+    const art = prof.articulation || {};
+    const base = typeof art.sibilant_softening === "number" ? art.sibilant_softening : 0.35;
+    // Boosts bei Apparaturen
+    const braceBoost  = art.braces_active ? 0.25 : 0.0;
+    const herbstBoost = art.herbst_hinge_active ? 0.15 : 0.0;
+    const expBoost    = art.expander_active ? 0.10 : 0.0;
+    // Sensitivität 0.6 … 1.6 (Kappe)
+    sibilantSensitivity = Math.max(0.6, Math.min(1.6, 0.8 + base + braceBoost + herbstBoost + expBoost));
+    sensBadge.textContent = `Sibilant-Sens: ${sibilantSensitivity.toFixed(2)}`;
+  }
+
+  // Initialisiere Audio
   async function initAudio(){
     try{
       const url = "../audio/latest.mp3";
@@ -121,7 +145,6 @@
     ctx = new (window.AudioContext||window.webkitAudioContext)();
     src = ctx.createMediaElementSource(audio);
     analyser = ctx.createAnalyser();
-    // etwas höhere Auflösung, damit Bänder sauberer gemittelt werden können
     analyser.fftSize = 4096;
     data = new Uint8Array(analyser.frequencyBinCount);
     src.connect(analyser);
@@ -139,96 +162,85 @@
     return s / Math.max(1,(i1-i0+1));
   }
 
-  // Grobklassifikation
+  // Grobklassifikation (voice-aware)
   function classify(sampleRate){
-    // Hole Magnituden (0..255)
     analyser.getByteFrequencyData(data);
 
-    // Bänder (ungefähr):
-    // low: 100–300 Hz, mid: 300–1000 Hz, high: 4000–8000 Hz
+    // Bänder
     const low  = sumBand(data, sampleRate, 100, 300);
     const mid  = sumBand(data, sampleRate, 300, 1000);
     const high = sumBand(data, sampleRate, 4000, 8000);
 
-    // Gesamtamplitude aus Zeitdomäne für Mundöffnung
-    // (eigene Zeitdomäne: über getByteTimeDomainData)
+    // Zeitdomäne für RMS (Mundöffnung)
     const time = new Uint8Array(analyser.fftSize);
     analyser.getByteTimeDomainData(time);
     let sum=0;
-    for(let i=0;i<time.length;i++){
-      const v=(time[i]-128)/128;
-      sum += v*v;
-    }
+    for(let i=0;i<time.length;i++){ const v=(time[i]-128)/128; sum += v*v; }
     const rms = Math.sqrt(sum/time.length);
 
-    // Heuristische Klassen:
-    // - Sibilant: high >> (mid+low)
-    // - Vokal: (low+mid) >> high
-    // - Plosiv: kurzer Spike -> hier approximiert durch hohes rms UND relativ ausgeglichene Bänder
-    let cls = "idle";
+    // Voice-Aware Schwellen:
+    // Erhöhe Gewichtung von High (Sibilanten) mit sibilantSensitivity,
+    // senke leicht Vokal-Schwellen, wenn Sensitivität hoch ist.
+    const highEff = high * sibilantSensitivity;
     const lm = low + mid;
-    if(high > lm * 1.25 && high > 14){ // high deutlich dominiert
+
+    let cls = "idle";
+    if(highEff > lm * (1.25 - (sibilantSensitivity-1.0)*0.12) && highEff > 14){
       cls = "sibilant";
-    } else if(lm > high * 1.25 && lm > 18){
+    } else if(lm > highEff * (1.25 + (sibilantSensitivity-1.0)*0.08) && lm > 18){
       cls = "vowel";
-    } else if(rms > 0.09 && Math.abs(high-lm) < 10){
+    } else if(rms > 0.09 && Math.abs(highEff-lm) < 10){
       cls = "plosive";
     } else if(rms > 0.03){
       cls = "neutral";
     }
 
-    return {low, mid, high, rms, cls};
+    return {low, mid, high: highEff, rms, cls};
   }
 
   // Mundform steuern
   function setMouth(open, cls){
-    // open 0..1
-    // Basispunkt
     const baseY = 195;
-    // Klassen-spezifische Formparametrisierung
     let widthFactor = 1.0;
     let heightAmp = 22 * open;
 
-    if(cls === "sibilant"){         // schmale Öffnung, horizontal gedehnt
+    if(cls === "sibilant"){
       widthFactor = 1.25;
-      heightAmp *= 0.45;
-    } else if(cls === "vowel"){     // runder Mund (O-Form), mehr Höhe
+      heightAmp *= 0.42; // noch schmaler bei sibilant
+    } else if(cls === "vowel"){
       widthFactor = 0.95;
-      heightAmp *= 1.15;
-    } else if(cls === "plosive"){   // kurze Impulse: kurz etwas weiter öffnen
+      heightAmp *= 1.18;
+    } else if(cls === "plosive"){
       heightAmp *= 1.30;
-    } else if(cls === "neutral"){   // leicht offen
+    } else if(cls === "neutral"){
       heightAmp *= 0.85;
-    } else {                        // idle
+    } else {
       heightAmp *= 0.25;
     }
 
-    // Mundbreite via Kontrollpunkte simulieren
     const leftX  = 100 - (widthFactor-1)*8;
     const rightX = 200 + (widthFactor-1)*8;
 
     const d = `M${leftX},${baseY} C150,${baseY+heightAmp*0.30} 150,${baseY+heightAmp*0.30} ${rightX},${baseY}`;
     mouth.setAttribute('d', d);
 
-    // Unterlippe etwas stärker nach unten
     const d2 = `M95,${205+heightAmp*0.6} C130,${220+heightAmp*0.8} 170,${220+heightAmp*0.8} 205,${205+heightAmp*0.6}`;
     lowerLip.setAttribute('d', d2);
   }
 
   // UI-Infos
-  function showInfo(cls, rms, low, mid, high){
+  function showInfo(cls, rms, low, mid, highEff){
     clsBadge.textContent = `Klasse: ${cls}`;
     ampBadge.textContent = `Amp: ${rms.toFixed(3)}`;
     loBadge.textContent  = `Low: ${Math.round(low)}`;
     midBadge.textContent = `Mid: ${Math.round(mid)}`;
-    hiBadge.textContent  = `High: ${Math.round(high)}`;
+    hiBadge.textContent  = `High*: ${Math.round(highEff)}`;
     bar.style.width = `${Math.min(100, Math.round(Math.max(0,(rms-0.02))*128))}%`;
   }
 
   function loop(){
     const sr = ctx.sampleRate || 48000;
     const {low, mid, high, rms, cls} = classify(sr);
-    // Öffnung sanft aus RMS ableiten
     const open = Math.max(0, Math.min(1, (rms-0.02)*3.2));
     setMouth(open, cls);
     showInfo(cls, rms, low, mid, high);
@@ -266,9 +278,10 @@
   }
 
   (async function boot(){
+    await loadVoiceSensitivity();
     await initAudio();
     setupEvents();
   })();
   </script>
 </body>
-  </html>
+</html>
