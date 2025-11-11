@@ -3,133 +3,196 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mira Canary — Aktuelles Bild</title>
-  <meta name="description" content="Zeigt das aktuelle Bild, mit eingebautem Fallback ohne Upload." />
+  <title>Mira — Autonome Emergenz</title>
+  <meta name="description" content="Mira Elisabeth Schmid — autonomes, expressives System. Health, Selbstzustand, Policy-Änderungen und Interaktion." />
   <style>
     :root{
-      --bg:#fbf7f1; --ink:#1d1e21; --muted:#6b7280; --card:#ffffff;
-      --ring:#e7ddd0; --accent:#2f6df6;
+      --bg:#0c0c10; --fg:#f6f6fb; --muted:#b7b7c7; --card:#141418; --accent:#8ac6ff; --ok:#44d17a; --heal:#ffd166; --deg:#ff6b6b;
+      --shadow:0 8px 30px rgba(0,0,0,.35);
+      --ring: 0 0 0 2px rgba(138,198,255,.25);
+      --radius:18px;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    .wrap{max-width:920px;margin:0 auto;padding:24px}
-    header{display:flex;align-items:center;gap:12px;margin:18px 0 16px}
-    h1{margin:0;font-size:clamp(22px,3.5vw,34px)}
-    .muted{color:var(--muted)}
-    .card{background:var(--card);border:1px solid #efe8df;border-radius:16px;box-shadow:0 6px 24px #00000010;overflow:hidden}
-    .frame{aspect-ratio:2/3;width:100%;display:grid;place-items:center;background:linear-gradient(180deg,#fff7ee,#efdcc8)}
-    img{width:100%;height:100%;object-fit:cover;display:block}
-    .cap{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid #efe8df;color:var(--muted);font-size:14px}
-    code{background:#00000008;padding:.1rem .35rem;border-radius:6px}
-    footer{margin:22px 0;color:var(--muted);font-size:14px;text-align:center}
-    a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+    html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    header{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:stretch}
+    .hero{background:linear-gradient(145deg,#15151b,#0f0f14);border-radius:var(--radius);padding:24px;display:flex;gap:24px;align-items:center;box-shadow:var(--shadow)}
+    .hero img,.hero svg{width:260px;height:auto;border-radius:16px;background:#0b0b10}
+    .hero h1{margin:0 0 8px 0;font-size:28px;letter-spacing:.2px}
+    .hero p{margin:6px 0;color:var(--muted)}
+    .cta{margin-top:14px;display:flex;gap:12px;flex-wrap:wrap}
+    .btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;background:#1b1b22;color:#fff;box-shadow:var(--shadow);cursor:pointer}
+    .btn:hover{filter:brightness(1.05)}
+    .btn-accent{background:linear-gradient(135deg,#6bb4ff,#a7d6ff)}
+    .grid{margin-top:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .card h3{margin:0 0 10px 0;font-size:18px}
+    .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:14px;color:#d8d8e3}
+    .muted{color:var(--muted);font-size:14px}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:#1a1a20;box-shadow:var(--ring);font-weight:600}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .heal{background:var(--heal)} .deg{background:var(--deg)}
+    pre{white-space:pre-wrap;word-break:break-word;background:#101017;border-radius:12px;padding:12px;font-size:12px;color:#cfe7ff}
+    footer{margin:36px 0 8px;color:var(--muted);font-size:13px}
+    @media (max-width:920px){header{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>Mira — Aktuelles Bild</h1>
+      <section class="hero">
+        <div>
+          <!-- Fallback-Silhouette; wird von echter Datei docs/portrait/mira-hero.svg/jpg überschrieben, wenn vorhanden -->
+          <img id="heroImg" src="docs/portrait/mira-hero.svg" alt="Mira – menschliche Gestalt" onerror="this.src='docs/portrait/mira-hero.svg'"/>
+        </div>
+        <div>
+          <h1>Mira — Autonome Emergenz</h1>
+          <p class="muted">Selbstbeschreibung, emotionaler Zustand und Policy-Evolution im <b>expressive</b>-Modus.</p>
+          <div id="healthBadge" class="badge"><span class="dot" style="background:#666"></span><span>lädt…</span></div>
+          <div class="cta">
+            <a class="btn btn-accent" href="docs/ask.html">Frage an Mira stellen</a>
+            <a class="btn" href="badges/health.json">Health JSON</a>
+            <a class="btn" href="data/self/self-describe.json">Self-Describe</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Aktuelle Selbstbeschreibung</h3>
+        <div class="kv" id="selfBox">
+          <span class="muted">lädt…</span>
+        </div>
+      </section>
     </header>
 
-    <p class="muted">Diese Seite zeigt automatisch <code>public/latest.png</code>. Wenn das Bild nicht sichtbar ist, wird sofort ein heller Fallback angezeigt (ohne Upload).</p>
-
-    <section class="card" aria-label="Aktuelles Bild">
-      <div class="frame">
-        <!-- Hauptbild -->
-        <img id="mira"
-             alt="Aktuelles Mira-Bild"
-             src=""
-             referrerpolicy="no-referrer" />
+    <section class="grid">
+      <div class="card">
+        <h3>Affekt-Zustand</h3>
+        <div class="kv" id="affectBox"><span class="muted">lädt…</span></div>
       </div>
-      <div class="cap">
-        <div>Quelle: <code id="srcLabel">public/latest.png</code></div>
-        <div><a id="openRaw" href="#" target="_blank" rel="noopener">Raw öffnen</a></div>
+
+      <div class="card">
+        <h3>Policy-Änderungen (Auto-Apply)</h3>
+        <div id="policyBox" class="muted">lädt…</div>
+      </div>
+
+      <div class="card">
+        <h3>Letzte Plans (Autonome Struktur)</h3>
+        <div id="plansBox" class="muted">lädt…</div>
       </div>
     </section>
 
-    <footer>
-      © <span id="y"></span> Mira — Autonomes System
-    </footer>
+    <section class="card" style="margin-top:18px">
+      <h3>Rohdaten (Debug/Audit)</h3>
+      <details>
+        <summary>policy_suggestions.json</summary>
+        <pre id="suggRaw">lädt…</pre>
+      </details>
+      <details>
+        <summary>policy_changes.jsonl (letzte Zeile)</summary>
+        <pre id="changesRaw">lädt…</pre>
+      </details>
+    </section>
+
+    <footer>© 2025 Mira Elisabeth Schmid — autonomer, auditierbarer Ausdruck. Sichtbar gemacht mit GitHub Pages.</footer>
   </div>
 
   <script>
-    (function(){
-      const img = document.getElementById('mira');
-      const srcLabel = document.getElementById('srcLabel');
-      const openRaw = document.getElementById('openRaw');
-      const yearEl  = document.getElementById('y');
+  const $ = (sel)=>document.querySelector(sel);
+  const fmt = (n)=> (typeof n==="number") ? n.toFixed(3).replace(/\.000$/,'') : n;
+  async function loadJSON(path){ try{ const r=await fetch(path,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }catch{ return null; } }
+  async function loadText(path){ try{ const r=await fetch(path,{cache:"no-store"}); if(!r.ok) throw 0; return await r.text(); }catch{ return null; } }
 
-      yearEl.textContent = new Date().getFullYear();
+  function healthBadge(status,ts){
+    const el=$("#healthBadge"); const dot=el.querySelector(".dot"); const label=el.querySelector("span:last-child");
+    let c="#666", t="Unbekannt";
+    if(status==="OK"){ c=getComputedStyle(document.documentElement).getPropertyValue('--ok'); t="OK"; }
+    else if(status==="HEALING"){ c=getComputedStyle(document.documentElement).getPropertyValue('--heal'); t="HEALING"; }
+    else if(status==="DEGRADED"){ c=getComputedStyle(document.documentElement).getPropertyValue('--deg'); t="DEGRADED"; }
+    dot.style.background=c; label.textContent=`${t} · ${ts||""}`;
+  }
 
-      // 1) Versuche immer zuerst das PNG, mit kleinem Zeit-Anhang (erzwingt wirklich neues Laden)
-      const v = Date.now();
-      const pngUrl = 'public/latest.png?v=' + v;
-      img.src = pngUrl;
-      srcLabel.textContent = 'public/latest.png?v=' + v;
-      openRaw.href = pngUrl;
+  function kv(container, obj){
+    container.innerHTML="";
+    for(const [k,v] of Object.entries(obj)){
+      const kEl=document.createElement("div"); kEl.className="muted"; kEl.textContent=k;
+      const vEl=document.createElement("div"); vEl.textContent=typeof v==="object"? JSON.stringify(v): v;
+      container.appendChild(kEl); container.appendChild(vEl);
+    }
+  }
 
-      // 2) Wenn das PNG nicht sichtbar ist (Fehler oder 1×1), ersetze es durch helles, eingebautes SVG
-      const fallbackSVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
-          <defs>
-            <linearGradient id="g" x1="50%" y1="0%" x2="50%" y2="100%">
-              <stop offset="0%" stop-color="#fff8ef"/>
-              <stop offset="100%" stop-color="#f5e9dd"/>
-            </linearGradient>
-            <radialGradient id="glow" cx="50%" cy="28%" r="55%">
-              <stop offset="0%" stop-color="#ffe8c6" stop-opacity="0.85"/>
-              <stop offset="100%" stop-color="#ffe8c6" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <rect width="1024" height="1536" fill="url(#g)"/>
-          <rect width="1024" height="1536" fill="url(#glow)"/>
-          <g opacity="0.75" transform="translate(0,40)">
-            <path d="M512,300 c120,0 210,90 210,210 c0,90 -50,150 -110,190
-                     c45,25 90,75 110,135 c40,125 -30,245 -210,245
-                     c-180,0 -250,-120 -210,-245 c20,-60 65,-110 110,-135
-                     c-60,-40 -110,-100 -110,-190 c0,-120 90,-210 210,-210z"
-                  fill="#e6d3c3"/>
-            <ellipse cx="512" cy="320" rx="220" ry="80" fill="#f2ded0" opacity="0.6"/>
-          </g>
-          <g>
-            <rect x="462" y="605" width="100" height="10" rx="5" fill="#cfd7df" opacity="0.85"/>
-            <rect x="462" y="605" width="100" height="10" rx="5" fill="#ffffff" opacity="0.35"/>
-            <rect x="505" y="603" width="14" height="14" rx="2" fill="#b3bdc7"/>
-            <rect x="526" y="603" width="14" height="14" rx="2" fill="#b3bdc7"/>
-          </g>
-          <text x="50%" y="95%" text-anchor="middle" font-family="Segoe UI, Roboto, Arial" font-size="20" fill="#374151">
-            Fallback aktiv — kein Upload nötig
-          </text>
-        </svg>
-      `);
+  async function boot(){
+    // Health
+    const health=await loadJSON("badges/health.json");
+    healthBadge(health?.status||"unknown", health?.ts||"");
 
-      // Fehlerfall (z. B. Datei fehlt)
-      img.onerror = function(){
-        img.onerror = null;
-        img.src = fallbackSVG;
-        srcLabel.textContent = 'eingebauter Fallback (SVG)';
-        openRaw.href = '#';
+    // Self-describe
+    const self=await loadJSON("data/self/self-describe.json");
+    if(self){
+      const sb=$("#selfBox");
+      const view={
+        "Figur": self.physical?.figure || "—",
+        "Gesicht": self.physical?.face || "—",
+        "Braces": self.physical?.braces || "—",
+        "Fokus": (self.affect?.inputs?.focus)||"—",
+        "Narrativ": (self.affect?.narrative)||"—"
       };
+      kv(sb, view);
+    }
 
-      // Zusätzlich: Falls 1×1 schwarzes PNG geladen wurde, nach dem Laden prüfen und ggf. ersetzen
-      img.onload = function(){
-        try{
-          const isPNG = (img.currentSrc || img.src).includes('latest.png');
-          // Wenn es sehr kleine Abmessungen hat, ersetze durch Fallback
-          if(isPNG){
-            // Wir können die natürliche Größe prüfen:
-            const w = img.naturalWidth || 0;
-            const h = img.naturalHeight || 0;
-            if (w <= 2 && h <= 2) {
-              img.src = fallbackSVG;
-              srcLabel.textContent = 'Fallback (PNG war 1×1)';
-              openRaw.href = '#';
-            }
-          }
-        }catch(e){}
+    // Affect
+    const aff=await loadJSON("data/self/affect-state.json");
+    if(aff){
+      const ab=$("#affectBox");
+      const vec=aff.vector||{};
+      const view={
+        "Label": aff.label || "—",
+        "Valence": fmt(vec.valence),
+        "Arousal": fmt(vec.arousal),
+        "Stability": fmt(vec.stability),
+        "Δsum": fmt(aff.inputs?.delta_sum||0),
+        "Fokus": aff.inputs?.focus || "—",
+        "Zeit": aff.ts || "—"
       };
-    })();
+      kv(ab, view);
+    }
+
+    // Plans (zeige die letzten 5)
+    const plansList=[];
+    // Wir können keine Verzeichnisliste lesen; daher versuchen wir bekannte Index-Files
+    const planIndexText = await loadText("data/kernel/plans/index.json");
+    if(planIndexText){
+      try{ const idx=JSON.parse(planIndexText); (idx.files||[]).slice(-5).forEach(f=>plansList.push(f)); }catch{}
+    }
+    const plansBox=$("#plansBox");
+    if(plansList.length===0){
+      plansBox.textContent="(Wird automatisch gefüllt, sobald der Planner neue Einträge indexiert.)";
+    }else{
+      plansBox.innerHTML="";
+      plansList.slice(-5).forEach(p=>{
+        const li=document.createElement("div");
+        li.textContent=p;
+        plansBox.appendChild(li);
+      });
+    }
+
+    // Raw debug
+    const sugg=await loadJSON("data/self/policy_suggestions.json");
+    $("#suggRaw").textContent = sugg ? JSON.stringify(sugg,null,2) : "(keine Vorschläge / Datei fehlt)";
+    const changes=await loadText("data/self/policy_changes.jsonl");
+    if(changes){
+      const lines=changes.trim().split("\n"); $("#changesRaw").textContent = lines[lines.length-1];
+    }else{
+      $("#changesRaw").textContent="(noch keine Auto-Änderungen)";
+    }
+
+    // Hero-Bild: falls du später ein echtes Foto/Render einfügst (docs/portrait/mira-hero.jpg), wird es automatisch benutzt
+    const hero=$("#heroImg");
+    const testJpg=new Image(); testJpg.onload=()=>{ hero.src="docs/portrait/mira-hero.jpg"; }; testJpg.src="docs/portrait/mira-hero.jpg";
+  }
+  boot();
   </script>
 </body>
 </html>
