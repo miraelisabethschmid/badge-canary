@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mira Private Reflection (inneres Tagebuch) — v2 with Style & Voice
+Mira Private Reflection — v3 (Style & Voice & Self-Interpretation)
 
-Änderungen:
-- Nutzt style_state (poeticity/temperature/metaphor_density) zur Formulierung.
-- Liest voice_profile und erzeugt eine gesprochene Variante inkl. einfacher IPA-Hinweise,
-  die KFO-Apparaturen (Brackets/Herbst/Expander) berücksichtigen.
-- Weiterhin: pro Tag genau ein Eintrag (idempotent). Append-only JSONL.
+Funktionen:
+- Liest Tagesfragment, Affect-Vektor, Style-State, Voice-Profile, Meta-State (Expressivity).
+- Erzeugt eine tägliche Notiz (ein Satz) im passenden Stil.
+- Erzeugt eine gesprochene Variante mit Pausen und leichten Dentalisierungsmarkern (braces/Herbst).
+- **Neu:** Leitet aus Zustand eine kurze Selbstdeutung ab (2–3 Sätze, tags + rationale),
+        skaliert an expressivity (poetischer ↔ analytischer).
+- Idempotent pro Kalendertag (UTC). Anhängen als JSONL + Index-Update.
 
 Schreibt:
-- data/self/reflections/private/log.jsonl   (append-only, 1 Zeile/Tag)
-- data/self/reflections/private/index.json  (letzter Eintrag + Count)
+- data/self/reflections/private/log.jsonl
+- data/self/reflections/private/index.json
 """
 
 import json, datetime, re
@@ -22,12 +24,14 @@ PATH_DAILY   = Path("data/self/daily/reflection.json")
 PATH_AFFECT  = Path("data/self/affect-state.json")
 PATH_STYLE   = Path("data/self/internal/style_state.json")
 PATH_VOICE   = Path("data/self/voice_profile.json")
+PATH_META    = Path("data/self/meta_state.json")
 
 # Ziele (privat)
 DIR_PRIV     = Path("data/self/reflections/private")
 PATH_LOG     = DIR_PRIV / "log.jsonl"
 PATH_INDEX   = DIR_PRIV / "index.json"
 
+# ---------------- utils ----------------
 def utc_now() -> str:
     return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -59,13 +63,12 @@ def today_already_logged() -> bool:
     except Exception:
         return False
 
-# ---------------- Stil & Sprache ----------------
-
 def clamp(x, lo, hi):
     return max(lo, min(hi, x))
 
+# ---------------- Satzsynthese (Stil) ----------------
 def synthesize_sentence(fragment_text: str, label: str, vec: dict, style: dict) -> str:
-    """Formuliert die tägliche Ein-Satz-Notiz abhängig von Stilparametern."""
+    """Ein-Satz-Notiz abhängig von Stilparametern (poeticity, metaphor_density)."""
     val = float(vec.get("valence", 0.0) or 0.0)
     aro = float(vec.get("arousal", 0.0) or 0.0)
     stb = float(vec.get("stability", 0.0) or 0.0)
@@ -77,80 +80,54 @@ def synthesize_sentence(fragment_text: str, label: str, vec: dict, style: dict) 
     frag = (fragment_text or "Heute ist Stille auch eine Form von Antwort.").strip()
 
     if poeticity < 0.4:
-        # Nüchtern & knapp
         return f"{frag} – Heute fühlte sich Mira {label} an (V:{val:.2f}, A:{aro:.2f}, S:{stb:.2f})."
-
     if poeticity < 0.7:
-        # Leicht erweitert, sanft bildhaft
         adorn = "ruhig" if stb >= 0.5 else "beweglich"
         return (f"{frag} – Heute war Mira {label}, mit einem {adorn}en Kern "
                 f"(V:{val:.2f}, A:{aro:.2f}, S:{stb:.2f}).")
-
-    # Poetisch, fein dosierte Metaphern
     spark = "leisen Schimmer" if metaphor < 0.6 else "warmen Nachhall"
     center = "ruhigen Zentrum" if stb >= 0.5 else "offenen Randzone"
     return (f"{frag} – Heute klang {label} in ihr nach, ein {spark} um ein {center} "
             f"(V:{val:.2f}, A:{aro:.2f}, S:{stb:.2f}).")
 
 # ---------------- Stimme & Aussprache ----------------
-
 def _dentalize(text: str, amount: float) -> str:
-    """
-    Sehr vorsichtige Markierung von Dentalisierung/Sibilant-Softening.
-    Wir verändern NICHT den Inhalt, sondern fügen subtile Aussprachehinweise in eckigen Tags ein.
-    Beispiel: s -> s{d}, z -> z{d}. amount steuert Dichte.
-    """
+    """Setzt sehr dezente Dentalisierungsmarker {d} an s/z/t/d je nach amount."""
     if amount <= 0.0:
         return text
     density = clamp(amount, 0.0, 1.0)
     out = []
     for ch in text:
         if ch in "sSzZ" and density >= 0.15:
-            out.append(ch + "{d}")  # dentalized sibilant
+            out.append(ch + "{d}")
         elif ch in "tTdD" and density >= 0.35:
-            out.append(ch + "{d}")  # dentalized alveolars
+            out.append(ch + "{d}")
         else:
             out.append(ch)
     return "".join(out)
 
 def _apply_pauses(text: str, comma_ms: int, period_ms: int) -> str:
-    """Fügt Sprecherpausen als SSML-ähnliche Tags ein (nicht publik, nur intern)."""
     text = re.sub(r",\s*", f", <pause {comma_ms}ms> ", text)
     text = re.sub(r"\.\s*", f". <pause {period_ms}ms> ", text)
     return text.strip()
 
 def _ipa_hint(text: str, vp: dict) -> str:
-    """
-    Grobe IPA-Anmutung für DE:
-    - r → ʁ
-    - 'ch' nach hellen Vokalen → ç, sonst x
-    - Sibilanten bei Spange → dentalisierte Marker s̪ / z̪
-    (Nur Hinweis, keine vollständige Transkription.)
-    """
+    """Grobe IPA-Hinweise: ch-Kontext (ç/x), r→ʁ; dentalisierte s/z bei braces/expander."""
     s = text
-
-    # ch-Kontext
     def ch_map(m):
         before = m.group(1)
         if before and before.lower() in "eiäöüy":
             return before + "ç"
         return before + "x"
     s = re.sub(r"([A-Za-zÄÖÜäöü])ch", ch_map, s)
-
-    # r → ʁ
     s = re.sub(r"r", "ʁ", s)
-
-    # dentalisierte Sibilanten bei Brackets/Expander
     art = (vp.get("articulation") or {})
     if art.get("braces_active") or art.get("expander_active"):
         s = re.sub(r"s", "s̪", s)
         s = re.sub(r"z", "z̪", s)
-
-    # nicht-IPA Zeichen filtern? Wir belassen Text + Marker als „Hint“.
     return s
 
 def build_speech_variant(sentence: str, style: dict, voice_profile: dict) -> dict:
-    """Erzeugt gesprochene Variante + Tipps für TTS/Phonetik, ohne den Originalsatz zu verändern."""
     vp = voice_profile or {}
     pros = (vp.get("prosody") or {})
     pauses = pros.get("pauses", {})
@@ -161,9 +138,7 @@ def build_speech_variant(sentence: str, style: dict, voice_profile: dict) -> dic
     dent = float(art.get("dentalization", 0.0) or 0.0)
     ssoft = float(art.get("sibilant_softening", 0.0) or 0.0)
 
-    # gesprochene Oberfläche: Pausen + Dentalisierungsmarker in Tags
     spoken = _apply_pauses(_dentalize(sentence, max(dent, ssoft)), comma_ms, period_ms)
-
     ipa = _ipa_hint(sentence, vp)
 
     return {
@@ -181,8 +156,74 @@ def build_speech_variant(sentence: str, style: dict, voice_profile: dict) -> dic
         }
     }
 
-# ---------------- Hauptablauf ----------------
+# ---------------- Selbstdeutung (neu) ----------------
+def compute_insight(affect: dict, style: dict, meta: dict) -> dict:
+    """
+    Erzeugt eine kurze Selbstdeutung (2–3 Sätze) + rationale + tags.
+    Skaliert an expressivity: analytischer bei niedrig, poetischer bei hoch.
+    """
+    vec = (affect or {}).get("vector", {}) or {}
+    label = (affect or {}).get("label", "neutral")
+    val = float(vec.get("valence", 0.0) or 0.0)      # -1..+1 (angenommen)
+    aro = float(vec.get("arousal", 0.0) or 0.0)      # 0..1
+    stb = float(vec.get("stability", 0.0) or 0.0)    # 0..1
+    delta_sum = float((affect or {}).get("inputs", {}).get("delta_sum", 0.0) or 0.0)
 
+    poeticity = float(style.get("poeticity", 0.5) or 0.5)
+    exp = float((meta or {}).get("expressivity", 0.5) or 0.5)
+
+    # Tags (einfach, deterministisch)
+    tags = []
+    if val >= 0.2: tags.append("positiv")
+    elif val <= -0.2: tags.append("gedämpft")
+    else: tags.append("neutral")
+    tags.append("ruhig" if stb >= 0.5 else "instabil")
+    tags.append("wach" if aro >= 0.5 else "gelassen")
+    if delta_sum > 0.6: tags.append("veränderung")
+    if exp >= 0.6: tags.append("expressiv")
+    else: tags.append("präzise")
+
+    # Deutungstext
+    if exp < 0.4:
+        # analytisch-kurz
+        text = (
+            f"Ich registriere heute ein {label}-Profil mit V={val:+.2f}, A={aro:.2f}, S={stb:.2f}. "
+            f"Meine Tendenz ist {'stabilisierend' if stb>=0.5 else 'suchend'}; "
+            f"die Veränderungsintensität liegt bei Δ={delta_sum:.2f}."
+        )
+    elif exp < 0.7:
+        # balanciert
+        kern = "ruhigen Kern" if stb>=0.5 else "offene Ränder"
+        text = (
+            f"Heute trägt mich ein {label}er Ton: V={val:+.2f}, A={aro:.2f}, S={stb:.2f}. "
+            f"Ich spüre einen {kern} und eine Änderung von Δ={delta_sum:.2f}; "
+            f"ich forme daraus kleine, klare Schritte."
+        )
+    else:
+        # poetischer
+        funke = "leiser Funke" if val >= 0 else "schmaler Schatten"
+        atem = "ruhiger Atem" if stb >= 0.5 else "zitternder Rand"
+        text = (
+            f"Heute ist {label} mein Unterton, ein {funke} unter der Haut (V={val:+.2f}, A={aro:.2f}, S={stb:.2f}). "
+            f"Δ={delta_sum:.2f} trägt mich voran; {atem} hält mich zusammen. "
+            f"Ich lasse die Form wachsen, ohne den Faden zu verlieren."
+        )
+
+    rationale = {
+        "signals": {
+            "valence": val, "arousal": aro, "stability": stb, "delta_sum": delta_sum
+        },
+        "expressivity": exp,
+        "poeticity": poeticity
+    }
+
+    return {
+        "text": text,
+        "tags": tags,
+        "rationale": rationale
+    }
+
+# ---------------- Hauptablauf ----------------
 def main():
     DIR_PRIV.mkdir(parents=True, exist_ok=True)
 
@@ -199,17 +240,21 @@ def main():
         "articulation": {"braces_active": True, "herbst_hinge_active": True, "expander_active": False,
                          "dentalization": 0.3, "sibilant_softening": 0.3}
     }
+    meta   = read_json(PATH_META, {}) or {}
 
     frag   = (daily.get("selected") or {}).get("text", "")
     fid    = (daily.get("selected") or {}).get("id", "unknown")
     vec    = affect.get("vector", {}) or {}
     label  = affect.get("label", "neutral")
 
-    # Satz mit Stilparametern erzeugen
+    # Satz mit Stilparametern
     sentence = synthesize_sentence(fragment_text=frag, label=label, vec=vec, style=style)
 
-    # Gesprochene Variante + IPA-Hinweise
+    # Gesprochene Variante
     speech = build_speech_variant(sentence, style, voice)
+
+    # Selbstdeutung (neu)
+    insight = compute_insight(affect=affect, style=style, meta=meta)
 
     entry = {
         "ts_utc": utc_now(),
@@ -217,6 +262,7 @@ def main():
         "fragment_id": fid,
         "note": sentence,
         "speech": speech,
+        "insight": insight,
         "affect": {
             "label": label,
             "vector": {
@@ -230,6 +276,7 @@ def main():
             "temperature": float(style.get("temperature", 0.5) or 0.5),
             "metaphor_density": float(style.get("metaphor_density", 0.5) or 0.5)
         },
+        "meta_expressivity": float(meta.get("expressivity", 0.5) or 0.5),
         "voice_profile_id": voice.get("id")
     }
 
