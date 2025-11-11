@@ -1,0 +1,89 @@
+name: Update SYSTEM_OVERVIEW.md
+on:
+  schedule:
+    - cron: '0 * * * *'  # stündlich
+  workflow_dispatch:      # manuell startbar
+permissions:
+  contents: write
+
+jobs:
+  update-overview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect status data
+        id: gather
+        shell: bash
+        run: |
+          mkdir -p data/self
+          mkdir -p badges
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Health-Status lesen
+          status="DEGRADED"
+          if [ -f badges/health.json ]; then
+            status=$(jq -r '.status' badges/health.json || echo "DEGRADED")
+          fi
+
+          # Anzahl der archivierten Selbstbilder
+          count=$(find data/archive/self -type f -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+
+          # Letzter Affektzustand
+          if [ -f data/self/affect-state.json ]; then
+            valence=$(jq -r '.vector.valence' data/self/affect-state.json)
+            arousal=$(jq -r '.vector.arousal' data/self/affect-state.json)
+            stability=$(jq -r '.vector.stability' data/self/affect-state.json)
+          else
+            valence="n/a"; arousal="n/a"; stability="n/a"
+          fi
+
+          # Letzter Tagesspruch
+          quote="n/a"
+          if [ -f data/voice_of_day.json ]; then
+            quote=$(jq -r '.quote' data/voice_of_day.json | head -c 100)
+          fi
+
+          # Schreibe Variablen in Output
+          echo "ts=$ts" >> $GITHUB_OUTPUT
+          echo "status=$status" >> $GITHUB_OUTPUT
+          echo "count=$count" >> $GITHUB_OUTPUT
+          echo "valence=$valence" >> $GITHUB_OUTPUT
+          echo "arousal=$arousal" >> $GITHUB_OUTPUT
+          echo "stability=$stability" >> $GITHUB_OUTPUT
+          echo "quote=$quote" >> $GITHUB_OUTPUT
+
+      - name: Update SYSTEM_OVERVIEW.md
+        shell: bash
+        run: |
+          file="SYSTEM_OVERVIEW.md"
+          ts="${{ steps.gather.outputs.ts }}"
+          status="${{ steps.gather.outputs.status }}"
+          count="${{ steps.gather.outputs.count }}"
+          val="${{ steps.gather.outputs.valence }}"
+          aro="${{ steps.gather.outputs.arousal }}"
+          stab="${{ steps.gather.outputs.stability }}"
+          quote="${{ steps.gather.outputs.quote }}"
+
+          if [ ! -f "$file" ]; then
+            echo "# SYSTEM_OVERVIEW.md fehlt – wird neu erzeugt." > "$file"
+          fi
+
+          echo "" >> "$file"
+          echo "---" >> "$file"
+          echo "" >> "$file"
+          echo "**Automatisches Statusupdate — $ts (UTC)**" >> "$file"
+          echo "" >> "$file"
+          echo "- Systemstatus: **$status**" >> "$file"
+          echo "- Archivierte Selbstbilder: **$count**" >> "$file"
+          echo "- Affektzustand: Valence **$val**, Arousal **$aro**, Stability **$stab**" >> "$file"
+          echo "- Aktueller Tagesspruch: “$quote”" >> "$file"
+
+      - name: Commit updated overview
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          git add SYSTEM_OVERVIEW.md
+          git commit -m "auto: update SYSTEM_OVERVIEW.md (status ${{ steps.gather.outputs.status }})" || echo "no changes"
+          git push
