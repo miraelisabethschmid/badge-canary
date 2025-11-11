@@ -1,0 +1,49 @@
+name: Auto-Deploy Pages on Heal
+
+on:
+  workflow_run:
+    workflows: ["Autonomous Heal & Emergenz"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy_on_success:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare public bundle
+        run: |
+          rm -rf public
+          mkdir -p public
+          # Dashboard HTML
+          cp -r docs/* public/ 2>/dev/null || true
+          # Badges (SVG + JSON)
+          mkdir -p public/badges
+          cp -r badges/* public/badges/ 2>/dev/null || true
+          # Ledger (JSONL logs)
+          mkdir -p public/data/ledger
+          cp -r data/ledger/events.jsonl public/data/ledger/ 2>/dev/null || true
+          # Minimal index redirect
+          if [ ! -f public/index.html ]; then
+            echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=health.html"><a href="health.html">Go to health.html</a>' > public/index.html
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
