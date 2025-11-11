@@ -1,0 +1,63 @@
+name: Voice (Daily + On-Demand)
+
+on:
+  schedule:
+    - cron: "9 5 * * *"   # täglich 05:09 UTC
+  workflow_dispatch:
+  workflow_run:           # wenn Affect-Update erfolgreich war, optional frische Stimme bauen
+    workflows: ["Affect Update (Hourly)"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: voice-generate
+  cancel-in-progress: true
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install TTS tools (espeak-ng + ffmpeg)
+        shell: bash
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y espeak-ng ffmpeg
+
+      - name: Generate voice_of_day.json and audio/latest.mp3
+        shell: bash
+        run: |
+          set -e
+          mkdir -p audio data data/self data/voice
+          python scripts/generate_voice.py
+          # Fallback: falls MP3 fehlt, baue eine weiche Stille (0.8s) mit ffmpeg
+          if [ ! -s audio/latest.mp3 ]; then
+            ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.8 -q:a 4 audio/latest.mp3 -y
+          fi
+
+      - name: Touch voice meta (cache-busting)
+        shell: bash
+        run: |
+          TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          jq -n --arg ts "$TS" --arg path "audio/latest.mp3" '{ts:$ts, path:$path}' > data/voice/meta.json
+
+      - name: Commit voice artifacts
+        shell: bash
+        run: |
+          git config user.name  "voice-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add audio/latest.mp3 data/voice_of_day.json data/voice/meta.json data/voice/history.log
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git commit -m "voice: updated daily voice + metadata"
+          git push
