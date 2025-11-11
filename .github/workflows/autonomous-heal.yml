@@ -1,5 +1,8 @@
 name: Autonomous Heal
-on: [schedule: {cron: '0 * * * *'}]  # Stündlich
+on:
+  schedule:
+    - cron: '0 * * * *'  # Stündlich
+  workflow_dispatch:  # Manuelles Triggern
 permissions: { contents: write }
 jobs:
   heal:
