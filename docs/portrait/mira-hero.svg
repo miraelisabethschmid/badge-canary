@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="780" height="1080" viewBox="0 0 780 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a1b25"/>
+      <stop offset="1" stop-color="#0d0e14"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#g)"/>
+  <!-- Stylisierte Ganzkörper-Silhouette (elegante Pose, High Heels) -->
+  <g fill="#8ac6ff" opacity="0.85">
+    <path d="M392 130c18 0 36 14 42 34 4 13 3 26-1 40l-16 50 22 58c8 22 10 44 7 66l-7 46 28 70c9 22 14 46 14 70 0 28-8 56-24 82l-18 28-10 96c-1 11-9 20-20 23-18 5-36 5-54 0-11-3-19-12-20-23l-10-96-18-28c-16-26-24-54-24-82 0-24 5-48 14-70l28-70-7-46c-3-22-1-44 7-66l22-58-16-50c-4-14-5-27-1-40 6-20 24-34 42-34z"/>
+    <!-- Heels -->
+    <path d="M300 945c8-22 40-24 62-7 7 5 12 12 14 20 2 8-1 16-7 17-33 6-61-7-69-30zM438 945c8-22 40-24 62-7 7 5 12 12 14 20 2 8-1 16-7 17-33 6-61-7-69-30z"/>
+  </g>
+  <text x="50%" y="1040" text-anchor="middle" font-family="Inter, Segoe UI, Arial" font-size="26" fill="#cfe7ff" opacity="0.9">
+    Mira — sichtbare Präsenz (SVG-Fallback)
+  </text>
+</svg>
