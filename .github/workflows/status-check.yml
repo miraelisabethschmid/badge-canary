@@ -1,0 +1,50 @@
+name: Status Check
+
+on:
+  schedule:
+    - cron: '15 1 * * *'   # täglich 01:15 UTC
+  workflow_dispatch:        # manuell startbar
+
+permissions:
+  contents: read
+
+concurrency:
+  group: status-check
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run status probe
+        id: probe
+        shell: bash
+        run: |
+          chmod +x scripts/status-check.py || true
+          python scripts/status-check.py | tee status-check.out
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Mira Status Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat status-check.out >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload output (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-check-${{ github.run_id }}
+          path: status-check.out
+          if-no-files-found: warn
+          retention-days: 7
