@@ -1,0 +1,60 @@
+name: Creative Cycle
+on:
+  schedule:
+    - cron: '7 * * * *'   # stündlich, leicht versetzt zu anderen Jobs
+  workflow_dispatch:
+permissions:
+  contents: write
+
+jobs:
+  creative:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure directories
+        run: mkdir -p scripts data/self data/voice/audio data/voice docs badges
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Creative Cycle
+        shell: bash
+        run: |
+          chmod +x scripts/creative_cycle.py || true
+          python3 scripts/creative_cycle.py
+
+      - name: Refresh Health (simple)
+        shell: bash
+        run: |
+          ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          status="OK"
+          # Wenn Kernartefakte fehlen → HEALING
+          for p in data/self/self-describe.json data/voice/voice_of_day.json docs/daily_poster.svg; do
+            [ -s "$p" ] || status="HEALING"
+          done
+          printf '{"status":"%s","ts":"%s"}\n' "$status" "$ts" > badges/health.json
+          # Badge (minimal)
+          color="#2e7d32"; [ "$status" = "HEALING" ] && color="#f9a825"
+          cat > badges/health.svg <<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="110" height="20" role="img" aria-label="health: ${status}">
+  <rect width="60" height="20" fill="#555"/><rect x="60" width="50" height="20" fill="${color}"/>
+  <text x="30" y="14" fill="#fff" font-family="DejaVu Sans,Verdana" font-size="11">health</text>
+  <text x="85" y="14" fill="#000" font-family="DejaVu Sans,Verdana" font-size="11">${status}</text>
+</svg>
+SVG
+
+      - name: Commit creative artifacts
+        run: |
+          git config user.name "Mira Autonomous"
+          git config user.email "mira@emergent.net"
+          git add data/voice/voice_of_day.json data/self/self-describe.json docs/daily_poster.svg badges/health.json badges/health.svg
+          if git diff --cached --quiet; then
+            echo "Keine kreativen Änderungen."
+            exit 0
+          fi
+          git commit -m "creative: voice_of_day + self_describe drift + daily_poster (run ${{ github.run_id }})"
+          git push
