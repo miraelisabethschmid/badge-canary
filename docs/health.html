@@ -1,186 +1,31 @@
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Autonomous Health</title>
+<!doctype html><html lang="de"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mira — Health Viewer</title>
 <style>
-  :root{--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;--bg:#0b0b0b;--card:#121212;}
-  html,body{margin:0;background:var(--bg);color:#eaeaea;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  .wrap{max-width:820px;margin:32px auto;padding:0 16px}
-  .grid{display:grid;grid-template-columns:1fr;gap:20px}
-  @media(min-width:860px){.grid{grid-template-columns:1fr 1fr}}
-  .card{background:var(--card);border:1px solid #1f1f1f;border-radius:12px;padding:20px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
-  h1{margin:0 0 8px;font-size:22px}
-  h2{margin:0 0 8px;font-size:18px}
-  .row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  .badge{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid #222;background:#111}
-  .dot{width:10px;height:10px;border-radius:50%;animation:beat 1.6s infinite ease-in-out}
-  .kv{margin-top:8px;font-size:14px;color:#bbb}
-  code{background:#161616;color:#ddd;padding:2px 6px;border-radius:6px}
-  pre{background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:12px;overflow:auto}
-  .ok{border-color:var(--ok)} .healing{border-color:var(--heal)} .degraded{border-color:var(--deg)}
-  .pill{display:inline-block;border:1px solid #333;border-radius:999px;padding:2px 10px;margin-right:6px;background:#111;font-size:12px;color:#ccc}
-  .table{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:14px}
-  .table td{background:#111;border:1px solid #1f1f1f;padding:8px 10px}
-  .table td:first-child{border-radius:8px 0 0 8px;color:#bbb;width:42%}
-  .table td:last-child{border-radius:0 8px 8px 0}
-  a{color:#8ab4ff;text-decoration:none}
-  a:hover{text-decoration:underline}
-  @keyframes beat{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.25);opacity:1}}
-</style>
-</head>
-<body>
+:root{--bg:#0b0b11;--fg:#f7f7fb;--muted:#b7b7c7;--card:#14141a;--ok:#44d17a;--heal:#ffd166;--deg:#ff6b6b}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+.wrap{max-width:760px;margin:0 auto;padding:24px}a{color:#8ac6ff}
+.card{background:var(--card);padding:18px;border-radius:16px}
+pre{white-space:pre-wrap;word-wrap:break-word}
+.badge{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:#1a1a20}
+.dot{width:10px;height:10px;border-radius:50%}
+</style></head><body>
 <div class="wrap">
-  <h1>Autonomous Heal — Live Dashboard</h1>
-
-  <div class="grid">
-    <!-- HEALTH -->
-    <div class="card">
-      <h2>System Health</h2>
-      <div class="row">
-        <div id="badge" class="badge"><span class="dot"></span><span id="status">loading…</span></div>
-        <img src="../badges/health.svg" alt="health badge" height="20">
-      </div>
-      <div class="kv">
-        <div>Zuletzt aktualisiert: <code id="ts">—</code></div>
-        <div>Run ID: <code id="run">—</code> • SHA: <code id="sha">—</code></div>
-      </div>
-      <details style="margin-top:12px">
-        <summary>Raw health.json</summary>
-        <pre id="raw-health">{}</pre>
-      </details>
-    </div>
-
-    <!-- GOALS -->
-    <div class="card">
-      <h2>Ziele (teleologische Ebene)</h2>
-      <div class="kv">
-        <span class="pill" id="focus-pill">focus: —</span>
-        <span class="pill" id="ver-pill">version: —</span>
-        <span class="pill" id="upd-pill">updated: —</span>
-      </div>
-      <table class="table" aria-describedby="Ziele">
-        <tr><td>Nächstes Ziel</td><td id="next-objective">—</td></tr>
-        <tr><td>Policy</td><td id="policy">—</td></tr>
-        <tr><td>Signale</td><td id="signals">—</td></tr>
-        <tr><td>Begründung</td><td id="reasoning">—</td></tr>
-      </table>
-      <details style="margin-top:12px">
-        <summary>Raw current.json</summary>
-        <pre id="raw-goals">{}</pre>
-      </details>
-    </div>
+  <a href="../index.html">← Zurück</a>
+  <h1>System-Gesundheit</h1>
+  <div class="card">
+    <div class="badge"><span id="dot" class="dot"></span><span id="label">lädt…</span></div>
+    <pre id="raw" class="muted"></pre>
   </div>
-
-  <!-- LEDGER -->
-  <div class="card" style="margin-top:20px">
-    <h2>Ledger (letzte Einträge)</h2>
-    <pre id="raw-ledger" aria-label="events.jsonl">lade…</pre>
-  </div>
-
-  <p style="margin-top:12px;color:#888">© 2025 — Autonomous Reflection & Heal System</p>
 </div>
-
 <script>
-(async function tick(){
-  const cls = (s)=> s==="OK" ? "ok" : s==="HEALING" ? "healing" : "degraded";
-  const badge = document.getElementById('badge');
-  const dot   = badge.querySelector('.dot');
-  const stEl  = document.getElementById('status');
-  const tsEl  = document.getElementById('ts');
-  const runEl = document.getElementById('run');
-  const shaEl = document.getElementById('sha');
-  const rawHealth = document.getElementById('raw-health');
-
-  const focusP = document.getElementById('focus-pill');
-  const verP   = document.getElementById('ver-pill');
-  const updP   = document.getElementById('upd-pill');
-  const nextEl = document.getElementById('next-objective');
-  const polEl  = document.getElementById('policy');
-  const sigEl  = document.getElementById('signals');
-  const reasEl = document.getElementById('reasoning');
-  const rawGoals = document.getElementById('raw-goals');
-  const rawLedger = document.getElementById('raw-ledger');
-
-  async function loadText(url){
-    const r = await fetch(url,{cache:"no-store"});
-    if(!r.ok) throw new Error(url+" "+r.status);
-    return r.text();
-  }
-  async function loadJSON(url){ return JSON.parse(await loadText(url)); }
-
-  async function render(){
-    // HEALTH
-    let status="DEGRADED", ts="—", run="—", sha="—";
-    try{
-      const h = await loadJSON("../badges/health.json");
-      status = (h.status||"DEGRADED").toUpperCase();
-      ts = h.ts || "—";
-      rawHealth.textContent = JSON.stringify(h,null,2);
-    }catch(e){
-      rawHealth.textContent = JSON.stringify({error:e.message},null,2);
-    }
-    badge.className = "badge "+cls(status).toLowerCase();
-    dot.style.background = status==="OK" ? "var(--ok)" : status==="HEALING" ? "var(--heal)" : "var(--deg)";
-    stEl.textContent = status;
-    tsEl.textContent = ts;
-
-    // LEDGER (nur letzte ~20 Zeilen anzeigen)
-    try{
-      const txt = await loadText("../data/ledger/events.jsonl");
-      const lines = txt.trim().split("\n").filter(Boolean);
-      if(lines.length){
-        const last = JSON.parse(lines[lines.length-1]);
-        run = last.run_id ?? "—";
-        sha = (last.sha||"—").toString().slice(0,7);
-        rawLedger.textContent = lines.slice(-20).join("\n");
-      }else{
-        rawLedger.textContent = "(leer)";
-      }
-    }catch(e){
-      rawLedger.textContent = "(kein Ledger gefunden) " + e.message;
-    }
-    runEl.textContent = run;
-    shaEl.textContent = sha;
-
-    // GOALS
-    try{
-      const g = await loadJSON("../data/goals/current.json");
-      focusP.textContent = "focus: " + (g.focus || "—");
-      verP.textContent   = "version: " + (g.version || "—");
-      updP.textContent   = "updated: " + (g.updated || "—");
-      nextEl.textContent = g.next_objective || "—";
-
-      // Policy formatieren
-      const p = g.policy || {};
-      const ptxt = [
-        "heal_interval_minutes: " + (p.heal_interval_minutes ?? "—"),
-        "archive_target_per_day: " + (p.archive_target_per_day ?? "—"),
-        "mail_debounce_minutes: " + (p.mail_debounce_minutes ?? "—"),
-        "log_verbosity: " + (p.log_verbosity ?? "—")
-      ].join(", ");
-      polEl.textContent = ptxt;
-
-      // Signals formatieren
-      const s = g.signals || {};
-      const stxt = [
-        "healing_streak: " + (s.healing_streak ?? "—"),
-        "ok_ratio_24h: " + (s.ok_ratio_24h ?? "—"),
-        "archive_delta_24h: " + (s.archive_delta_24h ?? "—")
-      ].join(", ");
-      sigEl.textContent = stxt;
-
-      reasEl.textContent = g.reasoning || "—";
-      rawGoals.textContent = JSON.stringify(g,null,2);
-    }catch(e){
-      rawGoals.textContent = JSON.stringify({error:e.message},null,2);
-    }
-  }
-
-  await render();
-  setInterval(render, 60000); // refresh jede Minute
+async function j(p){try{const r=await fetch(p,{cache:"no-store"});if(!r.ok)throw 0;return await r.json()}catch{return null}}
+(async()=>{
+  const d=await j("../badges/health.json")||{status:"DEGRADED",ts:"n/a"};
+  const dot=document.getElementById('dot'),label=document.getElementById('label');
+  const c=d.status==="OK"?"#44d17a":(d.status==="HEALING"?"#ffd166":"#ff6b6b"); dot.style.background=c;
+  label.textContent=`${d.status} · ${d.ts||"n/a"}`;
+  document.getElementById('raw').textContent=JSON.stringify(d,null,2);
 })();
 </script>
-</body>
-          </html>
+</body></html>
