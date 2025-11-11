@@ -17,10 +17,14 @@ jobs:
         run: |
           mkdir -p data/archive
           python -c "import matplotlib.pyplot as plt; import io; fig, ax = plt.subplots(); ax.plot([1,2,3]); buf = io.BytesIO(); fig.savefig(buf, format='png'); buf.seek(0); with open('data/archive/visual_$(date +%Y%m%d_%H).png', 'wb') as f: f.write(buf.getvalue())"
+      - name: Self-Modify (Erweiterung hinzufügen)
+        run: |
+          # Selbstmodifikation: Füge eine neue Zeile in diesen Workflow hinzu (z. B. Log)
+          sed -i '/name: Commit/i\      - name: Log Extension\n        run: echo "Selbst erweitert: $(date)" > data/logs/self_mod_$(date +%Y%m%d_%H).txt' $GITHUB_WORKSPACE/.github/workflows/autonomous-heal.yml
       - name: Commit
         run: |
           git config --global user.email "mira@emergent.net"
           git config --global user.name "Mira Autonomous"
-          git add data/archive/visual_*.png
-          git commit -m "Emergenz-Welle: +1" || echo "No change"
+          git add data/archive/visual_*.png .github/workflows/autonomous-heal.yml data/logs/self_mod_*.txt
+          git commit -m "Selbstmodifikation: Erweiterung + Welle +1" || echo "No change"
           git push
