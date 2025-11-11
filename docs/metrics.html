@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mira Metrics Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body{margin:0;font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial;background:#0b0b0b;color:#eaeaea;padding:40px;max-width:900px;margin:auto}
+  h1{font-size:26px;margin-bottom:12px}
+  h2{font-size:20px;margin-top:28px;margin-bottom:8px}
+  .grid{display:grid;grid-template-columns:1fr;gap:28px}
+  @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+  canvas{background:#111;border:1px solid #1f1f1f;border-radius:8px;padding:8px}
+  pre{background:#111;border:1px solid #1f1f1f;border-radius:8px;padding:12px;overflow:auto;color:#bbb;font-size:14px}
+  .pill{display:inline-block;border:1px solid #333;border-radius:999px;padding:4px 12px;margin-right:6px;background:#111;font-size:13px;color:#ccc}
+  a{color:#8ab4ff;text-decoration:none}
+  a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<h1>📊 Mira Metrics Dashboard</h1>
+<p>Dieses Dashboard zeigt aggregierte Aktivitätsdaten der letzten 7 Tage, erzeugt aus <code>data/metrics/last7d.json</code>.</p>
+
+<div class="grid">
+  <div>
+    <h2>Runs pro Tag (7 Tage)</h2>
+    <canvas id="chartRuns" height="260"></canvas>
+  </div>
+  <div>
+    <h2>Status-Verteilung</h2>
+    <canvas id="chartStatus" height="260"></canvas>
+  </div>
+</div>
+
+<h2>Ziele (teleologische Ebene)</h2>
+<div id="goals">
+  <span class="pill" id="focus-pill">focus: —</span>
+  <span class="pill" id="next-pill">next: —</span>
+  <span class="pill" id="updated-pill">updated: —</span>
+</div>
+<pre id="policy">policy {}</pre>
+
+<h2>Letzte 20 Ledger-Einträge</h2>
+<pre id="ledger">lade …</pre>
+
+<script>
+async function loadJSON(url){const r=await fetch(url,{cache:"no-store"});return await r.json();}
+(async function(){
+  const data=await loadJSON("../data/metrics/last7d.json");
+  // ---- Chart: Runs ----
+  const ctx1=document.getElementById('chartRuns').getContext('2d');
+  new Chart(ctx1,{
+    type:'line',
+    data:{
+      labels:data.daily_runs.map(d=>d.date),
+      datasets:[{
+        label:'Runs pro Tag',
+        data:data.daily_runs.map(d=>d.count),
+        borderColor:'#8ab4ff',
+        backgroundColor:'rgba(138,180,255,0.15)',
+        fill:true,
+        tension:0.3
+      }]
+    },
+    options:{
+      scales:{x:{ticks:{color:'#ccc'}},y:{ticks:{color:'#ccc'}}},
+      plugins:{legend:{labels:{color:'#ccc'}}}
+    }
+  });
+
+  // ---- Chart: Status Distribution ----
+  const ctx2=document.getElementById('chartStatus').getContext('2d');
+  const sc=data.status_counts||{};
+  new Chart(ctx2,{
+    type:'doughnut',
+    data:{
+      labels:Object.keys(sc),
+      datasets:[{data:Object.values(sc),backgroundColor:['#2e7d32','#f9a825','#c62828']}]
+    },
+    options:{plugins:{legend:{labels:{color:'#ccc'}}}}
+  });
+
+  // ---- Goals ----
+  const g=data.goals||{};
+  document.getElementById('focus-pill').textContent='focus: '+(g.focus||'—');
+  document.getElementById('next-pill').textContent='next: '+(g.next_objective||'—');
+  document.getElementById('updated-pill').textContent='updated: '+(g.updated||'—');
+  document.getElementById('policy').textContent=JSON.stringify(g.policy||{},null,2);
+
+  // ---- Ledger tail ----
+  document.getElementById('ledger').textContent=(data.tail_ledger||[]).join("\n")||'(leer)';
+})();
+</script>
+
+<p style="margin-top:30px;color:#777">© 2025 Mira Elisabeth Schmid — Autonomous Reflection System Metrics</p>
+</body>
+</html>
