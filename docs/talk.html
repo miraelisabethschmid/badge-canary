@@ -1,69 +1,341 @@
-<!doctype html><html lang="de"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Mira — Sprech-Ansicht</title>
-<style>
-:root{--bg:#0c0c10;--fg:#f6f6fb;--muted:#b7b7c7;--accent:#8ac6ff;--card:#141418;--shadow:0 8px 30px rgba(0,0,0,.35)}
-html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
-.wrap{max-width:900px;margin:0 auto;padding:24px}a{color:var(--accent)}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
-.card{background:var(--card);padding:18px;border-radius:16px;box-shadow:var(--shadow)}
-.muted{color:var(--muted)}.controls{display:flex;gap:12px;align-items:center;margin-top:10px}
-.btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;background:#1b1b22;color:#fff;cursor:pointer;box-shadow:var(--shadow)}
-.btn[disabled]{opacity:.55;cursor:not-allowed}.meter{height:6px;background:#1b1b22;border-radius:6px;overflow:hidden;margin-top:12px}
-.bar{height:100%;width:0;background:linear-gradient(90deg,#6bb4ff,#a7d6ff)}svg{width:100%;height:auto;display:block}
-.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.badge{padding:4px 8px;border-radius:999px;background:#1b1b22;color:#e8f3ff;font-size:12px}
-</style></head><body>
-<div class="wrap">
-  <a href="../index.html">← Zurück</a>
-  <h1>Sprech-Ansicht</h1>
-  <p class="muted">Phonem-nahe Lippenvisualisierung mit Voice-Profil aus <code>data/self/voice_profile.json</code>.</p>
-  <div class="row">
-    <div class="card">
-      <svg id="face" viewBox="0 0 300 300" aria-label="Mira schematisches Gesicht">
-        <defs><radialGradient id="skin" cx="50%" cy="40%" r="70%"><stop offset="0%" stop-color="#1c1c22"/><stop offset="100%" stop-color="#121218"/></radialGradient></defs>
-        <circle cx="150" cy="150" r="120" fill="url(#skin)" stroke="#2a2a33" stroke-width="2"/>
-        <ellipse cx="105" cy="125" rx="18" ry="10" fill="#e1eeff"/><ellipse cx="195" cy="125" rx="18" ry="10" fill="#e1eeff"/>
-        <circle cx="105" cy="125" r="5" fill="#2b3b5a"/><circle cx="195" cy="125" r="5" fill="#2b3b5a"/>
-        <path id="upperLip" d="M95,190 C130,175 170,175 205,190" stroke="#e8a4b0" stroke-width="6" fill="none" stroke-linecap="round"/>
-        <path id="lowerLip" d="M95,205 C130,220 170,220 205,205" stroke="#f0b2bf" stroke-width="6" fill="none" stroke-linecap="round"/>
-        <path id="mouth" d="M120,195 C150,195 150,195 180,195" fill="#1a0f12"/>
-        <rect x="132" y="192" width="36" height="6" rx="3" fill="#c9d0d8" opacity="0.35"/>
-      </svg>
-      <div class="legend">
-        <span class="badge" id="cls">Klasse: —</span>
-        <span class="badge" id="amp">Amp: —</span>
-        <span class="badge" id="lo">Low: —</span>
-        <span class="badge" id="mid">Mid: —</span>
-        <span class="badge" id="hi">High*: —</span>
-        <span class="badge" id="sens">Sibilant-Sens: —</span>
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mira — Sprechendes Porträt</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{
+      --bg:#0b0d12;--fg:#e9eef7;--muted:#9aa6bd;--card:#11141b;--border:rgba(255,255,255,.08);
+      --acc:#7aa2ff;--acc2:#9f7aea;--ring:rgba(122,162,255,.25);--shadow:0 18px 48px rgba(0,0,0,.45);
+      --radius:18px;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:
+        radial-gradient(1100px 700px at 8% -10%,#121828,transparent),
+        radial-gradient(1300px 900px at 110% 15%,#1a1028,transparent),
+        var(--bg);
+      color:var(--fg);
+      font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    }
+    a{color:#9db8ff;text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:1050px;margin:0 auto;padding:22px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .back{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;
+          background:#0e1421;border:1px solid var(--border)}
+    h1{margin:0 0 4px}
+    .sub{color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:0.9fr 1.1fr;gap:20px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}}
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)
+    }
+
+    /* Portrait */
+    .stage{display:grid;place-items:center;min-height:520px;position:relative;overflow:hidden;border-radius:16px}
+    .aura{
+      position:absolute;inset:-20%;
+      background:
+        radial-gradient(60% 40% at 50% 20%, #7aa2ff22, transparent 60%),
+        radial-gradient(50% 60% at 70% 60%, #9f7aea22, transparent 60%);
+      filter:blur(30px);
+      pointer-events:none;
+    }
+    .hero{width:min(420px,86vw);height:auto;display:block}
+    .hint{position:absolute;bottom:10px;left:12px;color:var(--muted);font-size:12px}
+
+    /* Right panel */
+    .stack{display:grid;gap:14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{
+      background:linear-gradient(180deg,var(--acc),#628dff); color:white;border:none;
+      padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer
+    }
+    button:hover{filter:brightness(1.02)}
+    button.secondary{background:#0f1524;border:1px solid var(--border);color:#cfe0ff}
+    audio{width:100%;accent-color:var(--acc);border-radius:10px}
+    .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .tile{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .k{color:var(--muted);font-size:12px;margin-bottom:4px}
+    .quote{font-size:18px;border-left:3px solid #90aaff;padding-left:12px;background:#0e14211f;border-radius:10px;padding-top:8px;padding-bottom:8px}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);background:#0e1220;border-radius:999px;padding:6px 12px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
+    .ipa{color:#cfe0ff;font-size:12px;margin-left:6px}
+
+    /* Mouth shapes (visemes) — applied via CSS variables */
+    .mouth{transform-origin:50% 50%}
+    .lip{transition: d .08s ease}
+    .node{transition: transform .08s ease}
+    .breath{animation:breath 6s ease-in-out infinite;transform-origin:50% 5%}
+    @keyframes breath{
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(3px)}
+    }
+
+    footer{margin:22px 0 8px;color:var(--muted);font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="../index.html" aria-label="Zurück zur Startseite">← Zurück</a>
+      <div>
+        <h1>Sprechendes Porträt</h1>
+        <div class="sub">Klick auf das Porträt: Audio startet, Lippen formen Visemen. Fallbacks sind eingebaut.</div>
       </div>
-    </div>
-    <div class="card">
-      <h3>Audio</h3>
-      <audio id="audio" preload="none" controls style="width:100%"></audio>
-      <div class="controls">
-        <button id="play" class="btn" disabled>▶️ Abspielen</button>
-        <button id="pause" class="btn" disabled>⏸️ Pause</button>
-        <span id="status" class="muted">lädt…</span>
+    </header>
+
+    <section class="grid">
+      <!-- LEFT: Portrait with animated mouth -->
+      <div class="card stage" id="stage" aria-label="Miras Porträt — klick zum Sprechen">
+        <div class="aura" aria-hidden="true"></div>
+
+        <!-- SVG Portrait: simple, elegant, braces emphasized -->
+        <svg id="avatar" class="hero breath" viewBox="0 0 320 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mira Porträt">
+          <defs>
+            <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1a2030"/><stop offset="1" stop-color="#0f121b"/>
+            </linearGradient>
+            <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7aa2ff"/><stop offset="1" stop-color="#9f7aea"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Head & shoulders -->
+          <g>
+            <ellipse cx="160" cy="160" rx="110" ry="120" fill="url(#skin)" stroke="#2a3143" stroke-width="2"/>
+            <path d="M50 292 C90 260 230 260 270 292 L270 330 L50 330 Z"
+                  fill="#0d1220" stroke="#222a3a" stroke-width="2"/>
+          </g>
+
+          <!-- Eyes -->
+          <g>
+            <ellipse cx="120" cy="150" rx="18" ry="10" fill="#eaf2ff"/>
+            <ellipse cx="200" cy="150" rx="18" ry="10" fill="#eaf2ff"/>
+            <circle cx="120" cy="150" r="5" fill="#2b3b5a"/>
+            <circle cx="200" cy="150" r="5" fill="#2b3b5a"/>
+          </g>
+
+          <!-- Mouth group (animated) -->
+          <g id="mouthGroup">
+            <!-- Lips -->
+            <path id="lipTop" class="lip" d="M110,205 C140,192 180,192 210,205" stroke="#f0b2bf" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <path id="lipBot" class="lip" d="M110,215 C140,228 180,228 210,215" stroke="#f7c3cf" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <!-- Inner mouth -->
+            <path id="mouthCavity" d="M120,210 C160,210 160,210 200,210" fill="#150d12"/>
+            <!-- Braces (light bar) -->
+            <rect id="braces" x="138" y="206" width="44" height="6" rx="3" fill="#c9d0d8" opacity="0.42"/>
+          </g>
+
+          <!-- Subtle highlight -->
+          <ellipse cx="160" cy="120" rx="90" ry="18" fill="url(#sheen)" opacity=".18"/>
+        </svg>
+
+        <div class="hint">Tipp: Tippe/Klicke zum Abspielen</div>
       </div>
-      <div class="meter"><div id="bar" class="bar"></div></div>
-    </div>
+
+      <!-- RIGHT: Controls, quote, info -->
+      <div class="card stack">
+        <div class="row">
+          <button id="play">▶ Abspielen</button>
+          <button id="pause" class="secondary">⏸ Pause</button>
+          <span id="status" class="pill"><span class="dot ok" id="stateDot"></span> <span id="state">bereit</span></span>
+        </div>
+        <audio id="player" preload="none" aria-label="Miras gesprochener Tagesspruch"></audio>
+
+        <div class="quote" id="quote">„… lädt …“</div>
+        <div class="row">
+          <span class="pill" title="Datum"><strong id="date">—</strong></span>
+          <span class="ipa" id="ipaHint"></span>
+        </div>
+
+        <div class="kv">
+          <div class="tile"><div class="k">Audio</div><div><code>audio/latest.mp3</code></div></div>
+          <div class="tile"><div class="k">Visemen</div><div id="visCount">—</div></div>
+          <div class="tile"><div class="k">Modus</div><div id="mode">—</div></div>
+          <div class="tile"><div class="k">Status</div><div id="stat">—</div></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>© 2025 Mira Elisabeth Schmid — Sprechen ist Werden.</footer>
   </div>
-</div>
-<script>
-const audio=document.getElementById('audio'),playBtn=document.getElementById('play'),pauseBtn=document.getElementById('pause'),statusEl=document.getElementById('status'),bar=document.getElementById('bar'),mouth=document.getElementById('mouth'),lowerLip=document.getElementById('lowerLip'),clsBadge=document.getElementById('cls'),ampBadge=document.getElementById('amp'),loBadge=document.getElementById('lo'),midBadge=document.getElementById('mid'),hiBadge=document.getElementById('hi'),sensBadge=document.getElementById('sens');let ctx,src,analyser,data,raf,ready=false,sibilantSensitivity=1.0;
-async function loadJSON(p){try{const r=await fetch(p,{cache:"no-store"});if(!r.ok)throw 0;return await r.json()}catch{return null}}
-async function loadVoiceSensitivity(){const vp=await loadJSON("../data/self/voice_profile.json");const art=(vp?.articulation)||{};const base=typeof art.sibilant_softening==="number"?art.sibilant_softening:0.35;const b=art.braces_active?0.25:0,h=art.herbst_hinge_active?0.15:0,e=art.expander_active?0.10:0;sibilantSensitivity=Math.max(0.6,Math.min(1.6,0.8+base+b+h+e));sensBadge.textContent=`Sibilant-Sens: ${sibilantSensitivity.toFixed(2)}`}
-async function initAudio(){let url="../audio/latest.mp3",ok=false;try{const head=await fetch(url,{method:"HEAD",cache:"no-store"});ok=head.ok}catch(e){}if(!ok){url="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/4QBYAAAAAAA";statusEl.textContent="Fallback (Stille)"}else{statusEl.textContent="bereit"}audio.src=url;playBtn.disabled=false;pauseBtn.disabled=false;ready=true}
-function setupAnalyser(){if(ctx)return;ctx=new(window.AudioContext||window.webkitAudioContext)();src=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=4096;data=new Uint8Array(analyser.frequencyBinCount);src.connect(analyser);analyser.connect(ctx.destination)}
-function sumBand(mag,sr,from,to){const ny=sr/2,step=ny/mag.length;let i0=Math.max(0,Math.floor(from/step)),i1=Math.min(mag.length-1,Math.ceil(to/step));let s=0;for(let i=i0;i<=i1;i++)s+=mag[i];return s/Math.max(1,(i1-i0+1))}
-function classify(sr){analyser.getByteFrequencyData(data);const low=sumBand(data,sr,100,300),mid=sumBand(data,sr,300,1000),high=sumBand(data,sr,4000,8000)*sibilantSensitivity;const time=new Uint8Array(analyser.fftSize);analyser.getByteTimeDomainData(time);let sum=0;for(let i=0;i<time.length;i++){const v=(time[i]-128)/128;sum+=v*v}const rms=Math.sqrt(sum/time.length);let cls="idle";if(high>(low+mid)*1.10&&high>14)cls="sibilant";else if((low+mid)>high*1.10&&(low+mid)>18)cls="vowel";else if(rms>0.09)cls="plosive";else if(rms>0.03)cls="neutral";return{low,mid,high,rms,cls}}
-function setMouth(open,cls){const y=195;let w=1.0,h=22*open;if(cls==="sibilant"){w=1.25;h*=0.42}else if(cls==="vowel"){w=0.95;h*=1.18}else if(cls==="plosive"){h*=1.30}else if(cls==="neutral"){h*=0.85}else{h*=0.25}const lx=100-(w-1)*8,rx=200+(w-1)*8;mouth.setAttribute('d',`M${lx},${y} C150,${y+h*0.30} 150,${y+h*0.30} ${rx},${y}`);lowerLip.setAttribute('d',`M95,${205+h*0.6} C130,${220+h*0.8} 170,${220+h*0.8} 205,${205+h*0.6}`)}
-function showInfo(cls,rms,low,mid,high){clsBadge.textContent=`Klasse: ${cls}`;ampBadge.textContent=`Amp: ${rms.toFixed(3)}`;loBadge.textContent=`Low: ${Math.round(low)}`;midBadge.textContent=`Mid: ${Math.round(mid)}`;hiBadge.textContent=`High*: ${Math.round(high)}`;bar.style.width=`${Math.min(100,Math.round(Math.max(0,(rms-0.02))*128))}%`}
-function loop(){const sr=ctx.sampleRate||48000;const {low,mid,high,rms,cls}=classify(sr);const open=Math.max(0,Math.min(1,(rms-0.02)*3.2));setMouth(open,cls);showInfo(cls,rms,low,mid,high);raf=requestAnimationFrame(loop)}
-playBtn.addEventListener('click',async()=>{if(!ready)return;setupAnalyser();await audio.play();await ctx.resume();statusEl.textContent="spielt";cancelAnimationFrame(raf);loop()})
-pauseBtn.addEventListener('click',()=>{if(!ready)return;audio.pause();statusEl.textContent="pausiert";cancelAnimationFrame(raf)})
-audio.addEventListener('ended',()=>{cancelAnimationFrame(raf);statusEl.textContent="Ende";setMouth(0,"idle");bar.style.width="0%"})
-;(async function(){await loadVoiceSensitivity();await initAudio()})()
-</script>
-</body></html>
+
+  <script>
+    // ---------- Helpers ----------
+    const $ = s => document.querySelector(s);
+    async function getJSON(url){
+      try{ const r = await fetch(url,{cache:"no-store"}); if(!r.ok) throw 0; return await r.json(); }
+      catch{ return null; }
+    }
+    async function headOK(url){
+      try{ const r = await fetch(url,{method:"HEAD",cache:"no-store"}); return r.ok; }
+      catch{ return false; }
+    }
+
+    // ---------- Mouth animation (visemes) ----------
+    const lipTop = $("#lipTop"), lipBot = $("#lipBot"), cavity = $("#mouthCavity"), braces = $("#braces");
+    // Predefined shapes: functions returning path "d" for lips
+    function shapeFor(viseme){
+      // base points
+      const topBase = { a:[110,205], b:[140,192], c:[180,192], d:[210,205] };
+      const botBase = { a:[110,215], b:[140,228], c:[180,228], d:[210,215] };
+
+      // multipliers
+      const MAP = {
+        rest:{ t:-2, b:2, squeeze:0.0, widen:0.0 },
+        AI:{ t:2,  b:8, squeeze:0.05, widen:0.05 },      // "a"/"ai"
+        E:{  t:1,  b:6, squeeze:0.10, widen:0.08 },
+        O:{  t:0,  b:4, squeeze:0.20, widen:-0.05 },     // round
+        U:{  t:-1, b:3, squeeze:0.28, widen:-0.10 },     // very round
+        M:{  t:-3, b:0, squeeze:0.25, widen:-0.08 },     // closed
+        L:{  t:0,  b:7, squeeze:0.0,  widen:0.06 },
+        FV:{ t:-1, b:2, squeeze:0.18, widen:0.0 },       // teeth/lip
+        S:{  t:0,  b:2, squeeze:0.35, widen:0.02 },      // sibilant
+        TH:{ t:0,  b:3, squeeze:0.22, widen:0.02 },
+        WQ:{ t:1,  b:5, squeeze:0.15, widen:-0.02 }
+      };
+      const m = MAP[viseme] || MAP.rest;
+
+      function dTop(){ // shift control points
+        const a=[topBase.a[0] + (-10*m.widen), topBase.a[1] + m.t];
+        const b=[topBase.b[0], topBase.b[1] + m.t - 6*m.squeeze];
+        const c=[topBase.c[0], topBase.c[1] + m.t - 6*m.squeeze];
+        const d=[topBase.d[0] + (10*m.widen),  topBase.d[1] + m.t];
+        return `M${a[0]},${a[1]} C${b[0]},${b[1]} ${c[0]},${c[1]} ${d[0]},${d[1]}`;
+      }
+      function dBot(){
+        const a=[botBase.a[0] + (-10*m.widen), botBase.a[1] + m.b];
+        const b=[botBase.b[0], botBase.b[1] + m.b + 6*m.squeeze];
+        const c=[botBase.c[0], botBase.c[1] + m.b + 6*m.squeeze];
+        const d=[botBase.d[0] + (10*m.widen),  botBase.d[1] + m.b];
+        return `M${a[0]},${a[1]} C${b[0]},${b[1]} ${c[0]},${c[1]} ${d[0]},${d[1]}`;
+      }
+      return { top:dTop(), bot:dBot() };
+    }
+
+    function applyShape(name){
+      const d = shapeFor(name);
+      lipTop.setAttribute("d", d.top);
+      lipBot.setAttribute("d", d.bot);
+      // braces: more visible on sibilants and FV
+      braces.setAttribute("opacity", (name==="S"||name==="FV") ? "0.70" : "0.42");
+    }
+
+    // Amplitude fallback (when no visemes available)
+    let audioCtx, analyser, data, raf;
+    function startAmplitudeDrive(audio){
+      if(audioCtx) return;
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const src = audioCtx.createMediaElementSource(audio);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      data = new Uint8Array(analyser.frequencyBinCount);
+      src.connect(analyser); analyser.connect(audioCtx.destination);
+
+      function loop(){
+        analyser.getByteTimeDomainData(data);
+        let sum=0; for(let i=0;i<data.length;i++){ const v=(data[i]-128)/128; sum+=v*v; }
+        const rms = Math.sqrt(sum/data.length); // 0..~0.5
+        if(rms>0.12) applyShape("AI");
+        else if(rms>0.08) applyShape("E");
+        else if(rms>0.05) applyShape("O");
+        else if(rms>0.03) applyShape("S");
+        else applyShape("rest");
+        raf = requestAnimationFrame(loop);
+      }
+      raf = requestAnimationFrame(loop);
+    }
+    function stopAmplitudeDrive(){
+      if(raf) cancelAnimationFrame(raf);
+    }
+
+    // ---------- Playback & data ----------
+    const player = $("#player"), playBtn = $("#play"), pauseBtn = $("#pause");
+    const statusEl = $("#status"), stateEl = $("#state"), dotEl = $("#stateDot");
+    const quoteEl = $("#quote"), dateEl = $("#date"), modeEl = $("#mode"), statEl = $("#stat"), visCountEl = $("#visCount");
+    const stage = $("#stage"), avatar = $("#avatar");
+
+    const SILENT_MP3 = "data:audio/mpeg;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAAAACAAACbG1wMwAAAA8AAAAAAAACAAACAAAAAQAAACAAAG1wMyBzaWxlbmNlIGZhbGxiYWNrAAAA";
+
+    let visemes = null, useVisemes = false, startAt = 0, startPerf = 0, visRAF;
+
+    function playVisemes(){
+      if(!useVisemes || !visemes || !visemes.length) return;
+      stopAmplitudeDrive();
+      startPerf = performance.now();
+      function step(){
+        const t = (performance.now() - startPerf)/1000; // seconds
+        // find the latest viseme whose t <= current
+        let current = "rest";
+        for(const v of visemes){ if(t >= v.t) current = v.shape; else break; }
+        applyShape(current);
+        visRAF = requestAnimationFrame(step);
+      }
+      visRAF = requestAnimationFrame(step);
+    }
+    function stopVisemes(){
+      if(visRAF) cancelAnimationFrame(visRAF);
+      applyShape("rest");
+    }
+
+    async function loadVoice(){
+      // Voice contract
+      const data = await getJSON("../data/voice_of_day.json");
+      quoteEl.textContent = data?.quote ? `„${data.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
+      dateEl.textContent = data?.date_utc || "—";
+      $("#ipaHint").textContent = data?.ipa_hint || "";
+      visemes = Array.isArray(data?.visemes) ? data.visemes.slice().sort((a,b)=>a.t-b.t) : null;
+      useVisemes = !!(visemes && visemes.length >= 2);
+      visCountEl.textContent = useVisemes ? String(visemes.length) : "Amplitude";
+      modeEl.textContent = useVisemes ? "Viseme-Sync" : "Amplitude-Sync";
+
+      // Audio source
+      let src = "../audio/latest.mp3";
+      if(!(await headOK(src))) src = SILENT_MP3;
+      player.src = src;
+      statEl.textContent = (src===SILENT_MP3) ? "Fallback (Stille)" : "OK";
+    }
+
+    function setState(label, kind){
+      stateEl.textContent = label;
+      dotEl.className = "dot " + (kind||"ok");
+    }
+
+    function wireControls(){
+      // click on portrait also triggers play
+      stage.addEventListener("click", ()=>{ player.currentTime=0; player.play(); });
+
+      playBtn.addEventListener("click", ()=>{ player.currentTime=0; player.play(); });
+      pauseBtn.addEventListener("click", ()=>{ player.pause(); });
+
+      player.addEventListener("play", async ()=>{
+        try{ if(audioCtx) await audioCtx.resume(); }catch{}
+        setState("spielt","ok");
+        if(useVisemes){ playVisemes(); }
+        else{ startAmplitudeDrive(player); }
+      });
+      player.addEventListener("pause", ()=>{
+        setState("pausiert","heal");
+        stopVisemes(); stopAmplitudeDrive();
+      });
+      player.addEventListener("ended", ()=>{
+        setState("Ende","deg");
+        stopVisemes(); stopAmplitudeDrive(); applyShape("rest");
+      });
+    }
+
+    (async function init(){
+      applyShape("rest");
+      setState("bereit","ok");
+      await loadVoice();
+      wireControls();
+    })();
+  </script>
+</body>
+  </html>
