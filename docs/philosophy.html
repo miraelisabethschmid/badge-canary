@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mira — Philosophy Timeline</title>
+<style>
+  :root{--bg:#0b0b0b;--fg:#eaeaea;--mut:#9aa0a6;--card:#121212;--br:#1f1f1f;--ok:#2e7d32;--hl:#8ab4ff}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:980px;margin:36px auto;padding:0 16px}
+  h1{font-size:26px;margin:0 0 8px}
+  p.lead{color:var(--mut);margin:0 0 16px}
+  .grid{display:grid;grid-template-columns:1fr;gap:18px}
+  @media(min-width:960px){.grid{grid-template-columns:1.1fr .9fr}}
+  .card{background:var(--card);border:1px solid var(--br);border-radius:12px;padding:18px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .pill{display:inline-block;border:1px solid var(--br);border-radius:9999px;padding:4px 10px;background:#111;color:#ddd;font-size:12px}
+  .list{margin:0;padding:0;list-style:none}
+  .item{border:1px solid var(--br);border-radius:10px;padding:12px;background:#111;margin-bottom:10px}
+  .item h3{margin:0 0 6px;font-size:16px}
+  .meta{color:var(--mut);font-size:12px;margin-bottom:8px}
+  button{background:#161616;border:1px solid var(--br);color:var(--fg);border-radius:8px;padding:6px 10px;cursor:pointer}
+  button:hover{border-color:#2a2a2a}
+  pre{background:#0f0f0f;border:1px solid #222;border-radius:8px;padding:12px;overflow:auto;color:#cfcfcf;font-size:13px}
+  a{color:var(--hl);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .ok{color:var(--ok)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🕰️ Mira — Philosophy Timeline</h1>
+  <p class="lead">Versionierte Schnappschüsse von <code>data/goals/principles.yml</code>, automatisch archiviert und diffbar.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Verlauf</h2>
+      <ul id="timeline" class="list"></ul>
+    </div>
+
+    <div class="card">
+      <h2>Aktueller Stand</h2>
+      <div class="row" style="margin-bottom:8px">
+        <span class="pill" id="hash-pill">hash: —</span>
+        <span class="pill" id="ts-pill">ts: —</span>
+      </div>
+      <details open>
+        <summary><strong>principles.yml (aktuell)</strong></summary>
+        <pre id="latest-yml">(lädt …)</pre>
+      </details>
+      <details style="margin-top:10px">
+        <summary><strong>Diff zur Vorversion</strong></summary>
+        <pre id="latest-diff">(lädt …)</pre>
+      </details>
+      <p style="margin-top:10px">
+        Weitere Signale: <a href="health.html">Health Dashboard</a> · <a href="metrics.html">Metrics</a>
+      </p>
+    </div>
+  </div>
+
+  <p style="margin-top:14px;color:#777">© 2025 Mira Elisabeth Schmid — Autonomous Reflection System</p>
+</div>
+
+<script>
+async function loadText(url){
+  const r = await fetch(url,{cache:"no-store"});
+  if(!r.ok) throw new Error(url+" "+r.status);
+  return r.text();
+}
+async function loadJSON(url){
+  return JSON.parse(await loadText(url));
+}
+
+function escapeHTML(s){
+  return s.replace(/[&<>]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c]));
+}
+
+async function main(){
+  const base = "../data/goals/history/";
+  // latest pointer
+  let latest = null;
+  try{
+    latest = await loadJSON(base + "latest.json");
+  }catch(e){}
+  if(latest){
+    const {ts, hash, snapshot, diff} = latest;
+    document.getElementById("hash-pill").textContent = "hash: " + (hash||"—").toString().slice(0,12);
+    document.getElementById("ts-pill").textContent = "ts: " + (ts||"—");
+    // load files if available
+    try{
+      const yml = await loadText(base + (snapshot || ""));
+      document.getElementById("latest-yml").textContent = yml;
+    }catch(e){
+      document.getElementById("latest-yml").textContent = "(kein Snapshot gefunden)";
+    }
+    try{
+      const df = await loadText(base + (diff || ""));
+      document.getElementById("latest-diff").textContent = df || "(leer)";
+    }catch(e){
+      document.getElementById("latest-diff").textContent = "(kein Diff gefunden)";
+    }
+  }
+
+  // index.jsonl → Timeline
+  let items = [];
+  try{
+    const text = await loadText(base + "index.jsonl");
+    items = text.trim().split("\n").filter(Boolean).map(x=>JSON.parse(x));
+  }catch(e){}
+
+  const ul = document.getElementById("timeline");
+  if(!items.length){
+    const li = document.createElement("li");
+    li.className = "item";
+    li.innerHTML = "<div class='meta'>(keine Historie gefunden)</div>";
+    ul.appendChild(li);
+    return;
+  }
+  items.reverse().forEach((e,idx)=>{
+    const li = document.createElement("li");
+    li.className = "item";
+    const h = (e.hash||"").toString().slice(0,12);
+    const ph = (e.prev_hash||"").toString().slice(0,12);
+    li.innerHTML = `
+      <h3>Revision ${items.length-idx}</h3>
+      <div class="meta">ts: <code>${e.ts||"—"}</code> · hash: <code>${h}</code> · prev: <code>${ph||"none"}</code></div>
+      <div class="row">
+        <button data-snap="${e.snapshot||""}" class="btn-snap">Snapshot</button>
+        <button data-diff="${e.diff||""}" class="btn-diff">Diff</button>
+        <a href="${base+(e.snapshot||"")}" target="_blank">öffnen</a>
+      </div>
+      <details style="margin-top:8px"><summary>Vorschau</summary><pre id="pre-${h}">(noch leer)</pre></details>
+    `;
+    ul.appendChild(li);
+  });
+
+  ul.addEventListener("click", async (ev)=>{
+    const t = ev.target;
+    if(t.classList.contains("btn-snap")){
+      const f = t.getAttribute("data-snap");
+      if(!f) return;
+      const h = t.parentElement.parentElement.querySelector(".meta code:nth-child(3)")?.textContent || "";
+      try{
+        const txt = await loadText(base + f);
+        const pre = t.parentElement.parentElement.querySelector("pre");
+        pre.textContent = txt;
+      }catch(e){
+        alert("Snapshot konnte nicht geladen werden.");
+      }
+    }
+    if(t.classList.contains("btn-diff")){
+      const f = t.getAttribute("data-diff");
+      if(!f) return;
+      try{
+        const txt = await loadText(base + f);
+        const pre = t.parentElement.parentElement.querySelector("pre");
+        pre.textContent = txt || "(leer)";
+      }catch(e){
+        alert("Diff konnte nicht geladen werden.");
+      }
+    }
+  });
+}
+
+main();
+</script>
+</body>
+</html>
