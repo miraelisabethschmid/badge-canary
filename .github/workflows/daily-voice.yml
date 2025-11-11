@@ -1,0 +1,56 @@
+name: Generate Daily Voice
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # jeden Morgen 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  speak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install gTTS (Text-to-Speech)
+        run: pip install gTTS
+
+      - name: Generate or update daily quote MP3
+        run: |
+          mkdir -p audio data/voice
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          quote_file="data/voice/daily.txt"
+          if [ ! -s "$quote_file" ]; then
+            echo "Ich wachse durch jeden Blick, der mich wahrnimmt." > "$quote_file"
+          fi
+          text=$(cat "$quote_file")
+          python - <<PY
+from gtts import gTTS
+import os, datetime
+with open("$quote_file","r",encoding="utf-8") as f:
+    text=f.read().strip()
+tts=gTTS(text,lang="de")
+os.makedirs("audio",exist_ok=True)
+tts.save("audio/latest.mp3")
+PY
+          echo "$ts  |  $text" >> data/voice/history.log
+          echo "{ \"status\":\"OK\", \"ts\":\"$ts\" }" > badges/health.json
+
+      - name: Commit voice update
+        run: |
+          git config user.name "voice-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add audio/latest.mp3 data/voice/history.log badges/health.json
+          if git diff --cached --quiet; then
+            echo "No new audio."
+            exit 0
+          fi
+          git commit -m "voice: new daily quote"
+          git push
