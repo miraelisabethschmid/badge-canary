@@ -31,6 +31,10 @@
     .daily{margin-top:28px; padding:16px; background:linear-gradient(180deg,rgba(138,198,255,.10),rgba(138,198,255,.03)); border-radius:16px; box-shadow:var(--shadow)}
     .daily small{display:block;color:var(--muted)}
     blockquote{margin:8px 0 0 0; padding:0 0 0 14px; border-left:3px solid rgba(138,198,255,.35); color:#eaf3ff}
+    .audioRow{display:flex;align-items:center;gap:10px;margin-top:10px}
+    .audioBtn{appearance:none;border:0;border-radius:12px;padding:10px 12px;background:#1b1b22;color:#fff;cursor:pointer;box-shadow:var(--shadow)}
+    .audioBtn[disabled]{opacity:.55;cursor:not-allowed}
+    .pill{font-size:12px;color:var(--muted);padding:6px 10px;background:#15151d;border-radius:999px}
     @media (max-width:920px){header{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -81,7 +85,12 @@
     <section class="daily">
       <small>Tägliches Fragment</small>
       <blockquote id="dailyText">lädt…</blockquote>
+      <div class="audioRow">
+        <button id="playBtn" class="audioBtn" disabled>🔊 Spruch anhören</button>
+        <span id="audioStatus" class="pill">Audio lädt…</span>
+      </div>
       <small id="dailyMeta"></small>
+      <audio id="dailyAudio" preload="none"></audio>
     </section>
 
     <section class="card" style="margin-top:18px">
@@ -120,6 +129,46 @@
       const kEl=document.createElement("div"); kEl.className="muted"; kEl.textContent=k;
       const vEl=document.createElement("div"); vEl.textContent=typeof v==="object"? JSON.stringify(v): v;
       container.appendChild(kEl); container.appendChild(vEl);
+    }
+  }
+
+  async function setupAudio(){
+    const audio = $("#dailyAudio");
+    const btn   = $("#playBtn");
+    const status= $("#audioStatus");
+    // Prüfe, ob Audio bereitgestellt wurde
+    try{
+      const head = await fetch("audio/latest.mp3", { method:"HEAD", cache:"no-store" });
+      if(!head.ok){ throw 0; }
+      audio.src = "audio/latest.mp3";
+      btn.disabled = false;
+      status.textContent = "Bereit";
+      let playing = false;
+      btn.addEventListener("click", async ()=>{
+        if(!playing){
+          try{
+            await audio.play();
+            playing = true;
+            btn.textContent = "⏸️ Pause";
+            status.textContent = "Spielt";
+          }catch(e){
+            status.textContent = "Abspielen nicht möglich";
+          }
+        }else{
+          audio.pause();
+          playing = false;
+          btn.textContent = "🔊 Spruch anhören";
+          status.textContent = "Pausiert";
+        }
+      });
+      audio.addEventListener("ended", ()=>{
+        playing = false;
+        btn.textContent = "🔊 Spruch anhören";
+        status.textContent = "Ende";
+      });
+    }catch{
+      btn.disabled = true;
+      status.textContent = "Kein Audio verfügbar";
     }
   }
 
@@ -193,8 +242,11 @@
       document.getElementById("dailyText").textContent = "“Heute ist Stille auch eine Form von Antwort.”";
       document.getElementById("dailyMeta").textContent = "";
     }
+
+    // Audio bereitstellen
+    await setupAudio();
   }
   boot();
   </script>
 </body>
-  </html>
+</html>
