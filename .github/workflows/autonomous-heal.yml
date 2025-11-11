@@ -22,8 +22,50 @@ jobs:
 
       - name: Setup Python
         uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
+        with:
+          python-version: '3.12'
 
+      # --- Schritt 1: Contracts/Fallbacks sicherstellen (No-404-Policy) ---
+      - name: Ensure contracts (folders + placeholders)
+        shell: bash
+        run: |
+          set -e
+          mkdir -p badges data/self data/ledger data/archive audio docs scripts
+          # Health JSON – falls fehlt, konservativer Default
+          if [ ! -s badges/health.json ]; then
+            printf '{ "status":"DEGRADED","ts":"n/a" }\n' > badges/health.json
+          fi
+          # Self Describe – kompakter Default
+          if [ ! -s data/self/self-describe.json ]; then
+            cat > data/self/self-describe.json <<'JSON'
+            {
+              "physical": { "description": "—" },
+              "voice":    { "profile": "—" },
+              "affect":   { "inputs": { "focus": "—" }, "narrative": "—" }
+            }
+JSON
+          fi
+          # Ledger-Datei vorhanden halten
+          touch data/ledger/events.jsonl
+          # Stille-MP3 als Audio-Fallback (1s)
+          if [ ! -s audio/latest.mp3 ]; then
+            base64 -d > audio/latest.mp3 << 'B64'
+            // UExBQ0VIT0xERVI6IHNpbGVudCAxcyBtcDMgKG1pbmkuKSBnZW5lcmF0ZWQgdmlhIGJhc2U2NAo=
+B64
+          fi
+          # Health-Viewer (docs/health.html) – optionaler Minimalfall
+          if [ ! -s docs/health.html ]; then
+            cat > docs/health.html <<'HTML'
+            <!doctype html><meta charset="utf-8"><title>Health</title>
+            <pre id="raw">{}</pre><script>
+            fetch("../badges/health.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
+              document.getElementById("raw").textContent = JSON.stringify(j,null,2)
+            }).catch(()=>{document.getElementById("raw").textContent="{}"})
+            </script>
+HTML
+          fi
+
+      # --- Artefakt-Detection wie gehabt ---
       - id: detect
         name: Detect new artifacts
         shell: bash
@@ -37,6 +79,7 @@ jobs:
           diff=$(git diff --name-only "$last".."$head" -- data/archive | wc -l)
           [ "$diff" -gt 0 ] && echo "new=true" >> $GITHUB_OUTPUT || echo "new=false" >> $GITHUB_OUTPUT
 
+      # --- Healing-Dummy (PNG) ---
       - name: Generate PNG (healing)
         shell: bash
         continue-on-error: true
@@ -55,23 +98,12 @@ plt.savefig(f"data/archive/wave-{int(time.time())}.png")
 PY
           ec=$?
           if [ "$ec" -ne 0 ]; then
-            mkdir -p data/logs data/archive
             echo "PNG failed - healing" | tee -a data/logs/heal.txt
             echo "{}" > data/archive/placeholder.json
           fi
           exit 0
 
-      - name: Cleanup old archives (retention guard)
-        shell: bash
-        run: |
-          days=30
-          path="data/archive"
-          mkdir -p "$path" data/logs
-          echo "[cleanup] Removing files older than $days days in $path"
-          find "$path" -type f -mtime +$days -print -delete | tee -a data/logs/cleanup.log || true
-          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          echo "$ts cleanup complete" >> data/logs/cleanup.log
-
+      # --- Selbstmod-Tag (idempotent) ---
       - name: Self-mod (idempotent)
         shell: bash
         run: |
@@ -88,6 +120,7 @@ PY
             echo "Inserted log extension tag."
           }
 
+      # --- Append-only Log + Checksums ---
       - name: Append-only log with checksum
         shell: bash
         run: |
@@ -98,6 +131,7 @@ PY
           echo "$msg" >> "$f"
           sum=$(sha256sum "$f" | awk '{print $1}')
           echo "$ts sha256=$sum" >> data/logs/checksums.txt
+          # Rotation bei >1 MB
           sz=$(wc -c < "$f")
           if [ "$sz" -gt 1048576 ]; then
             mv "$f" "data/logs/run-$(date -u +%Y%m%d%H%M%S).log"
@@ -112,6 +146,7 @@ PY
             exit 0
           fi
 
+      # --- Ledger & State ---
       - name: Ledger entry
         shell: bash
         run: |
@@ -128,112 +163,7 @@ PY
           | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}' > data/ledger/state.sha256
           git add data/ledger/state.sha256
 
-      - id: prevhealth
-        name: Read previous health status
-        shell: bash
-        run: |
-          PREV="UNKNOWN"
-          if [ -f badges/health.json ]; then
-            PREV=$(python - <<'PY'
-import json,sys
-try:
-  print(json.load(open("badges/health.json"))["status"])
-except Exception:
-  print("UNKNOWN")
-PY
-)
-          fi
-          echo "PREV_STATUS=$PREV" >> $GITHUB_ENV
-
-      - name: Health probe
-        shell: bash
-        run: |
-          mkdir -p badges
-          status="OK"
-          test -s data/archive || status="DEGRADED"
-          grep -q "PNG failed" data/logs/heal.txt 2>/dev/null && status="HEALING"
-          printf '{"status":"%s","ts":"%s"}\n' "$status" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > badges/health.json
-          git add badges/health.json
-          git commit -m "Health probe: $status" || echo "No health change"
-          git push || true
-
-      - name: Build health.svg from health.json
-        shell: bash
-        run: |
-          chmod +x scripts/health_badge.py || true
-          python scripts/health_badge.py
-          git add badges/health.svg
-          git commit -m "badge: update health.svg" || echo "No badge change"
-          git push || true
-
-      - id: mailts
-        name: Mail timestamp (UTC)
-        shell: bash
-        run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
-
-      - id: curhealth
-        name: Export current health status
-        shell: bash
-        run: |
-          CUR=$(python - <<'PY'
-import json,sys
-try:
-  print(json.load(open("badges/health.json"))["status"])
-except Exception:
-  print("UNKNOWN")
-PY
-)
-          echo "CURRENT_STATUS=$CUR" >> $GITHUB_ENV
-
-      - name: Anomaly ping (health status changed)
-        if: always() && env.PREV_STATUS != env.CURRENT_STATUS && secrets.SMTP_SERVER && secrets.SMTP_PORT && secrets.SMTP_USER && secrets.SMTP_PASS
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.SMTP_SERVER }}
-          server_port: ${{ secrets.SMTP_PORT }}
-          username: ${{ secrets.SMTP_USER }}
-          password: ${{ secrets.SMTP_PASS }}
-          subject: "Mira anomaly: ${{ env.PREV_STATUS }} → ${{ env.CURRENT_STATUS }} @ ${{ env.MAIL_TS }}"
-          to: pemia.dir@gmail.com
-          from: "badge-canary <noreply@canary.local>"
-          content_type: text/plain
-          body: |
-            Health status changed.
-            previous: ${{ env.PREV_STATUS }}
-            current:  ${{ env.CURRENT_STATUS }}
-            timestamp: ${{ env.MAIL_TS }}
-            run: ${{ github.run_id }} • sha: ${{ github.sha }}
-
-      - name: Reflect goals (teleological update)
-        shell: bash
-        run: |
-          echo "[reflector] Running goal_reflector.py ..."
-          chmod +x scripts/goal_reflector.py || true
-          python scripts/goal_reflector.py
-          git add data/goals/current.json
-          git commit -m "goal_reflector: updated current goals" || echo "No goal changes"
-          git push || true
-
-      - name: Synthesize affect-state (innerer Zustand)
-        shell: bash
-        run: |
-          echo "[affect] synthesizing ..."
-          chmod +x scripts/affect_synthesizer.py || true
-          python scripts/affect_synthesizer.py
-          git add data/self/affect-state.json
-          git commit -m "affect: synthesize state" || echo "No affect change"
-          git push || true
-
-      - name: Rebuild self-describe.json
-        shell: bash
-        run: |
-          echo "[self-describe] rebuilding ..."
-          chmod +x scripts/self_describe_builder.py || true
-          python scripts/self_describe_builder.py
-          git add data/self/self-describe.json
-          git commit -m "self-describe: refresh persona state" || echo "No self-describe change"
-          git push || true
-
+      # --- Semantic patch bump ---
       - name: Semantic patch bump (deterministic)
         shell: bash
         run: |
@@ -247,6 +177,26 @@ PY
             git add "$vfile"
           fi
 
+      # --- Health probe (schreibt badges/health.json) ---
+      - name: Health probe
+        shell: bash
+        run: |
+          mkdir -p badges
+          status="OK"
+          test -s data/archive || status="DEGRADED"
+          grep -q "PNG failed" data/logs/heal.txt 2>/dev/null && status="HEALING"
+          printf '{"status":"%s","ts":"%s"}\n' "$status" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > badges/health.json
+          git add badges/health.json
+
+      # --- Health-SVG aus JSON bauen (Scripts ist im Repo) ---
+      - name: Build health.svg from health.json
+        shell: bash
+        run: |
+          chmod +x scripts/health_badge.py || true
+          python scripts/health_badge.py || true
+          git add badges/health.svg || true
+
+      # --- Commit & Push (Noise-Guard wie gehabt) ---
       - name: Commit changes (signed)
         shell: bash
         run: |
@@ -257,14 +207,21 @@ PY
             echo "No changes."
             exit 0
           fi
+          # Prüfe, ob NUR health.json im Index liegt
           only_health=$(git diff --name-only --cached | grep -v '^badges/health\.json$' | wc -l | tr -d ' ')
           if [ "$only_health" -eq 0 ]; then
             echo "Only health.json changed — skipping commit to reduce noise."
             git reset
             exit 0
           fi
-          git commit -S -m "pulse: content+ledger+logs+self+affect (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs+self+affect (run ${{ github.run_id }})"
+          git commit -S -m "pulse: content+ledger+logs (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs (run ${{ github.run_id }})"
           git push
+
+      # --- Debounced Mail bei neuen Artefakten ---
+      - name: Mail timestamp (UTC)
+        id: mailts
+        shell: bash
+        run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
 
       - name: Debounced mail
         if: always() && steps.detect.outputs.new == 'true'
@@ -284,28 +241,12 @@ PY
             new-artifacts: ${{ steps.detect.outputs.new }}
             timestamp: ${{ env.MAIL_TS }}
 
+      # --- Run-Summary ---
       - name: Pulse summary
         if: always()
         shell: bash
         run: |
-          STATUS=$(python - <<'PY'
-import json,sys
-try:
-  print(json.load(open("badges/health.json"))["status"])
-except Exception:
-  print("n/a")
-PY
-)
-          AFF=$(python - <<'PY'
-import json,sys
-try:
-  print(json.load(open("data/self/affect-state.json"))["label"])
-except Exception:
-  print("n/a")
-PY
-)
           echo "## Autonomous Heal — Pulse ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- Actor: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Health: \`${STATUS}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Affect: \`${AFF}\`" >> $GITHUB_STEP_SUMMARY
           echo "- New artifacts: \`${{ steps.detect.outputs.new || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: \`$(jq -r .status badges/health.json 2>/dev/null || echo 'n/a')\`" >> $GITHUB_STEP_SUMMARY
