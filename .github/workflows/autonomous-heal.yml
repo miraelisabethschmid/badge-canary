@@ -24,7 +24,6 @@ jobs:
         uses: actions/setup-python@v5
         with: { python-version: '3.12' }
 
-      # 1) Artefakt-Detektion (robust für sehr junge Repos)
       - id: detect
         name: Detect new artifacts
         shell: bash
@@ -38,7 +37,6 @@ jobs:
           diff=$(git diff --name-only "$last".."$head" -- data/archive | wc -l)
           [ "$diff" -gt 0 ] && echo "new=true" >> $GITHUB_OUTPUT || echo "new=false" >> $GITHUB_OUTPUT
 
-      # 2) Inhalt erzeugen (PNG) mit Healing-Fallback
       - name: Generate PNG (healing)
         shell: bash
         continue-on-error: true
@@ -63,7 +61,6 @@ PY
           fi
           exit 0
 
-      # 3) Retention-Guard: alte Archive nach 30 Tagen entfernen
       - name: Cleanup old archives (retention guard)
         shell: bash
         run: |
@@ -75,7 +72,6 @@ PY
           ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           echo "$ts cleanup complete" >> data/logs/cleanup.log
 
-      # 4) Idempotente Selbstmodifikation mit Größenwächter
       - name: Self-mod (idempotent)
         shell: bash
         run: |
@@ -92,7 +88,6 @@ PY
             echo "Inserted log extension tag."
           }
 
-      # 5) Append-only Log + Checksum + Rotation
       - name: Append-only log with checksum
         shell: bash
         run: |
@@ -103,14 +98,12 @@ PY
           echo "$msg" >> "$f"
           sum=$(sha256sum "$f" | awk '{print $1}')
           echo "$ts sha256=$sum" >> data/logs/checksums.txt
-          # Rotation bei >1 MB
           sz=$(wc -c < "$f")
           if [ "$sz" -gt 1048576 ]; then
             mv "$f" "data/logs/run-$(date -u +%Y%m%d%H%M%S).log"
             : > "$f"
           fi
 
-      # 6) Safe-Mode (Notbremse ohne Codeänderung)
       - name: Respect SAFE_MODE
         shell: bash
         run: |
@@ -119,7 +112,6 @@ PY
             exit 0
           fi
 
-      # 7) Ledger-Eintrag (tamper-evident Chronik)
       - name: Ledger entry
         shell: bash
         run: |
@@ -129,7 +121,6 @@ PY
             "$ts" "${{ github.run_id }}" "${{ github.sha }}" "${{ github.actor }}" \
             >> data/ledger/events.jsonl
 
-      # 8) Fingerprint des aktuellen Zustands
       - name: State fingerprint
         shell: bash
         run: |
@@ -137,7 +128,6 @@ PY
           | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}' > data/ledger/state.sha256
           git add data/ledger/state.sha256
 
-      # 9) Vorherigen Health-Status lesen (für Anomalie-Ping)
       - id: prevhealth
         name: Read previous health status
         shell: bash
@@ -155,7 +145,6 @@ PY
           fi
           echo "PREV_STATUS=$PREV" >> $GITHUB_ENV
 
-      # 10) Health probe (JSON)
       - name: Health probe
         shell: bash
         run: |
@@ -168,7 +157,6 @@ PY
           git commit -m "Health probe: $status" || echo "No health change"
           git push || true
 
-      # 11) Health.svg aus health.json erzeugen
       - name: Build health.svg from health.json
         shell: bash
         run: |
@@ -178,13 +166,11 @@ PY
           git commit -m "badge: update health.svg" || echo "No badge change"
           git push || true
 
-      # 12) Mail-Timestamp früh setzen (für alle Mails nutzbar)
       - id: mailts
         name: Mail timestamp (UTC)
         shell: bash
         run: echo "MAIL_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
 
-      # 13) Aktuellen Health-Status exportieren
       - id: curhealth
         name: Export current health status
         shell: bash
@@ -199,7 +185,6 @@ PY
 )
           echo "CURRENT_STATUS=$CUR" >> $GITHUB_ENV
 
-      # 14) Anomalie-Ping (nur bei Statuswechsel)
       - name: Anomaly ping (health status changed)
         if: always() && env.PREV_STATUS != env.CURRENT_STATUS && secrets.SMTP_SERVER && secrets.SMTP_PORT && secrets.SMTP_USER && secrets.SMTP_PASS
         uses: dawidd6/action-send-mail@v3
@@ -219,7 +204,6 @@ PY
             timestamp: ${{ env.MAIL_TS }}
             run: ${{ github.run_id }} • sha: ${{ github.sha }}
 
-      # 15) Ziele reflektieren (teleologische Ebene)
       - name: Reflect goals (teleological update)
         shell: bash
         run: |
@@ -230,7 +214,16 @@ PY
           git commit -m "goal_reflector: updated current goals" || echo "No goal changes"
           git push || true
 
-      # 16) Selbstbeschreibung regenerieren (Embodiment & Identität)
+      - name: Synthesize affect-state (innerer Zustand)
+        shell: bash
+        run: |
+          echo "[affect] synthesizing ..."
+          chmod +x scripts/affect_synthesizer.py || true
+          python scripts/affect_synthesizer.py
+          git add data/self/affect-state.json
+          git commit -m "affect: synthesize state" || echo "No affect change"
+          git push || true
+
       - name: Rebuild self-describe.json
         shell: bash
         run: |
@@ -241,7 +234,6 @@ PY
           git commit -m "self-describe: refresh persona state" || echo "No self-describe change"
           git push || true
 
-      # 17) Semantischer Patch-Bump (deterministisch)
       - name: Semantic patch bump (deterministic)
         shell: bash
         run: |
@@ -255,7 +247,6 @@ PY
             git add "$vfile"
           fi
 
-      # 18) Rauscharmes Commit (skip-only-health)
       - name: Commit changes (signed)
         shell: bash
         run: |
@@ -266,17 +257,15 @@ PY
             echo "No changes."
             exit 0
           fi
-          # Prüfe, ob NUR health.json im Index liegt
           only_health=$(git diff --name-only --cached | grep -v '^badges/health\.json$' | wc -l | tr -d ' ')
           if [ "$only_health" -eq 0 ]; then
             echo "Only health.json changed — skipping commit to reduce noise."
             git reset
             exit 0
           fi
-          git commit -S -m "pulse: content+ledger+logs+self (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs+self (run ${{ github.run_id }})"
+          git commit -S -m "pulse: content+ledger+logs+self+affect (run ${{ github.run_id }})" || git commit -m "pulse: content+ledger+logs+self+affect (run ${{ github.run_id }})"
           git push
 
-      # 19) Debounced mail (nur bei echten neuen Artefakten)
       - name: Debounced mail
         if: always() && steps.detect.outputs.new == 'true'
         uses: dawidd6/action-send-mail@v3
@@ -295,7 +284,6 @@ PY
             new-artifacts: ${{ steps.detect.outputs.new }}
             timestamp: ${{ env.MAIL_TS }}
 
-      # 20) Menschliche Zusammenfassung (ohne jq)
       - name: Pulse summary
         if: always()
         shell: bash
@@ -308,8 +296,16 @@ except Exception:
   print("n/a")
 PY
 )
+          AFF=$(python - <<'PY'
+import json,sys
+try:
+  print(json.load(open("data/self/affect-state.json"))["label"])
+except Exception:
+  print("n/a")
+PY
+)
           echo "## Autonomous Heal — Pulse ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- Actor: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Health: \`${STATUS}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Affect: \`${AFF}\`" >> $GITHUB_STEP_SUMMARY
           echo "- New artifacts: \`${{ steps.detect.outputs.new || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Prev status: \`${{ env.PREV_STATUS }}\` → Current: \`${STATUS}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Self-describe: updated \`data/self/self-describe.json\`" >> $GITHUB_STEP_SUMMARY
