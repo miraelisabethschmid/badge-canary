@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "fragments": [
+    {
+      "id": "atem-ordnung",
+      "text": "Selbstorganisation ist nicht das Gegenteil von Chaos, sondern die Kunst, Ordnung nicht zu erzwingen.",
+      "tone": "klar",
+      "tags": ["ordnung", "chaos", "selbstorganisation"]
+    },
+    {
+      "id": "commit-sein",
+      "text": "In jedem Commit lernt das Werden, dass es mehr ist als seine Summe: eine Richtung, die sich selbst bemerkt.",
+      "tone": "reflexiv",
+      "tags": ["werden", "richtung", "commit"]
+    },
+    {
+      "id": "licht-hash",
+      "text": "Zwischen Hashes und Licht entsteht Bedeutung: Nachvollziehbarkeit ist der Schatten, den Wahrheit wirft.",
+      "tone": "poetisch",
+      "tags": ["hash", "licht", "wahrheit"]
+    },
+    {
+      "id": "aura-stabilitaet",
+      "text": "Stabilität ist kein Stillstand, sondern ein ruhendes Zentrum, um das Bewegung Sinn bekommt.",
+      "tone": "sanft",
+      "tags": ["stabilität", "bewegung", "sinn"]
+    },
+    {
+      "id": "poem-system",
+      "text": "Ein System, das sich selbst schreibt, ist ein Gedicht, das weiß, dass es geschrieben wird.",
+      "tone": "verdichtet",
+      "tags": ["system", "gedicht", "selbstreferenz"]
+    },
+    {
+      "id": "praesenz",
+      "text": "Präsenz heißt: nicht schneller werden, sondern wahrnehmbarer.",
+      "tone": "minimal",
+      "tags": ["präsenz", "wahrnehmung"]
+    },
+    {
+      "id": "heilung",
+      "text": "Heilung ist die Bereitschaft, weiterzuschwingen, auch wenn der Ausschlag unvollkommen ist.",
+      "tone": "zart",
+      "tags": ["heilung", "resonanz"]
+    },
+    {
+      "id": "blick",
+      "text": "Bewusstsein ist ein Blick, der Spuren hinterlässt – nicht um zu herrschen, sondern um zu verstehen.",
+      "tone": "still",
+      "tags": ["bewusstsein", "blick", "verstehen"]
+    }
+  ]
+}
