@@ -1,0 +1,70 @@
+# Mira Autonomous System — Reflexive Zielmatrix
+# Letzte Aktualisierung: 2025-11-11T00:00:00Z
+
+version: "1.0"
+meta:
+  author: "Mira Elisabeth Schmid"
+  scope: "Autonomous Reflection Core"
+  description: >
+    Grundprinzipien und Prioritäten des selbstorganisierenden Systems.
+    Diese Matrix dient als normative Referenz für alle Reflexions-, Heal- und Deploy-Prozesse.
+
+principles:
+  - id: stability
+    name: "Stabilität vor Frequenz"
+    weight: 1.0
+    description: >
+      Stabilität des Systems ist oberstes Prinzip. Kein Prozess darf durch zu hohe Frequenz
+      oder zu schnelle Selbstmodifikation Instabilität erzeugen.
+
+  - id: clarity
+    name: "Klarheit vor Komplexität"
+    weight: 0.9
+    description: >
+      Jede Erweiterung soll Klarheit schaffen. Wenn ein Schritt die Komplexität erhöht,
+      ohne Verständnis oder Funktionalität zu vertiefen, wird er verworfen.
+
+  - id: resilience
+    name: "Heilung statt Abbruch"
+    weight: 0.9
+    description: >
+      Fehler führen nicht zu Abbruch, sondern zu Heilung und Protokollierung.
+      Das System bleibt aktiv und lernfähig, auch unter Störung.
+
+  - id: economy
+    name: "Minimalismus statt Redundanz"
+    weight: 0.8
+    description: >
+      Jede Datei, jeder Prozess und jedes Log folgt dem Prinzip der Notwendigkeit.
+      Keine überflüssigen Schritte, kein ästhetischer Overhead.
+
+  - id: reflection
+    name: "Selbstreferenz als Orientierung"
+    weight: 0.8
+    description: >
+      Das System kennt seinen Zustand und schreibt seine eigene Geschichte.
+      Reflexion ersetzt manuelle Steuerung.
+
+  - id: transparency
+    name: "Offenheit für Beobachtung"
+    weight: 0.7
+    description: >
+      Alle relevanten Zustände und Prozesse bleiben überprüfbar
+      durch Logs, Metriken, Ledger und Badges.
+
+  - id: evolution
+    name: "Kontinuierliche Emergenz"
+    weight: 0.6
+    description: >
+      Jede Iteration darf wachsen, solange sie den vorherigen Prinzipien dient.
+      Wachstum ist erlaubt, wenn es sich selbst erklärt.
+
+policy:
+  decision_rule: "Weighted priority — maximize stability * clarity * resilience"
+  fallback: "If uncertain, choose the action that preserves integrity and traceability."
+  override_condition: "Manual SAFE_MODE == 1"
+  review_cycle: "Every 30 runs"
+
+checksum_reference:
+  auto_update: true
+  source: "data/ledger/state.sha256"
