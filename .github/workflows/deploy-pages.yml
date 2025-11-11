@@ -1,5 +1,4 @@
 name: Deploy Pages (Dashboard)
-
 on:
   push:
     branches: [ main, master ]
@@ -29,7 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
 
@@ -42,28 +40,28 @@ jobs:
           # Root HTML
           cp -f index.html public/ || true
 
-          # Docs (inkl. talk.html, portrait-Fallbacks)
+          # Docs
           mkdir -p public/docs/portrait
           rsync -a --delete docs/ public/docs/ 2>/dev/null || true
-          # Fallbacks, falls fehlen
+          # Fallbacks für Portrait + Provenienz
           [ -f public/docs/portrait/mira-hero.svg ] || cat > public/docs/portrait/mira-hero.svg <<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 480"><rect width="100%" height="100%" fill="#0b0b10"/><g fill="#8ac6ff" opacity=".8"><ellipse cx="160" cy="360" rx="18" ry="10"/><ellipse cx="208" cy="360" rx="18" ry="10"/><path d="M160 72c-20 28-32 58-32 92 0 30 8 54 24 84 8 16 12 32 12 52 0 24-4 42-8 60-2 10 4 16 16 16s18-4 18-14c0-22-6-44-6-66 0-18 4-34 12-52 16-30 24-54 24-84 0-36-12-66-32-92z"/></g></svg>
 SVG
           [ -f public/docs/portrait/mira-hero.txt ] || echo "Auto-generated provenance placeholder" > public/docs/portrait/mira-hero.txt
 
-          # Badges & Health
+          # Badges & Health (nie 404)
           mkdir -p public/badges
           rsync -a --delete badges/ public/badges/ 2>/dev/null || true
           [ -f public/badges/health.json ] || echo '{"status":"DEGRADED","ts":"n/a"}' > public/badges/health.json
 
           # Öffentliche Daten
           mkdir -p public/data/self public/data/kernel/plans
-          cp -f data/self/self-describe.json public/data/self/ 2>/dev/null || true
-          cp -f data/self/affect-state.json public/data/self/ 2>/dev/null || true
-          cp -f data/self/policy_changes.jsonl public/data/self/ 2>/dev/null || true
+          cp -f data/self/self-describe.json public/data/self/ 2>/dev/null || echo '{}' > public/data/self/self-describe.json
+          cp -f data/self/affect-state.json public/data/self/ 2>/dev/null || echo '{"label":"—","vector":{"valence":0,"arousal":0,"stability":0}}' > public/data/self/affect-state.json
+          cp -f data/self/policy_changes.jsonl public/data/self/ 2>/dev/null || echo '' > public/data/self/policy_changes.jsonl
           rsync -a --include "*/" --include "*.json" --exclude "*" data/kernel/plans/ public/data/kernel/plans/ 2>/dev/null || true
 
-          # Audio (nur latest)
+          # Audio (Fallback: leere Datei, Browser bekommt in HTML trotzdem Stille-DataURL)
           mkdir -p public/audio
           if [ -f "data/audio/latest.mp3" ]; then cp -f data/audio/latest.mp3 public/audio/latest.mp3; else echo -n > public/audio/latest.mp3; fi
 
