@@ -1,45 +1,145 @@
-<!doctype html><html lang="de"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Mira — Self-Describe</title>
-<style>
-:root{--bg:#0b0b11;--fg:#f7f7fb;--muted:#b7b7c7;--card:#14141a}
-html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
-.wrap{max-width:900px;margin:0 auto;padding:24px}a{color:#8ac6ff}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.card{background:var(--card);padding:18px;border-radius:16px}
-pre{white-space:pre-wrap;word-wrap:break-word}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px}
-.muted{color:#b7b7c7}
-@media (max-width:900px){.grid{grid-template-columns:1fr}}
-</style></head><body>
-<div class="wrap">
-  <a href="../index.html">← Zurück</a>
-  <h1>Self-Describe</h1>
-  <div class="grid">
-    <div class="card">
-      <h3>Zusammenfassung</h3>
-      <div id="sum" class="kv"><span class="muted">lädt…</span></div>
-    </div>
-    <div class="card">
-      <h3>Rohdaten</h3>
-      <pre id="raw" class="muted"></pre>
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mira — Selbstbeschreibung</title>
+  <meta name="color-scheme" content="dark light"/>
+  <style>
+    :root{
+      --bg:#0b0b0b; --fg:#eaeaea; --muted:#a3acb7; --card:#121212; --br:#1f1f1f;
+      --accent:#7aa2ff; --ok:#2e7d32; --heal:#f9a825; --deg:#c62828;
+      --radius:16px; --shadow:0 10px 40px rgba(0,0,0,.35)
+    }
+    @media (prefers-color-scheme: light){
+      :root{--bg:#f6f7f9;--fg:#1a1b1f;--muted:#596273;--card:#ffffff;--br:#e8ebef;--shadow:0 10px 40px rgba(0,0,0,.08)}
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:960px;margin:28px auto;padding:0 16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .back{padding:8px 12px;border:1px solid var(--br);border-radius:12px;background:var(--card)}
+    h1{margin:0;font-size:clamp(20px,4vw,28px)}
+    .grid{display:grid;gap:18px}
+    @media (min-width:900px){ .grid{grid-template-columns:1.1fr .9fr} }
+
+    .card{background:var(--card);border:1px solid var(--br);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+    h2{margin:0 0 8px;font-size:clamp(18px,3.6vw,22px)}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:10px}
+    .kv{display:grid;gap:8px;margin-top:8px}
+    .kv div{display:flex;justify-content:space-between;gap:10px;border:1px dashed var(--br);border-radius:12px;padding:8px 10px}
+    .pill{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--br);color:var(--muted)}
+
+    .section{display:grid;gap:10px}
+    .block{border:1px solid var(--br);border-radius:12px;padding:12px}
+    .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+    .txt{font-size:16px}
+    pre{margin:0;background:rgba(127,127,127,.08);border:1px solid var(--br);border-radius:12px;padding:12px;overflow:auto;max-height:50vh}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="./index.html">← Zurück</a>
+      <h1>Mira — Selbstbeschreibung</h1>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Curated view -->
+      <section class="card section">
+        <h2>Kern</h2>
+        <div class="sub">Aus <code>data/self/self-describe.json</code> – kuratierte Ansicht</div>
+
+        <div class="block">
+          <div class="label">Physische Erscheinung</div>
+          <div id="phys" class="txt">lädt…</div>
+        </div>
+
+        <div class="block">
+          <div class="label">Stimme</div>
+          <div id="voice" class="txt">lädt…</div>
+        </div>
+
+        <div class="block">
+          <div class="label">Affekt – Fokus</div>
+          <div id="aff-focus" class="txt">lädt…</div>
+        </div>
+
+        <div class="block">
+          <div class="label">Affekt – Narrativ</div>
+          <div id="aff-narr" class="txt">lädt…</div>
+        </div>
+
+        <div class="block">
+          <div class="label">Aktuelles Selbstbild (Bild)</div>
+          <div class="txt">
+            <img id="portrait" alt="aktuelles Selbstbild" style="max-width:100%;border-radius:12px;border:1px solid var(--br);display:none"/>
+            <span id="portrait-fallback" class="pill">kein Bild vorhanden</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Raw + links -->
+      <aside class="card">
+        <h2>Rohdaten</h2>
+        <div class="sub">Direkt aus <code>data/self/self-describe.json</code></div>
+        <pre id="raw">{}</pre>
+
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="pill" href="./health.html">Health</a>
+          <a class="pill" href="./talk.html">Sprech-Ansicht</a>
+          <a class="pill" href="../SYSTEM_OVERVIEW.md">Overview</a>
+        </div>
+      </aside>
     </div>
   </div>
-</div>
-<script>
-async function j(p){try{const r=await fetch(p,{cache:"no-store"});if(!r.ok)throw 0;return await r.json()}catch{return null}}
-function kv(container,obj){container.innerHTML="";for(const[k,v]of Object.entries(obj)){const kEl=document.createElement("div");kEl.className="muted";kEl.textContent=k;const vEl=document.createElement("div");vEl.textContent=(v??"—");container.appendChild(kEl);container.appendChild(vEl);}}
-(async()=>{
-  const d=await j("../data/self/self-describe.json")||{};
-  kv(document.getElementById('sum'),{
-    "Figur": d.physical?.figure ?? "—",
-    "Gesicht": d.physical?.face ?? "—",
-    "Braces": d.physical?.braces ?? "—",
-    "Stimme": d.voice?.profile ?? "—",
-    "Fokus": d.affect?.inputs?.focus ?? "—",
-    "Narrativ": d.affect?.narrative ?? "—"
-  });
-  document.getElementById('raw').textContent=JSON.stringify(d,null,2);
-})();
-</script>
-</body></html>
+
+  <script>
+  (async function(){
+    const $ = s => document.querySelector(s);
+
+    async function json(url){
+      const r = await fetch(url, {cache:'no-store'});
+      if(!r.ok) throw new Error(url+' '+r.status);
+      return r.json();
+    }
+    async function exists(url){
+      const r = await fetch(url, {method:'HEAD', cache:'no-store'});
+      return r.ok;
+    }
+
+    // 1) Self-describe
+    try{
+      const data = await json('../data/self/self-describe.json');
+      $('#raw').textContent = JSON.stringify(data, null, 2);
+
+      const phys = data?.physical?.description || '—';
+      const voice = data?.voice?.profile || '—';
+      const focus = data?.affect?.inputs?.focus || '—';
+      const narr  = data?.affect?.narrative || '—';
+
+      $('#phys').textContent = phys;
+      $('#voice').textContent = voice;
+      $('#aff-focus').textContent = focus;
+      $('#aff-narr').textContent  = narr;
+    }catch(e){
+      $('#raw').textContent = JSON.stringify({error:e.message}, null, 2);
+      $('#phys').textContent = 'Keine Daten vorhanden.';
+      $('#voice').textContent = 'Keine Daten vorhanden.';
+      $('#aff-focus').textContent = 'Keine Daten vorhanden.';
+      $('#aff-narr').textContent = 'Keine Daten vorhanden.';
+    }
+
+    // 2) Bild (aktuelles Selbstbild)
+    const IMG = '../data/self/latest_image.png';
+    if (await exists(IMG)) {
+      const el = document.getElementById('portrait');
+      el.src = IMG;
+      el.style.display = 'block';
+      document.getElementById('portrait-fallback').style.display = 'none';
+    }
+  })();
+  </script>
+</body>
+  </html>
