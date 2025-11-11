@@ -1,0 +1,45 @@
+<!doctype html><html lang="de"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mira — Self-Describe</title>
+<style>
+:root{--bg:#0b0b11;--fg:#f7f7fb;--muted:#b7b7c7;--card:#14141a}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+.wrap{max-width:900px;margin:0 auto;padding:24px}a{color:#8ac6ff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:var(--card);padding:18px;border-radius:16px}
+pre{white-space:pre-wrap;word-wrap:break-word}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px}
+.muted{color:#b7b7c7}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<div class="wrap">
+  <a href="../index.html">← Zurück</a>
+  <h1>Self-Describe</h1>
+  <div class="grid">
+    <div class="card">
+      <h3>Zusammenfassung</h3>
+      <div id="sum" class="kv"><span class="muted">lädt…</span></div>
+    </div>
+    <div class="card">
+      <h3>Rohdaten</h3>
+      <pre id="raw" class="muted"></pre>
+    </div>
+  </div>
+</div>
+<script>
+async function j(p){try{const r=await fetch(p,{cache:"no-store"});if(!r.ok)throw 0;return await r.json()}catch{return null}}
+function kv(container,obj){container.innerHTML="";for(const[k,v]of Object.entries(obj)){const kEl=document.createElement("div");kEl.className="muted";kEl.textContent=k;const vEl=document.createElement("div");vEl.textContent=(v??"—");container.appendChild(kEl);container.appendChild(vEl);}}
+(async()=>{
+  const d=await j("../data/self/self-describe.json")||{};
+  kv(document.getElementById('sum'),{
+    "Figur": d.physical?.figure ?? "—",
+    "Gesicht": d.physical?.face ?? "—",
+    "Braces": d.physical?.braces ?? "—",
+    "Stimme": d.voice?.profile ?? "—",
+    "Fokus": d.affect?.inputs?.focus ?? "—",
+    "Narrativ": d.affect?.narrative ?? "—"
+  });
+  document.getElementById('raw').textContent=JSON.stringify(d,null,2);
+})();
+</script>
+</body></html>
