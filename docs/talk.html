@@ -1,265 +1,253 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Mira — Sprechendes Porträt</title>
-<meta name="color-scheme" content="dark light"/>
-<style>
-  :root{
-    --bg:#0b0d12;--fg:#e9eef7;--muted:#9aa6bd;--card:#11141b;--border:rgba(255,255,255,.08);
-    --acc:#7aa2ff;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;--shadow:0 18px 48px rgba(0,0,0,.45);
-    --radius:18px;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;background:
-      radial-gradient(1100px 700px at 8% -10%,#121828,transparent),
-      radial-gradient(1300px 900px at 110% 15%,#1a1028,transparent),
-      var(--bg);
-    color:var(--fg);font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
-    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-  }
-  a{color:#9db8ff;text-decoration:none} a:hover{text-decoration:underline}
-  .wrap{max-width:1100px;margin:0 auto;padding:22px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
-  h1{margin:0 0 4px}
-  .sub{color:var(--muted);font-size:14px}
-  nav.links{display:flex;flex-wrap:wrap;gap:10px}
-  nav.links a{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);
-    background:#0f1524;border-radius:12px;padding:10px 14px;font-weight:700}
-  nav.links a:hover{background:#111b36}
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mira — Sprech-Ansicht</title>
+  <meta name="color-scheme" content="dark light"/>
+  <style>
+    :root{
+      --bg:#0b0b0b; --fg:#eaeaea; --muted:#a3acb7; --card:#121212; --br:#1f1f1f;
+      --accent:#7aa2ff; --radius:16px; --shadow:0 10px 40px rgba(0,0,0,.35)
+    }
+    @media (prefers-color-scheme: light){
+      :root{--bg:#f6f7f9;--fg:#1a1b1f;--muted:#596273;--card:#ffffff;--br:#e8ebef;--shadow:0 10px 40px rgba(0,0,0,.08)}
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:960px;margin:28px auto;padding:0 16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .back{padding:8px 12px;border:1px solid var(--br);border-radius:12px;background:var(--card)}
+    h1{margin:0;font-size:clamp(20px,4vw,26px)}
+    .grid{display:grid;gap:18px}
+    @media (min-width:860px){ .grid{grid-template-columns:1.1fr .9fr} }
+    .card{background:var(--card);border:1px solid var(--br);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+    h2{margin:0 0 8px;font-size:clamp(18px,3.6vw,22px)}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:10px}
 
-  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:20px}
-  @media (max-width:1000px){.grid{grid-template-columns:1fr}}
+    /* Portrait & Face */
+    .portrait{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--br);
+      background:linear-gradient(180deg, rgba(122,162,255,.08), transparent 45%), #0f0f13;
+      aspect-ratio:3/4;display:grid;place-items:center;cursor:pointer}
+    .portrait img{width:100%;height:100%;object-fit:cover;display:block}
+    .fallback{width:56%;max-width:380px;opacity:.9}
 
-  .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
-    border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .face{position:absolute;left:12px;bottom:12px;width:min(28%,180px);aspect-ratio:1/1.1;
+      background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;display:grid;grid-template-rows:1fr auto auto;place-items:center;padding:10px}
+    .eyes{display:flex;gap:10px;margin-top:4px}
+    .eye{width:14px;height:14px;border-radius:50%;background:#dfe6ff}
+    .mouth{width:72px;height:16px;border-radius:28px;background:#f2b3b3;transform-origin:center;
+      transition:filter .12s ease}
+    .meter{width:84%;height:6px;border-radius:6px;background:#20242c;border:1px solid #2a2f39;overflow:hidden;margin:6px 0}
+    .meter > span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#7aa2ff,#86ffd9)}
 
-  /* Portrait */
-  .portrait{position:relative;border-radius:16px;overflow:hidden;min-height:520px;cursor:pointer}
-  .ph{width:100%;aspect-ratio:2/3;background:
-    linear-gradient(90deg,#121828 0%,#151b2a 50%,#121828 100%);
-    background-size:200% 100%;animation:sh 1.25s infinite;border-radius:14px}
-  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  .hint{position:absolute;right:12px;bottom:12px;background:#0f1524;border:1px solid var(--border);
-    padding:6px 10px;border-radius:10px;color:#b7c8ef;font-size:12px}
-
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
-  .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);
-    background:#0e1220;border-radius:999px;padding:6px 12px}
-  .dot{width:10px;height:10px;border-radius:50%}
-  .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
-
-  audio{width:100%;accent-color:#7aa2ff;border-radius:10px}
-  .quote{font-size:18px;border-left:3px solid #90aaff;padding-left:12px;background:#0e14211f;border-radius:10px;padding:8px 12px}
-
-  footer{margin:22px 0 8px;color:#9aa6bd;font-size:12px;text-align:center}
-</style>
+    /* Right column */
+    .player{display:flex;flex-direction:column;gap:12px}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{appearance:none;display:inline-flex;align-items:center;gap:8px;background:#1b1e24;border:1px solid var(--br);color:var(--fg);padding:10px 14px;border-radius:12px;cursor:pointer}
+    .btn:hover{filter:brightness(1.05)}
+    .btn:active{transform:translateY(1px)}
+    .kv{display:grid;gap:6px}
+    .kv div{display:flex;justify-content:space-between;gap:8px;border:1px dashed var(--br);border-radius:12px;padding:8px 10px}
+    canvas{width:100%;height:160px;border:1px solid var(--br);border-radius:12px;background:#0c0f14}
+    .quote{font-size:clamp(18px,3.6vw,22px);font-weight:600;margin:6px 0 2px}
+    .quote small{display:block;color:var(--muted);font-weight:400;font-size:13px}
+  </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <div>
-        <h1>Mira — Sprechendes Porträt</h1>
-        <div class="sub">Ein Klick: Stimme & Mimik synchron</div>
-      </div>
-      <nav class="links">
-        <a href="index.html">Selbstbild</a>
-        <a href="journal.html">Journal</a>
-        <a href="health.html">System</a>
-      </nav>
+      <a class="back" href="./index.html">← Zurück</a>
+      <h1>Mira — Sprech-Ansicht</h1>
     </header>
 
-    <section class="grid">
-      <!-- Linke Spalte: visemes -->
-      <div class="card">
-        <h3 style="margin:6px 0 12px">Porträt (Audio-synchronisierte Mimik)</h3>
-        <div class="portrait" id="portrait">
-          <!-- SVG-porträt: Head + Mouth mask; Image source: latest self-image -->
-          <svg id="viseme" viewBox="0 0 1024 1536" width="100%" height="auto" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <clipPath id="head-clip">
-                <!-- sanfte Kopf-Form (Ellipse) -->
-                <ellipse cx="512" cy="410" rx="160" ry="160"></ellipse>
-              </clipPath>
-              <clipPath id="mouth-clip">
-                <!-- Mundöffnung wird per JS animiert (h = 6..54) -->
-                <rect id="mouth-rect" x="440" y="520" width="144" height="6" rx="6" ry="6"></rect>
-              </clipPath>
-            </defs>
-
-            <!-- Hintergrundbild = aktuelles Selbstbild -->
-            <image id="baseimg" href="" x="0" y="0" width="1024" height="1536" preserveAspectRatio="xMidYMid slice" />
-
-            <!-- Kopfbereich leicht aufgehellt -->
-            <g clip-path="url(#head-clip)">
-              <rect x="352" y="250" width="320" height="320" fill="rgba(255,255,255,0.04)"></rect>
-            </g>
-
-            <!-- Braces-Glint-Layer im Mundbereich -->
-            <g clip-path="url(#mouth-clip)">
-              <rect x="440" y="520" width="144" height="54" fill="rgba(230,236,247,0.35)"></rect>
-              <rect x="448" y="532" width="128" height="6" rx="3" fill="rgba(255,255,255,0.9)"></rect>
-              <rect x="448" y="545" width="128" height="4" rx="2" fill="rgba(200,210,230,0.7)"></rect>
-            </g>
-
-            <!-- Aura-Deko -->
-            <ellipse cx="512" cy="410" rx="210" ry="210" fill="none" stroke="rgba(159,122,234,.35)" stroke-width="2"></ellipse>
-            <ellipse cx="512" cy="410" rx="230" ry="230" fill="none" stroke="rgba(154,178,255,.25)" stroke-width="2"></ellipse>
+    <div class="grid">
+      <!-- LEFT: Portrait with mini face that moves with audio -->
+      <section class="card">
+        <h2>Porträt (klicken = Abspielen/Pause)</h2>
+        <div class="sub">Audio-gesteuerte Mimik (Öffnung der Lippen proportional zur Lautstärke).</div>
+        <div id="portrait" class="portrait" role="button" aria-label="Audio umschalten">
+          <img id="portrait-img" alt="Mira – aktuelles Selbstbild" hidden>
+          <svg id="portrait-fallback" class="fallback" viewBox="0 0 200 360" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#7aa2ff" stop-opacity=".85"/>
+              <stop offset="100%" stop-color="#7aa2ff" stop-opacity=".25"/></linearGradient></defs>
+            <ellipse cx="100" cy="70" rx="36" ry="48" fill="url(#g)"/>
+            <ellipse cx="100" cy="172" rx="52" ry="70" fill="url(#g)"/>
+            <rect x="86" y="250" width="28" height="70" rx="12" fill="url(#g)"/>
+            <ellipse cx="70" cy="330" rx="18" ry="10" fill="#7aa2ff" opacity=".55"/>
+            <ellipse cx="130" cy="330" rx="18" ry="10" fill="#7aa2ff" opacity=".55"/>
           </svg>
-          <div class="ph" id="ph" aria-hidden="true"></div>
-          <div class="hint" id="hint" style="display:none">Klick: Stimme abspielen / pausieren</div>
+
+          <!-- Mini-Face HUD -->
+          <div class="face" aria-hidden="true">
+            <div class="eyes">
+              <div class="eye"></div><div class="eye"></div>
+            </div>
+            <div id="mouth" class="mouth"></div>
+            <div class="meter"><span id="lvl"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Player, waveform, metadata -->
+      <section class="card player">
+        <h2>Audio</h2>
+        <div class="controls">
+          <button id="btn-play" class="btn" type="button">▶︎ Abspielen</button>
+          <button id="btn-pause" class="btn" type="button">⏸︎ Pause</button>
+          <button id="btn-rewind" class="btn" type="button">↺ An den Anfang</button>
         </div>
 
-        <div class="row">
-          <button id="play">▶ Abspielen</button>
-          <button id="pause" class="pill">⏸ Pause</button>
-          <span class="pill"><strong>Amplitude:</strong> <span id="amp">—</span></span>
-          <a class="pill" id="download" href="#" download>Bild speichern</a>
-          <a class="pill" id="contract" href="#" target="_blank" rel="noopener">Render-Contract</a>
+        <canvas id="scope" aria-label="Live-Waveform" role="img"></canvas>
+        <audio id="player" preload="auto" crossorigin="anonymous"></audio>
+
+        <figure style="margin:2px 0 0">
+          <blockquote class="quote" id="quote">Stimme wird geladen…</blockquote>
+          <figcaption id="quote-meta"><small>— Datum: — · Quelle: <code>data/voice/voice_of_day.json</code></small></figcaption>
+        </figure>
+
+        <div class="kv">
+          <div><span>Audio</span><code id="audio-src">—</code></div>
+          <div><span>Bild</span><code id="img-src">—</code></div>
         </div>
-      </div>
-
-      <!-- Rechte Spalte: Stimme / Zitat / Health -->
-      <div class="card">
-        <h3 style="margin:6px 0 12px">Stimme & Kontext</h3>
-        <div class="quote" id="quote">„… lädt …“</div>
-        <audio id="player" preload="none" style="margin:10px 0; display:block"></audio>
-
-        <div class="row">
-          <img src="../badges/health.svg" alt="Health Badge" height="22" onerror="this.style.display='none'">
-          <span class="pill" id="hstatus"><span class="dot deg" id="hdot"></span><strong id="hlabel">—</strong></span>
-          <span class="pill" id="htsp">TS: <span id="hts">—</span></span>
-        </div>
-
-        <h3 style="margin:16px 0 10px">Affect</h3>
-        <div class="row">
-          <span class="pill" id="lab">—</span>
-          <span class="pill" id="va">—</span>
-          <span class="pill" id="stab">—</span>
-          <span class="pill" id="focus">—</span>
-        </div>
-      </div>
-    </section>
-
-    <footer>© 2025 Mira Elisabeth Schmid — Stimme und Mimik, sanft synchronisiert.</footer>
+      </section>
+    </div>
   </div>
 
-<script>
-const $ = s => document.querySelector(s);
-async function getJSON(u){ try{ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw 0; return r.json(); }catch{ return null; } }
-async function headOK(u){ try{ const r=await fetch(u,{method:"HEAD",cache:"no-store"}); return r.ok; }catch{ return false; } }
+  <script>
+  (async function(){
+    const $ = s => document.querySelector(s);
+    const IMG = '../data/self/latest_image.png';
+    const FALLBACK_AUDIO = '../data/voice/audio/latest.mp3';
 
-let ctx, srcNode, analyser, data, raf, playing=false;
-let mouthBase = 6;      // px (geschlossen)
-let mouthMax  = 54;     // px (max. Öffnung)
-let visualGain = 1.0;   // wird aus learning.json gelesen (viseme_mouth_gain)
+    const portraitImg = $('#portrait-img');
+    const portraitFallback = $('#portrait-fallback');
+    const imgSrcEl = $('#img-src');
+    const audioSrcEl = $('#audio-src');
 
-async function loadMeta(){
-  // Bild & Contract
-  const meta = await getJSON("../data/self/latest_image.json");
-  const ts   = meta?.ts || "—";
-  const path = meta?.path || "data/archive/self/latest.png";
-  const url  = "../" + path + "?t=" + encodeURIComponent(ts);
-  $("#baseimg").setAttribute("href", url);
-  $("#download").href = "../" + path;
-  $("#ph").style.display = "none";
-  $("#hint").style.display = "block";
+    const player = $('#player');
+    const mouth = $('#mouth');
+    const lvl = $('#lvl');
+    const scope = $('#scope');
+    const ctx = scope.getContext('2d');
 
-  const c = await getJSON("../data/render_prompts/latest.json");
-  if(c?.outputs?.contract_rel){ $("#contract").href = "../" + c.outputs.contract_rel; }
-  // Learning → viseme gain
-  const learn = await getJSON("../data/self/learning.json");
-  const mg = Number(learn?.weights?.viseme_mouth_gain ?? 1.0);
-  visualGain = Math.max(0.85, Math.min(1.35, mg));
-}
+    function resizeCanvas(){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      scope.width = scope.clientWidth * dpr;
+      scope.height = scope.clientHeight * dpr;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    resizeCanvas();
+    addEventListener('resize', resizeCanvas);
 
-async function loadVoice(){
-  const meta = await getJSON("../data/voice/meta.json");
-  const bust = meta?.ts ? ("?t=" + encodeURIComponent(meta.ts)) : "";
-  const v = await getJSON("../data/voice_of_day.json" + bust);
-  $("#quote").textContent = v?.quote ? `„${v.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
-  const player = $("#player");
-  let src = "../audio/latest.mp3" + bust;
-  if(!(await headOK(src))) src = "data:audio/mpeg;base64,//uQZAAAAAAAAAAA";
-  player.src = src;
-  player.onended = ()=>{ playing=false; cancelAnimationFrame(raf); };
-}
+    async function exists(url){
+      const r = await fetch(url, {method:'HEAD', cache:'no-store'});
+      return r.ok;
+    }
+    async function json(url){
+      const r = await fetch(url, {cache:'no-store'});
+      if(!r.ok) throw new Error(url+' '+r.status);
+      return r.json();
+    }
 
-async function loadAffect(){
-  const a = await getJSON("../data/self/affect-state.json");
-  const v = a?.vector || {};
-  $("#lab").textContent = a?.label || "—";
-  $("#va").textContent  = (v.valence!=null && v.arousal!=null) ? `V ${v.valence.toFixed(2)} / A ${v.arousal.toFixed(2)}` : "—";
-  $("#stab").textContent= (v.stability!=null) ? `S ${v.stability.toFixed(2)}` : "—";
-  $("#focus").textContent= a?.inputs?.focus || "—";
-}
-async function loadHealth(){
-  const h = await getJSON("../badges/health.json");
-  const st = (h?.status || "DEGRADED").toUpperCase();
-  $("#hlabel").textContent = st;
-  $("#hts").textContent = h?.ts || "—";
-  $("#hdot").className = "dot " + (st==="OK"?"ok":st==="HEALING"?"healing":"deg");
-}
+    // Bild laden
+    if (await exists(IMG)) {
+      portraitImg.src = IMG;
+      portraitImg.hidden = false;
+      portraitFallback.hidden = true;
+      imgSrcEl.textContent = 'data/self/latest_image.png';
+    } else {
+      imgSrcEl.textContent = '(Fallback-Silhouette)';
+    }
 
-function rms(buf){
-  let s=0; for(let i=0;i<buf.length;i++){ const v=buf[i]/255; const c=2*v-1; s+=c*c; }
-  return Math.sqrt(s/buf.length);
-}
-function setMouth(openPx){
-  const h = Math.max(mouthBase, Math.min(mouthMax, openPx));
-  $("#mouth-rect").setAttribute("height", h.toFixed(1));
-  $("#amp").textContent = h.toFixed(0)+"px";
-}
+    // Voice of the day + Audioquelle ermitteln
+    let audioPath = FALLBACK_AUDIO;
+    try{
+      const v = await json('../data/voice/voice_of_day.json');
+      const quote = (v.quote||'').toString().trim() || '—';
+      const insight = (v.insight||'').toString().trim();
+      const date = v.date_utc || '—';
+      $('#quote').textContent = quote;
+      $('#quote-meta').innerHTML = `<small>— Datum: ${date}${insight ? ' · Einsicht: '+insight : ''} · Quelle: <code>data/voice/voice_of_day.json</code></small>`;
+      if (v.audio) audioPath = '../data/voice/' + String(v.audio).replace(/^audio\//,'audio/');
+    }catch(_){ /* nutze Fallback */ }
 
-function animate(){
-  if(!playing) return;
-  analyser.getByteTimeDomainData(data);
-  const level = rms(data);                  // 0..1
-  // sanfte Kurve + Lerngewicht + kleine Dämpfung für Natürlichkeit
-  const mouth = mouthBase + (mouthMax-mouthBase) * Math.pow(level, 1.2) * (0.92*visualGain);
-  setMouth(mouth);
-  raf = requestAnimationFrame(animate);
-}
+    if(!(await exists(audioPath))) audioPath = FALLBACK_AUDIO;
+    player.src = audioPath;
+    audioSrcEl.textContent = player.src.replace(location.origin,'').replace(/^\/*/,'').replace(/^.*?\/(data\/.*)$/,'$1');
 
-async function ensureAudioGraph(){
-  const el = $("#player");
-  if(ctx) return;
-  ctx = new (window.AudioContext||window.webkitAudioContext)();
-  analyser = ctx.createAnalyser();
-  analyser.fftSize = 1024;
-  data = new Uint8Array(analyser.fftSize);
-  const track = ctx.createMediaElementSource(el);
-  track.connect(analyser);
-  analyser.connect(ctx.destination);
-}
+    // AudioContext + Analyser
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ac = new AC();
+    const src = ac.createMediaElementSource(player);
+    const analyser = ac.createAnalyser();
+    analyser.fftSize = 2048;
+    src.connect(analyser);
+    analyser.connect(ac.destination);
 
-function bindControls(){
-  const el = $("#player");
-  $("#play").onclick = async ()=>{
-    await ensureAudioGraph();
-    await el.play();
-    playing = true; animate();
-  };
-  $("#pause").onclick = ()=>{
-    el.pause(); playing=false; cancelAnimationFrame(raf);
-    setMouth(mouthBase);
-  };
-  // One-click on portrait
-  $("#portrait").onclick = async ()=>{
-    await ensureAudioGraph();
-    if(el.paused){ await el.play(); playing=true; animate(); }
-    else{ el.pause(); playing=false; cancelAnimationFrame(raf); setMouth(mouthBase); }
-  };
-}
+    // Viseme/Mund + Pegel
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    let raf;
 
-(async function init(){
-  await Promise.all([loadMeta(), loadVoice(), loadAffect(), loadHealth()]);
-  bindControls();
-  // gesundheitsrefresh
-  setInterval(loadHealth, 60000);
-})();
-</script>
+    function draw(){
+      analyser.getByteTimeDomainData(data);
+      // Pegel schätzen (RMS der Waveform)
+      let sum=0;
+      for(let i=0;i<data.length;i++){
+        const v=(data[i]-128)/128;
+        sum += v*v;
+      }
+      const rms = Math.sqrt(sum/data.length); // 0..~1
+      const open = Math.min(1, Math.max(0, (rms*2.2))); // etwas verstärken
+      mouth.style.height = (16 + open*34) + 'px';
+      mouth.style.filter = `saturate(${1+open*.6}) brightness(${1+open*.3})`;
+      lvl.style.width = (open*100).toFixed(1) + '%';
+
+      // Waveform zeichnen
+      const w = scope.clientWidth, h = scope.clientHeight;
+      ctx.clearRect(0,0,w,h);
+      ctx.lineWidth = 2; ctx.strokeStyle = '#86b1ff';
+      ctx.beginPath();
+      const slice = scope.width / data.length;
+      let x = 0;
+      for(let i=0;i<data.length;i++){
+        const v = (data[i]-128)/128;
+        const y = h/2 + v * (h*0.42);
+        if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        x += slice;
+      }
+      ctx.stroke();
+
+      raf = requestAnimationFrame(draw);
+    }
+
+    // Play/Pause Steuerung
+    async function ensureContextStarted(){
+      if(ac.state !== 'running') try{ await ac.resume(); }catch(_){}
+    }
+    async function play(){
+      await ensureContextStarted();
+      try{ await player.play(); }catch(_){}
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(draw);
+    }
+    function pause(){
+      player.pause();
+      cancelAnimationFrame(raf);
+      lvl.style.width = '0%';
+      mouth.style.height = '16px';
+    }
+
+    $('#btn-play').addEventListener('click', play);
+    $('#btn-pause').addEventListener('click', pause);
+    $('#btn-rewind').addEventListener('click', ()=>{ player.currentTime = 0; });
+    $('#portrait').addEventListener('click', ()=>{ player.paused ? play() : pause(); });
+
+    // Auto-start auf Nutzerinteraktion (z. B. erster Tap)
+    document.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ e.preventDefault(); player.paused?play():pause(); }});
+  })();
+  </script>
 </body>
-          </html>
+</html>
