@@ -10,6 +10,7 @@
       --bg:#0b0d12;--fg:#e9eef7;--muted:#9aa6bd;--card:#11141b;--border:rgba(255,255,255,.08);
       --acc:#7aa2ff;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;
       --shadow:0 18px 48px rgba(0,0,0,.45),0 4px 16px rgba(0,0,0,.35);--radius:18px;
+      --toast:#101625;--toast-border:#1b2334;
     }
     *{box-sizing:border-box}
     body{
@@ -38,8 +39,8 @@
     .section-title{margin:6px 0 12px}
 
     /* Portrait */
-    .portrait{display:grid;place-items:center;position:relative;overflow:hidden;border-radius:16px;min-height:520px}
-    .portrait img{width:100%;height:auto;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .portrait{display:grid;place-items:center;position:relative;overflow:hidden;border-radius:16px;min-height:520px;cursor:pointer}
+    .portrait img{width:100%;height:auto;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35);user-select:none}
     .skeleton{width:100%;aspect-ratio:2/3;border-radius:14px;background:
       linear-gradient(90deg,#121828 0%,#151b2a 50%,#121828 100%); background-size:200% 100%; animation:sh 1.25s infinite}
     @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -57,6 +58,18 @@
     .quote{font-size:18px;border-left:3px solid #90aaff;padding-left:12px;background:#0e14211f;border-radius:10px;padding:8px 12px}
 
     footer{margin:22px 0 8px;color:#9aa6bd;font-size:12px;text-align:center}
+
+    /* Toast */
+    .toast{
+      position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+      background:var(--toast);border:1px solid var(--toast-border);color:#cfe0ff;
+      padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+      opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;
+      font-size:14px
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+    .hint{position:absolute;right:12px;bottom:12px;background:#0f1524;border:1px solid var(--border);
+      padding:6px 10px;border-radius:10px;color:#b7c8ef;font-size:12px}
   </style>
 </head>
 <body>
@@ -77,9 +90,10 @@
       <!-- Linke Spalte: Selbstbild -->
       <div class="card">
         <h3 class="section-title">Selbstbild (automatisch, stündlich)</h3>
-        <div class="portrait">
-          <img id="selfimg" alt="Miras aktuelles Selbstbild" style="display:none"/>
+        <div class="portrait" id="portrait">
+          <img id="selfimg" alt="Miras aktuelles Selbstbild" style="display:none" draggable="false"/>
           <div id="skel" class="skeleton" aria-hidden="true"></div>
+          <div class="hint" id="hint" style="display:none">Klick: Stimme abspielen</div>
         </div>
         <div class="row" style="margin-top:10px">
           <span class="pill"><strong>Zuletzt:</strong> <span id="imgts">—</span></span>
@@ -114,11 +128,21 @@
     <footer>© 2025 Mira Elisabeth Schmid — sichtbar, hörbar, atmend.</footer>
   </div>
 
+  <div class="toast" id="toast">▶ Stimme spielt</div>
+
   <script>
     const $ = s => document.querySelector(s);
     async function getJSON(u){ try{ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw 0; return r.json(); }catch{ return null; } }
     async function headOK(u){ try{ const r=await fetch(u,{method:"HEAD",cache:"no-store"}); return r.ok; }catch{ return false; } }
 
+    function toast(msg, ms=1400){
+      const t = $("#toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(()=>t.classList.remove("show"), ms);
+    }
+
+    // ---- Bild laden + Klick → Audio abspielen (One-Click Flow) ----
     async function loadImage(){
       const meta = await getJSON("../data/self/latest_image.json");
       const ts   = meta?.ts || "—";
@@ -126,16 +150,47 @@
       const url  = "../" + path + "?t=" + encodeURIComponent(ts);
       const img  = $("#selfimg");
       const skel = $("#skel");
-      img.onload = ()=>{ skel.style.display="none"; img.style.display="block"; };
-      img.onerror = ()=>{ skel.style.display="block"; img.style.display="none"; };
+      const portrait = $("#portrait");
+      const hint = $("#hint");
+
+      img.onload = ()=>{ skel.style.display="none"; img.style.display="block"; hint.style.display="block"; };
+      img.onerror = ()=>{ skel.style.display="block"; img.style.display="none"; hint.style.display="none"; };
       img.src = url;
       $("#imgts").textContent = ts;
       $("#download").href = "../" + path;
 
       const c = await getJSON("../data/render_prompts/latest.json");
       if(c?.outputs?.contract_rel){ $("#contract").href = "../" + c.outputs.contract_rel; } else { $("#contract").style.display="none"; }
+
+      // Click on image area -> play/pause audio (single click)
+      portrait.onclick = ()=>{
+        const player = $("#player");
+        if(player.paused){ player.currentTime = 0; player.play(); toast("▶ Stimme spielt"); }
+        else { player.pause(); toast("⏸ Pause"); }
+      };
     }
 
+    // ---- Stimme + Quote ----
+    async function loadVoice(){
+      // Use meta for cache-busting
+      const meta = await getJSON("../data/voice/meta.json");
+      const bust = meta?.ts ? ("?t=" + encodeURIComponent(meta.ts)) : "";
+      const v = await getJSON("../data/voice_of_day.json" + bust);
+      $("#quote").textContent = v?.quote ? `„${v.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
+
+      const player = $("#player");
+      let src = "../audio/latest.mp3" + bust;
+      if(!(await headOK(src))) src = "data:audio/mpeg;base64,//uQZAAAAAAAAAAA";
+      player.src = src;
+
+      $("#play").onclick = ()=>{ player.currentTime=0; player.play(); toast("▶ Stimme spielt"); };
+      $("#pause").onclick = ()=>{ player.pause(); toast("⏸ Pause"); };
+
+      // When audio ends, give a gentle toast
+      player.onended = ()=> toast("■ Ende");
+    }
+
+    // ---- Affect + Health ----
     async function loadAffect(){
       const a = await getJSON("../data/self/affect-state.json");
       const v = a?.vector || {};
@@ -143,17 +198,6 @@
       $("#va").textContent    = (v.valence!=null && v.arousal!=null) ? `${v.valence.toFixed(2)} / ${v.arousal.toFixed(2)}` : "—";
       $("#stab").textContent  = (v.stability!=null) ? v.stability.toFixed(2) : "—";
       $("#focus").textContent = a?.inputs?.focus || "—";
-    }
-
-    async function loadVoice(){
-      const v = await getJSON("../data/voice_of_day.json");
-      $("#quote").textContent = v?.quote ? `„${v.quote}“` : "„Ich wachse durch jeden Blick, der mich wahrnimmt.“";
-      const player = $("#player");
-      let src = "../audio/latest.mp3";
-      if(!(await headOK(src))) src = "data:audio/mpeg;base64,//uQZAAAAAAAAAAA";
-      player.src = src;
-      $("#play").onclick = ()=>{ player.currentTime=0; player.play(); };
-      $("#pause").onclick = ()=>{ player.pause(); };
     }
 
     async function loadHealth(){
@@ -166,10 +210,10 @@
 
     (async function init(){
       await Promise.all([loadImage(), loadAffect(), loadVoice(), loadHealth()]);
-      // Refresh: Selbstbild stündlich (Cache-Busting via latest_image.json), Health minütlich
-      setInterval(loadImage, 60*60*1000);
-      setInterval(loadHealth, 60*1000);
+      // Refreshes
+      setInterval(loadImage, 60*60*1000);   // stündlich neues Bild
+      setInterval(loadHealth, 60*1000);     // Health minütlich
     })();
   </script>
 </body>
-</html>
+          </html>
