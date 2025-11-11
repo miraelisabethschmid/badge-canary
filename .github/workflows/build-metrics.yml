@@ -1,0 +1,55 @@
+name: Build Mira Metrics
+
+on:
+  schedule:
+    - cron: "15 * * * *"   # stündlich, 15 Minuten nach Autonomous Heal
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-metrics
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies (lightweight)
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyGitHub || true  # optional, falls local mode aktiv
+
+      - name: Run metrics builder
+        run: |
+          mkdir -p data/metrics
+          python scripts/metrics_builder.py
+          ls -lh data/metrics/
+
+      - name: Commit metrics JSON if changed
+        shell: bash
+        run: |
+          git config user.name "badge-canary"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet data/metrics/last7d.json; then
+            echo "No metrics changes."
+            exit 0
+          fi
+          git add data/metrics/last7d.json
+          git commit -m "metrics: update last7d.json"
+          git push
+
+      - name: Trigger Pages redeploy
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: "Deploy Pages (Health Dashboard)"
+          token: ${{ secrets.GITHUB_TOKEN }}
