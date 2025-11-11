@@ -7,6 +7,7 @@ on:
       - 'docs/**'
       - 'badges/**'
       - 'data/ledger/**'
+      - 'data/goals/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -38,7 +39,10 @@ jobs:
           # Ledger (JSONL logs)
           mkdir -p public/data/ledger
           cp -r data/ledger/events.jsonl public/data/ledger/ 2>/dev/null || true
-          # Optional index redirect (simplified to avoid YAML parse issues)
+          # Goals (teleologische Ebene)
+          mkdir -p public/data/goals
+          cp -r data/goals/current.json public/data/goals/ 2>/dev/null || true
+          # Minimal index redirect
           if [ ! -f public/index.html ]; then
             echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=health.html"><a href="health.html">Go to health.html</a>' > public/index.html
           fi
