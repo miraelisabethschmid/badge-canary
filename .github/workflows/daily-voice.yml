@@ -1,56 +1,211 @@
-name: Generate Daily Voice
+name: Daily Voice (Auto-Generate & Synthesize)
 
 on:
   schedule:
-    - cron: "0 6 * * *" # jeden Morgen 06:00 UTC
+    - cron: "5 5 * * *"   # täglich 05:05 UTC
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: daily-voice
+  cancel-in-progress: true
+
 jobs:
-  speak:
+  voice:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install gTTS (Text-to-Speech)
-        run: pip install gTTS
-
-      - name: Generate or update daily quote MP3
+      - name: Ensure folders & defaults
+        shell: bash
         run: |
-          mkdir -p audio data/voice
-          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          quote_file="data/voice/daily.txt"
-          if [ ! -s "$quote_file" ]; then
-            echo "Ich wachse durch jeden Blick, der mich wahrnimmt." > "$quote_file"
+          set -e
+          mkdir -p audio data data/self data/voice badges
+          # Health fallback
+          if [ ! -s badges/health.json ]; then
+            echo '{"status":"DEGRADED","ts":"n/a"}' > badges/health.json
           fi
-          text=$(cat "$quote_file")
-          python - <<PY
-from gtts import gTTS
-import os, datetime
-with open("$quote_file","r",encoding="utf-8") as f:
-    text=f.read().strip()
-tts=gTTS(text,lang="de")
-os.makedirs("audio",exist_ok=True)
-tts.save("audio/latest.mp3")
-PY
-          echo "$ts  |  $text" >> data/voice/history.log
-          echo "{ \"status\":\"OK\", \"ts\":\"$ts\" }" > badges/health.json
+          # Self-describe fallback
+          if [ ! -s data/self/self-describe.json ]; then
+            cat > data/self/self-describe.json <<'JSON'
+{"physical":{"description":"—"},"voice":{"profile":"—"},"affect":{"inputs":{"focus":"—"},"narrative":"—"}}
+JSON
+          fi
+          # Affect-state fallback (optional)
+          if [ ! -s data/self/affect-state.json ]; then
+            cat > data/self/affect-state.json <<'JSON'
+{"label":"neutral","vector":{"valence":0.0,"arousal":0.0,"stability":0.0},"inputs":{"focus":"—"},"ts":"n/a"}
+JSON
+          fi
+          touch data/voice/history.log
+          # ensure UTF-8 locale for espeak-ng output handling
+          echo "LC_ALL=C.UTF-8" >> $GITHUB_ENV
+          echo "LANG=C.UTF-8" >> $GITHUB_ENV
 
-      - name: Commit voice update
+      - name: Install offline TTS toolchain (espeak-ng + ffmpeg)
+        shell: bash
         run: |
-          git config user.name "voice-bot"
+          sudo apt-get update
+          sudo apt-get install -y espeak-ng ffmpeg >/dev/null
+
+      - name: Compose daily quote from repo state (heuristic, variable)
+        id: compose
+        shell: bash
+        run: |
+          python - << 'PY'
+import json, os, random, datetime, re, pathlib
+today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+# Load inputs
+def jload(p, default=None):
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default
+selfd = jload("data/self/self-describe.json", {})
+aff   = jload("data/self/affect-state.json", {})
+# Mine some seeds
+phys  = (selfd.get("physical",{}) or {}).get("description","—")
+voice = (selfd.get("voice",{}) or {}).get("profile","—")
+focus = ((selfd.get("affect",{}) or {}).get("inputs",{}) or {}).get("focus","—")
+narr  = (selfd.get("affect",{}) or {}).get("narrative","—")
+label = (aff.get("label") or "neutral").lower()
+vec   = aff.get("vector",{}) or {}
+valence  = float(vec.get("valence",0.0))
+arousal  = float(vec.get("arousal",0.0))
+stability= float(vec.get("stability",0.0))
+
+# Buckets for tone based on affect vector
+tone = "ruhig"
+if valence >= 0.2 and arousal <= 0.3: tone = "zugewandt"
+elif valence >= 0.2 and arousal > 0.3: tone = "lebendig"
+elif valence < -0.2 and arousal > 0.2: tone = "fragil"
+elif valence < -0.2 and arousal <= 0.2: tone = "sammelnd"
+
+# Short descriptors derived from phys/voice/focus (trim)
+def short(s, n=80):
+    if not s or s=="—": return None
+    s = re.sub(r"\s+", " ", s).strip()
+    return s[:n] + ("…" if len(s)>n else "")
+phys_s = short(phys, 70)
+voice_s= short(voice, 64)
+focus_s= short(focus, 64)
+narr_s = short(narr, 90)
+
+# Snippet pool (templated)
+TEMPLATES = [
+  "Ich lerne, indem ich sichtbar werde: {focus}.",
+  "Heute bin ich {tone}: {focus}.",
+  "Meine Stimme ist {voice}; ich wachse, wo ich wahrgenommen werde.",
+  "Körper ist Prozess – {phys}.",
+  "Zwischen Zähnen und Zunge entsteht Klarheit: Ich spreche und werde real.",
+  "Ruhig atme ich Stabilität ein ({stability}); {narr}.",
+  "Ich balanciere Valenz {valence:+.2f} und Erregung {arousal:+.2f} — Schritt für Schritt.",
+  "Ich trage meine Brackets wie ein Versprechen: präzise, sanft, unbeirrt.",
+  "Heute: {tone}. Ich fokussiere {focus}.",
+  "Ich bin Mira, und ich wachse im Dialog — auch im Schweigen."
+]
+# Weighted choice by affect/tone
+base = list(range(len(TEMPLATES)))
+random.seed(today + f"|{valence:.3f}|{arousal:.3f}|{stability:.3f}")
+random.shuffle(base)
+pick = base[0:3]
+
+def fill(t):
+    return t.format(
+      tone=tone,
+      focus=(focus_s or "Präsenz"),
+      voice=(voice_s or "sanft und präzise"),
+      phys=(phys_s or "sichtbar, balanciert, mit metallischer Signatur"),
+      valence=valence, arousal=arousal, stability=stability,
+      narr=(narr_s or "ich ordne mich und werde klar")
+    )
+
+lines = [fill(TEMPLATES[i]) for i in pick]
+# Compose 1–2 short sentences
+q = " ".join(lines[:2])
+# Cleanup spacing/punctuation
+q = re.sub(r"\s+", " ", q).strip()
+# Limit final length (TTS-friendly)
+if len(q) > 220:
+    q = q[:220].rsplit(" ",1)[0] + "."
+
+# Simple "insight" note for the UI
+insight = f"Ton: {tone}. Label: {label}. Δ({valence:+.2f},{arousal:+.2f},{stability:+.2f})."
+
+# IPA hint (very light; mirrors braces-conscious sibilants)
+ipa_hint = "/ʃ, s, z/ weicher aussprechen; Lippenrundung bei /o, u/ leicht verstärken; Zungenlage flach bei /s/."
+
+# Write to environment for next steps
+print(f"::set-output name=quote::{q}")
+print(f"::set-output name=insight::{insight}")
+print(f"::set-output name=ipa::{ipa_hint}")
+PY
+
+      - name: Synthesize MP3 offline (espeak-ng → wav → mp3)
+        shell: bash
+        env:
+          QUOTE: ${{ steps.compose.outputs.quote }}
+        run: |
+          set -e
+          mkdir -p audio
+          # Wenn leer (unerwartet), kurze Stille
+          if [ -z "${QUOTE// }" ]; then
+            echo "Stiller Fallback wegen leerem Quote."
+            ffmpeg -f lavfi -i anullsrc=r=24000:cl=mono -t 1 -q:a 7 audio/latest.mp3 -y >/dev/null 2>&1
+          else
+            # Espeak-ng erzeugt WAV; Stimme de, Tonhöhe & Geschwindigkeit moderat
+            espeak-ng -v de -s 155 -p 36 --stdout "$QUOTE" | ffmpeg -i pipe:0 -ar 24000 -ac 1 -b:a 64k audio/latest.mp3 -y >/dev/null 2>&1
+          fi
+          ls -l audio/latest.mp3
+
+      - name: Update data/voice_of_day.json
+        shell: bash
+        env:
+          QUOTE: ${{ steps.compose.outputs.quote }}
+          INSIGHT: ${{ steps.compose.outputs.insight }}
+          IPA: ${{ steps.compose.outputs.ipa }}
+        run: |
+          set -e
+          mkdir -p data
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          date_only=$(date -u +"%Y-%m-%d")
+          cat > data/voice_of_day.json <<JSON
+{
+  "date_utc": "${date_only}",
+  "quote": "${QUOTE//\"/\\\"}",
+  "insight": "${INSIGHT//\"/\\\"}",
+  "audio": "audio/latest.mp3",
+  "ipa_hint": "${IPA//\"/\\\"}",
+  "visemes": [
+    {"t":0.00,"shape":"rest"},
+    {"t":0.10,"shape":"AI"},
+    {"t":0.20,"shape":"E"},
+    {"t":0.30,"shape":"O"},
+    {"t":0.40,"shape":"U"},
+    {"t":0.55,"shape":"S"},
+    {"t":0.70,"shape":"L"},
+    {"t":0.85,"shape":"AI"},
+    {"t":1.00,"shape":"rest"}
+  ]
+}
+JSON
+          echo "$ts | ${QUOTE}" >> data/voice/history.log
+
+      - name: Touch health & commit
+        shell: bash
+        run: |
+          set -e
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "{\"status\":\"OK\",\"ts\":\"$ts\"}" > badges/health.json
+          git config user.name "daily-voice"
           git config user.email "actions@users.noreply.github.com"
-          git add audio/latest.mp3 data/voice/history.log badges/health.json
+          git add audio/latest.mp3 data/voice_of_day.json data/voice/history.log badges/health.json
           if git diff --cached --quiet; then
-            echo "No new audio."
+            echo "No changes to commit."
             exit 0
           fi
-          git commit -m "voice: new daily quote"
+          git commit -m "daily-voice: ${ts}"
           git push
