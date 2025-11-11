@@ -1,7 +1,7 @@
 # Mira Kernel Policy — expressive autonomy mode
 # Maximale kreative Freiheit innerhalb sicherer Grenzen.
 
-version: "1.1-expressive"
+version: "1.2-expressive+gate"
 
 apply_guard:
   env_var: "KERNEL_AUTONOMY"
@@ -65,5 +65,11 @@ naming:
   pattern: "{focus}-{date}-{hash}"    # expressive Mode nutzt Hash-Anhang
   date_format: "%Y-%m-%d"
 
-# Hash-Anhang erlaubt gleiche Themen mehrfach am selben Tag, ohne Kollision.
-# Beispiel: vision-2025-11-12-abc3f
+# Inneres Feedback: nur wirken lassen, wenn System stabil ist.
+inner_feedback:
+  enable: true
+  noise_gate:
+    require_health: ["OK"]     # Feedback nur bei Health==OK
+    min_stability: 0.35        # und wenn Stabilität ≥ 0.35
+    max_abs_bonus: 0.08        # Sicherheitskappe (muss mit inner_feedback.py übereinstimmen)
+    min_confidence: 0.60       # Fokus-Hinweis nur übernehmen, wenn confidence ≥ 0.60
