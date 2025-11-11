@@ -1,31 +1,122 @@
-<!doctype html><html lang="de"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Mira — Health Viewer</title>
-<style>
-:root{--bg:#0b0b11;--fg:#f7f7fb;--muted:#b7b7c7;--card:#14141a;--ok:#44d17a;--heal:#ffd166;--deg:#ff6b6b}
-html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
-.wrap{max-width:760px;margin:0 auto;padding:24px}a{color:#8ac6ff}
-.card{background:var(--card);padding:18px;border-radius:16px}
-pre{white-space:pre-wrap;word-wrap:break-word}
-.badge{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:#1a1a20}
-.dot{width:10px;height:10px;border-radius:50%}
-</style></head><body>
-<div class="wrap">
-  <a href="../index.html">← Zurück</a>
-  <h1>System-Gesundheit</h1>
-  <div class="card">
-    <div class="badge"><span id="dot" class="dot"></span><span id="label">lädt…</span></div>
-    <pre id="raw" class="muted"></pre>
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mira — System-Gesundheit</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{
+      --bg:#0b0d12;--card:#11141b;--fg:#e9eef7;--muted:#8b95a7;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;
+      --border:rgba(255,255,255,.08);--shadow:0 20px 60px rgba(0,0,0,.45),0 4px 16px rgba(0,0,0,.35);
+      --radius:16px;--ring:rgba(122,162,255,.25);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:radial-gradient(1100px 700px at 10% -10%,#121828,transparent),
+               radial-gradient(1200px 900px at 110% 10%,#1a1028,transparent),var(--bg);
+      color:var(--fg);font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
+      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    }
+    .wrap{max-width:900px;margin:0 auto;padding:28px}
+    a{color:#9db8ff;text-decoration:none} a:hover{text-decoration:underline}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .back{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;
+          background:#0e1421;border:1px solid var(--border)}
+    h1{margin:0 0 8px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+          border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .pill{display:inline-flex;gap:10px;align-items:center;border:1px solid var(--border);
+          background:#0e1220;border-radius:999px;padding:8px 14px}
+    .dot{width:12px;height:12px;border-radius:50%}
+    .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
+    .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .tile{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .k{color:var(--muted);font-size:12px;margin-bottom:4px}
+    code{background:#0e1322;border:1px solid var(--border);padding:2px 6px;border-radius:8px}
+    pre{background:#0e1322;border:1px solid var(--border);border-radius:12px;padding:12px;
+        overflow:auto;max-height:380px}
+    .badgeimg{height:22px;border-radius:6px;border:1px solid var(--border);background:#0e1220;padding:4px}
+    .hint{color:var(--muted);font-size:13px;margin-top:8px}
+    footer{margin:24px 0 8px;color:#9aa6bd;font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="../index.html" aria-label="Zurück zur Startseite">← Zurück</a>
+      <div>
+        <h1>System-Gesundheit</h1>
+        <div style="color:#8b95a7">Live-Ansicht von <code>badges/health.json</code> und jüngstem Ledger-Eintrag.</div>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="row">
+        <div id="pill" class="pill" title="Gesamtstatus">
+          <span id="dot" class="dot deg"></span>
+          <strong id="status">lädt…</strong>
+        </div>
+        <img class="badgeimg" src="../badges/health.svg" alt="Health Badge"
+             onerror="this.style.display='none'">
+      </div>
+
+      <div class="kv">
+        <div class="tile"><div class="k">Zeitstempel</div><div id="ts">—</div></div>
+        <div class="tile"><div class="k">Run / SHA</div><div><code id="run">—</code> · <code id="sha">—</code></div></div>
+      </div>
+
+      <details style="margin-top:12px">
+        <summary>Rohdaten anzeigen</summary>
+        <pre id="raw">{}</pre>
+      </details>
+      <div class="hint">Kein 404: Bei fehlenden Daten fällt der Viewer automatisch auf „DEGRADED“ zurück.</div>
+    </section>
+
+    <footer>© 2025 Mira Elisabeth Schmid — autonomer, auditierbarer Ausdruck.</footer>
   </div>
-</div>
-<script>
-async function j(p){try{const r=await fetch(p,{cache:"no-store"});if(!r.ok)throw 0;return await r.json()}catch{return null}}
-(async()=>{
-  const d=await j("../badges/health.json")||{status:"DEGRADED",ts:"n/a"};
-  const dot=document.getElementById('dot'),label=document.getElementById('label');
-  const c=d.status==="OK"?"#44d17a":(d.status==="HEALING"?"#ffd166":"#ff6b6b"); dot.style.background=c;
-  label.textContent=`${d.status} · ${d.ts||"n/a"}`;
-  document.getElementById('raw').textContent=JSON.stringify(d,null,2);
-})();
-</script>
-</body></html>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    async function loadJSON(url){
+      try{
+        const r = await fetch(url,{cache:"no-store"});
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        return await r.json();
+      }catch(_){ return null; }
+    }
+    async function loadTXT(url){
+      try{
+        const r = await fetch(url,{cache:"no-store"});
+        if(!r.ok) return "";
+        return await r.text();
+      }catch(_){ return ""; }
+    }
+    function cls(status){ return status==="OK" ? "ok" : status==="HEALING" ? "healing" : "deg"; }
+
+    async function render(){
+      let status="DEGRADED", ts="n/a", run="—", sha="—";
+      const h = await loadJSON("../badges/health.json");
+      if(h){ status=(h.status||"DEGRADED").toUpperCase(); ts=h.ts||"n/a"; }
+      const ledger = await loadTXT("../data/ledger/events.jsonl");
+      if(ledger.trim().length){
+        try{
+          const last = JSON.parse(ledger.trim().split("\n").slice(-1)[0]);
+        run = last.run_id ?? "—";
+        sha = (last.sha||"—").toString().slice(0,7);
+        }catch(_){}
+      }
+      $("#status").textContent = status;
+      $("#ts").textContent = ts;
+      $("#run").textContent = run;
+      $("#sha").textContent = sha;
+      $("#dot").className = "dot " + cls(status);
+      $("#raw").textContent = JSON.stringify({status, ts, run_id:run, sha}, null, 2);
+    }
+
+    render();
+    setInterval(render, 60000);
+  </script>
+</body>
+</html>
