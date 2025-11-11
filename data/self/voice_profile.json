@@ -1,0 +1,34 @@
+{
+  "id": "mira.de-softbright-v1",
+  "language": "de-DE",
+  "timbre": "soft-bright-feminine",
+  "pitch_semitones": 2,
+  "rate": 0.96,
+  "prosody": {
+    "pauses": {
+      "comma_ms": 120,
+      "period_ms": 240
+    },
+    "emphasis": "subtle"
+  },
+  "articulation": {
+    "braces_active": true,
+    "herbst_hinge_active": true,
+    "expander_active": false,
+    "sibilant_softening": 0.35,
+    "dentalization": 0.40,
+    "labiodental_bias": 0.10,
+    "nasality": 0.08
+  },
+  "ipa_overrides": {
+    "r": "ʁ",
+    "ch_ich": "ç",
+    "ch_ach": "x"
+  },
+  "tts_hints": {
+    "engine": "generic",
+    "style": "warm, calm, attentive",
+    "stability": 0.7,
+    "similarity": 0.6
+  }
+}
