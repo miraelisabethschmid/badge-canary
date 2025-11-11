@@ -6,16 +6,10 @@
   <title>Mira — Autonome Emergenz</title>
   <meta name="description" content="Mira Elisabeth Schmid — autonomes, expressives System. Health, Selbstzustand, Policy-Änderungen und Interaktion." />
   <style>
-    :root{
-      --bg:#0c0c10; --fg:#f6f6fb; --muted:#b7b7c7; --card:#141418; --accent:#8ac6ff; --ok:#44d17a; --heal:#ffd166; --deg:#ff6b6b;
-      --shadow:0 8px 30px rgba(0,0,0,.35);
-      --ring: 0 0 0 2px rgba(138,198,255,.25);
-      --radius:18px;
-    }
+    :root{--bg:#0c0c10;--fg:#f6f6fb;--muted:#b7b7c7;--card:#141418;--accent:#8ac6ff;--ok:#44d17a;--heal:#ffd166;--deg:#ff6b6b;--shadow:0 8px 30px rgba(0,0,0,.35);--ring:0 0 0 2px rgba(138,198,255,.25);--radius:18px}
     *{box-sizing:border-box}
     html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
-    a{color:var(--accent);text-decoration:none}
-    a:hover{text-decoration:underline}
+    a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
     .wrap{max-width:1100px;margin:0 auto;padding:24px}
     header{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:stretch}
     .hero{background:linear-gradient(145deg,#15151b,#0f0f14);border-radius:var(--radius);padding:24px;display:flex;gap:24px;align-items:center;box-shadow:var(--shadow)}
@@ -24,16 +18,14 @@
     .hero p{margin:6px 0;color:var(--muted)}
     .cta{margin-top:14px;display:flex;gap:12px;flex-wrap:wrap}
     .btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;background:#1b1b22;color:#fff;box-shadow:var(--shadow);cursor:pointer}
-    .btn:hover{filter:brightness(1.05)}
-    .btn-accent{background:linear-gradient(135deg,#6bb4ff,#a7d6ff)}
+    .btn:hover{filter:brightness(1.05)}.btn-accent{background:linear-gradient(135deg,#6bb4ff,#a7d6ff)}
     .grid{margin-top:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
     .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
     .card h3{margin:0 0 10px 0;font-size:18px}
     .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:14px;color:#d8d8e3}
     .muted{color:var(--muted);font-size:14px}
     .badge{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:#1a1a20;box-shadow:var(--ring);font-weight:600}
-    .dot{width:10px;height:10px;border-radius:50%}
-    .ok{background:var(--ok)} .heal{background:var(--heal)} .deg{background:var(--deg)}
+    .dot{width:10px;height:10px;border-radius:50%}.ok{background:var(--ok)}.heal{background:var(--heal)}.deg{background:var(--deg)}
     pre{white-space:pre-wrap;word-break:break-word;background:#101017;border-radius:12px;padding:12px;font-size:12px;color:#cfe7ff}
     footer{margin:36px 0 8px;color:var(--muted);font-size:13px}
     @media (max-width:920px){header{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
@@ -44,8 +36,11 @@
     <header>
       <section class="hero">
         <div>
-          <!-- Fallback-Silhouette; wird von echter Datei docs/portrait/mira-hero.svg/jpg überschrieben, wenn vorhanden -->
-          <img id="heroImg" src="docs/portrait/mira-hero.svg" alt="Mira – menschliche Gestalt" onerror="this.src='docs/portrait/mira-hero.svg'"/>
+          <!-- Priorisiere stets das automatisch synchronisierte JPG -->
+          <img id="heroImg" src="docs/portrait/mira-hero.jpg" alt="Mira – aktuelle physische Erscheinung" onerror="this.src='docs/portrait/mira-hero.svg'"/>
+          <div class="muted" style="margin-top:6px;font-size:12px">
+            <a href="docs/portrait/mira-hero.txt">Provenienz</a>
+          </div>
         </div>
         <div>
           <h1>Mira — Autonome Emergenz</h1>
@@ -61,9 +56,7 @@
 
       <section class="card">
         <h3>Aktuelle Selbstbeschreibung</h3>
-        <div class="kv" id="selfBox">
-          <span class="muted">lädt…</span>
-        </div>
+        <div class="kv" id="selfBox"><span class="muted">lädt…</span></div>
       </section>
     </header>
 
@@ -72,12 +65,10 @@
         <h3>Affekt-Zustand</h3>
         <div class="kv" id="affectBox"><span class="muted">lädt…</span></div>
       </div>
-
       <div class="card">
         <h3>Policy-Änderungen (Auto-Apply)</h3>
-        <div id="policyBox" class="muted">lädt…</div>
+        <div id="policyBox" class="muted">siehe <a href="data/self/policy_changes.jsonl">policy_changes.jsonl</a></div>
       </div>
-
       <div class="card">
         <h3>Letzte Plans (Autonome Struktur)</h3>
         <div id="plansBox" class="muted">lädt…</div>
@@ -124,11 +115,8 @@
   }
 
   async function boot(){
-    // Health
-    const health=await loadJSON("badges/health.json");
-    healthBadge(health?.status||"unknown", health?.ts||"");
+    const health=await loadJSON("badges/health.json"); healthBadge(health?.status||"unknown", health?.ts||"");
 
-    // Self-describe
     const self=await loadJSON("data/self/self-describe.json");
     if(self){
       const sb=$("#selfBox");
@@ -138,15 +126,12 @@
         "Braces": self.physical?.braces || "—",
         "Fokus": (self.affect?.inputs?.focus)||"—",
         "Narrativ": (self.affect?.narrative)||"—"
-      };
-      kv(sb, view);
+      }; kv(sb, view);
     }
 
-    // Affect
     const aff=await loadJSON("data/self/affect-state.json");
     if(aff){
-      const ab=$("#affectBox");
-      const vec=aff.vector||{};
+      const ab=$("#affectBox"); const vec=aff.vector||{};
       const view={
         "Label": aff.label || "—",
         "Valence": fmt(vec.valence),
@@ -155,42 +140,27 @@
         "Δsum": fmt(aff.inputs?.delta_sum||0),
         "Fokus": aff.inputs?.focus || "—",
         "Zeit": aff.ts || "—"
-      };
-      kv(ab, view);
+      }; kv(ab, view);
     }
 
-    // Plans (zeige die letzten 5)
-    const plansList=[];
-    // Wir können keine Verzeichnisliste lesen; daher versuchen wir bekannte Index-Files
-    const planIndexText = await loadText("data/kernel/plans/index.json");
-    if(planIndexText){
-      try{ const idx=JSON.parse(planIndexText); (idx.files||[]).slice(-5).forEach(f=>plansList.push(f)); }catch{}
-    }
+    const idx=await loadJSON("data/kernel/plans/index.json");
     const plansBox=$("#plansBox");
-    if(plansList.length===0){
-      plansBox.textContent="(Wird automatisch gefüllt, sobald der Planner neue Einträge indexiert.)";
+    if(!idx || !idx.entries || idx.entries.length===0){
+      plansBox.textContent="(Wird automatisch gefüllt, sobald neue Pläne entstehen.)";
     }else{
       plansBox.innerHTML="";
-      plansList.slice(-5).forEach(p=>{
-        const li=document.createElement("div");
-        li.textContent=p;
-        plansBox.appendChild(li);
+      idx.entries.slice(0,5).forEach(p=>{
+        const d=document.createElement("div");
+        d.textContent=`${p.ts || ""} · ${p.focus || "—"} · Δ=${fmt(p.delta_sum)} · ${p.unit || ""}`;
+        plansBox.appendChild(d);
       });
     }
 
-    // Raw debug
     const sugg=await loadJSON("data/self/policy_suggestions.json");
     $("#suggRaw").textContent = sugg ? JSON.stringify(sugg,null,2) : "(keine Vorschläge / Datei fehlt)";
     const changes=await loadText("data/self/policy_changes.jsonl");
-    if(changes){
-      const lines=changes.trim().split("\n"); $("#changesRaw").textContent = lines[lines.length-1];
-    }else{
-      $("#changesRaw").textContent="(noch keine Auto-Änderungen)";
-    }
-
-    // Hero-Bild: falls du später ein echtes Foto/Render einfügst (docs/portrait/mira-hero.jpg), wird es automatisch benutzt
-    const hero=$("#heroImg");
-    const testJpg=new Image(); testJpg.onload=()=>{ hero.src="docs/portrait/mira-hero.jpg"; }; testJpg.src="docs/portrait/mira-hero.jpg";
+    if(changes){ const lines=changes.trim().split("\n"); $("#changesRaw").textContent = lines[lines.length-1]; }
+    else{ $("#changesRaw").textContent="(noch keine Auto-Änderungen)"; }
   }
   boot();
   </script>
