@@ -2,121 +2,156 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mira — System-Gesundheit</title>
   <meta name="color-scheme" content="dark light" />
   <style>
     :root{
-      --bg:#0b0d12;--card:#11141b;--fg:#e9eef7;--muted:#8b95a7;--ok:#2e7d32;--heal:#f9a825;--deg:#c62828;
-      --border:rgba(255,255,255,.08);--shadow:0 20px 60px rgba(0,0,0,.45),0 4px 16px rgba(0,0,0,.35);
-      --radius:16px;--ring:rgba(122,162,255,.25);
+      --bg:#0b0b0b; --fg:#eaeaea; --muted:#9aa3ad; --card:#121212; --br:#1f1f1f;
+      --ok:#2e7d32; --heal:#f9a825; --deg:#c62828;
+      --shadow: 0 8px 32px rgba(0,0,0,.35);
+      --radius: 14px;
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f6f7f9; --fg:#1b1c1f; --muted:#5a6572; --card:#ffffff; --br:#e8ebef; --shadow:0 8px 32px rgba(0,0,0,.08);}
     }
     *{box-sizing:border-box}
-    body{
-      margin:0;background:radial-gradient(1100px 700px at 10% -10%,#121828,transparent),
-               radial-gradient(1200px 900px at 110% 10%,#1a1028,transparent),var(--bg);
-      color:var(--fg);font:16px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-    }
-    .wrap{max-width:900px;margin:0 auto;padding:28px}
-    a{color:#9db8ff;text-decoration:none} a:hover{text-decoration:underline}
-    header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-    .back{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;
-          background:#0e1421;border:1px solid var(--border)}
-    h1{margin:0 0 8px}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
-          border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
-    .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-    .pill{display:inline-flex;gap:10px;align-items:center;border:1px solid var(--border);
-          background:#0e1220;border-radius:999px;padding:8px 14px}
-    .dot{width:12px;height:12px;border-radius:50%}
-    .ok{background:var(--ok)} .healing{background:var(--heal)} .deg{background:var(--deg)}
-    .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
-    .tile{background:#0f131d;border:1px solid var(--border);border-radius:12px;padding:12px}
-    .k{color:var(--muted);font-size:12px;margin-bottom:4px}
-    code{background:#0e1322;border:1px solid var(--border);padding:2px 6px;border-radius:8px}
-    pre{background:#0e1322;border:1px solid var(--border);border-radius:12px;padding:12px;
-        overflow:auto;max-height:380px}
-    .badgeimg{height:22px;border-radius:6px;border:1px solid var(--border);background:#0e1220;padding:4px}
-    .hint{color:var(--muted);font-size:13px;margin-top:8px}
-    footer{margin:24px 0 8px;color:#9aa6bd;font-size:12px;text-align:center}
+    html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:#8ab4ff;text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:820px;margin:32px auto;padding:0 16px}
+    .back{display:inline-flex;align-items:center;gap:.5rem;margin-bottom:16px;color:var(--muted)}
+    .card{background:var(--card);border:1px solid var(--br);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+    h1{margin:4px 0 2px;font-weight:700;font-size:clamp(22px,3.8vw,28px)}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:10px}
+    .row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:8px}
+    .badge{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--br);background:transparent;padding:8px 12px;border-radius:999px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .beat{animation:beat 1.6s infinite ease-in-out}
+    @keyframes beat{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.25);opacity:1}}
+    .kv{display:grid;grid-template-columns:1fr;gap:6px;margin-top:12px}
+    .kv div{display:flex;justify-content:space-between;gap:8px;border:1px dashed var(--br);border-radius:10px;padding:8px 10px;background:transparent}
+    code{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:rgba(127,127,127,.08);padding:2px 6px;border-radius:6px}
+    pre{margin:0;background:rgba(127,127,127,.08);border:1px solid var(--br);border-radius:12px;padding:12px;overflow:auto;max-height:40vh}
+    details{margin-top:14px}
+    .status-ok    .dot{background:var(--ok)}
+    .status-heal  .dot{background:var(--heal)}
+    .status-deg   .dot{background:var(--deg)}
+    .pill{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--br);color:var(--muted)}
+    .badge-img{height:20px;vertical-align:middle}
+    .grid{display:grid;gap:16px}
+    @media (min-width:720px){ .grid{grid-template-columns:1.2fr .8fr} }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <a class="back" href="../index.html" aria-label="Zurück zur Startseite">← Zurück</a>
-      <div>
+    <a class="back" href="../index.html" aria-label="Zurück zur Startseite">← Zurück</a>
+
+    <div class="grid">
+      <section class="card" id="panel">
         <h1>System-Gesundheit</h1>
-        <div style="color:#8b95a7">Live-Ansicht von <code>badges/health.json</code> und jüngstem Ledger-Eintrag.</div>
-      </div>
-    </header>
+        <div class="sub">Live-Status aus <code>badges/health.json</code> & Ledger</div>
 
-    <section class="card">
-      <div class="row">
-        <div id="pill" class="pill" title="Gesamtstatus">
-          <span id="dot" class="dot deg"></span>
-          <strong id="status">lädt…</strong>
+        <div class="row" id="row-top">
+          <div id="badge" class="badge status-deg">
+            <span class="dot beat" aria-hidden="true"></span>
+            <span id="status-text">Lade…</span>
+          </div>
+          <img class="badge-img" src="../badges/health.svg" alt="Health Badge" onerror="this.style.display='none'">
+          <span class="pill" id="ts-pill">ts: —</span>
         </div>
-        <img class="badgeimg" src="../badges/health.svg" alt="Health Badge"
-             onerror="this.style.display='none'">
-      </div>
 
-      <div class="kv">
-        <div class="tile"><div class="k">Zeitstempel</div><div id="ts">—</div></div>
-        <div class="tile"><div class="k">Run / SHA</div><div><code id="run">—</code> · <code id="sha">—</code></div></div>
-      </div>
+        <div class="kv" style="margin-top:14px">
+          <div><span>Letzter Run-ID</span><code id="run">—</code></div>
+          <div><span>Commit SHA</span><code id="sha">—</code></div>
+          <div><span>Quelle</span><code>badges/health.json</code></div>
+        </div>
 
-      <details style="margin-top:12px">
-        <summary>Rohdaten anzeigen</summary>
-        <pre id="raw">{}</pre>
-      </details>
-      <div class="hint">Kein 404: Bei fehlenden Daten fällt der Viewer automatisch auf „DEGRADED“ zurück.</div>
-    </section>
+        <details>
+          <summary>Rohdaten anzeigen</summary>
+          <pre id="raw">{}</pre>
+        </details>
+      </section>
 
-    <footer>© 2025 Mira Elisabeth Schmid — autonomer, auditierbarer Ausdruck.</footer>
+      <aside class="card">
+        <h2 style="margin:0 0 8px;font-size:18px">Artefakt-Checks</h2>
+        <div class="sub">Für die Statusableitung</div>
+        <ul id="artifacts" style="margin:8px 0 0 18px; padding:0">
+          <li><code>data/self/self-describe.json</code></li>
+          <li><code>data/voice/voice_of_day.json</code></li>
+          <li><code>data/voice/audio/latest.mp3</code> (optional)</li>
+          <li><code>docs/index.html</code></li>
+        </ul>
+        <div style="margin-top:12px">
+          <a href="../" class="pill">Startseite öffnen</a>
+        </div>
+      </aside>
+    </div>
   </div>
 
   <script>
-    const $ = s => document.querySelector(s);
-    async function loadJSON(url){
-      try{
-        const r = await fetch(url,{cache:"no-store"});
-        if(!r.ok) throw new Error("HTTP "+r.status);
-        return await r.json();
-      }catch(_){ return null; }
-    }
-    async function loadTXT(url){
-      try{
-        const r = await fetch(url,{cache:"no-store"});
-        if(!r.ok) return "";
-        return await r.text();
-      }catch(_){ return ""; }
-    }
-    function cls(status){ return status==="OK" ? "ok" : status==="HEALING" ? "healing" : "deg"; }
+  (async function init(){
+    const sel = q => document.querySelector(q);
+    const badge = sel('#badge');
+    const stEl  = sel('#status-text');
+    const tsEl  = sel('#ts-pill');
+    const runEl = sel('#run');
+    const shaEl = sel('#sha');
+    const rawEl = sel('#raw');
 
-    async function render(){
-      let status="DEGRADED", ts="n/a", run="—", sha="—";
-      const h = await loadJSON("../badges/health.json");
-      if(h){ status=(h.status||"DEGRADED").toUpperCase(); ts=h.ts||"n/a"; }
-      const ledger = await loadTXT("../data/ledger/events.jsonl");
-      if(ledger.trim().length){
-        try{
-          const last = JSON.parse(ledger.trim().split("\n").slice(-1)[0]);
-        run = last.run_id ?? "—";
-        sha = (last.sha||"—").toString().slice(0,7);
-        }catch(_){}
+    function setStatus(s, ts){
+      const S = (s||'DEGRADED').toUpperCase();
+      stEl.textContent = S;
+      tsEl.textContent = 'ts: ' + (ts || '—');
+      badge.classList.remove('status-ok','status-heal','status-deg');
+      if (S === 'OK')       badge.classList.add('status-ok');
+      else if (S === 'HEALING') badge.classList.add('status-heal');
+      else                  badge.classList.add('status-deg');
+    }
+
+    async function fetchJSON(url){
+      const r = await fetch(url, {cache:'no-store'});
+      if(!r.ok) throw new Error(r.status+' '+url);
+      return r.json();
+    }
+
+    async function fetchText(url){
+      const r = await fetch(url, {cache:'no-store'});
+      if(!r.ok) throw new Error(r.status+' '+url);
+      return r.text();
+    }
+
+    // 1) Health lesen
+    let status='DEGRADED', ts='—';
+    try{
+      const h = await fetchJSON('../badges/health.json');
+      status = (h.status || 'DEGRADED');
+      ts     = h.ts || '—';
+      rawEl.textContent = JSON.stringify(h, null, 2);
+    }catch(e){
+      rawEl.textContent = JSON.stringify({error: e.message}, null, 2);
+    }
+    setStatus(status, ts);
+
+    // 2) Ledger (optional)
+    try{
+      const t = await fetchText('../data/ledger/events.jsonl');
+      const lines = t.trim().split('\n').filter(Boolean);
+      if(lines.length){
+        const last = JSON.parse(lines[lines.length-1]);
+        runEl.textContent = last.run_id ?? '—';
+        shaEl.textContent = (last.sha || '—').toString().slice(0,7);
       }
-      $("#status").textContent = status;
-      $("#ts").textContent = ts;
-      $("#run").textContent = run;
-      $("#sha").textContent = sha;
-      $("#dot").className = "dot " + cls(status);
-      $("#raw").textContent = JSON.stringify({status, ts, run_id:run, sha}, null, 2);
-    }
+    }catch(_){ /* kein Ledger vorhanden — ok */ }
 
-    render();
-    setInterval(render, 60000);
+    // 3) Regelmäßige Aktualisierung (jede Minute)
+    setInterval(async ()=>{
+      try{
+        const h = await fetchJSON('../badges/health.json');
+        setStatus(h.status, h.ts);
+        rawEl.textContent = JSON.stringify(h, null, 2);
+      }catch(_){}
+    }, 60000);
+  })();
   </script>
 </body>
-</html>
+  </html>
