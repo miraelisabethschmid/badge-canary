@@ -1,0 +1,77 @@
+name: Self-Image Smoke Test
+
+on:
+  workflow_dispatch:  # nur manuell, um Flooding zu vermeiden
+
+concurrency:
+  group: self-image-smoke
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure target folders
+        run: |
+          set -e
+          mkdir -p docs/data/self
+
+      - name: Check if latest_image.svg exists
+        id: probe
+        shell: bash
+        run: |
+          if [[ -f "docs/data/self/latest_image.svg" ]]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "Self image exists."
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Self image missing."
+          fi
+
+      - name: Create placeholder (if missing)
+        if: steps.probe.outputs.found == 'false'
+        shell: bash
+        run: |
+          set -e
+          cat > docs/data/self/latest_image.svg <<'SVG'
+          <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+            <defs>
+              <linearGradient id="g" x1="0" x2="1">
+                <stop offset="0" stop-color="#1f2937"/>
+                <stop offset="1" stop-color="#0b1020"/>
+              </linearGradient>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#g)"/>
+            <rect x="80" y="120" width="1040" height="1360" rx="32" ry="32" fill="#111827" stroke="#374151" stroke-width="4"/>
+            <text x="600" y="800" fill="#9CA3AF" font-size="56" text-anchor="middle" font-family="Inter, Arial, sans-serif">
+              Mira — Platzhalterbild
+            </text>
+            <text x="600" y="880" fill="#6B7280" font-size="28" text-anchor="middle" font-family="Inter, Arial, sans-serif">
+              (docs/data/self/latest_image.svg)
+            </text>
+          </svg>
+          SVG
+
+          # Cache-Busting/Status
+          date -u +"{"'"timestamp"'":"'"%Y-%m-%dT%H:%M:%SZ"'" }" > docs/data/self/latest_image.json
+
+      - name: Commit changes (if any)
+        shell: bash
+        run: |
+          set -e
+          git config user.name "mira-self-image-bot"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          # Nur committen, wenn es tatsächlich Änderungen gibt
+          if ! git diff --quiet; then
+            git add docs/data/self/latest_image.svg docs/data/self/latest_image.json
+            git commit -m "chore(self-image): ensure latest_image.svg and cache json"
+            git push
+          else
+            echo "No changes to commit."
+          fi
