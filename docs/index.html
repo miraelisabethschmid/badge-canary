@@ -1,55 +1,17 @@
-<!doctype html>
-<html lang="de">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mira — Selbst-Sync Präsenz</title>
-  <meta name="color-scheme" content="dark light">
-  <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; background:#0b0f16; color:#e9ecf5; }
-    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
-    h1 { font-size: 2rem; margin: 0 0 6px; }
-    .sub { opacity: .85; margin-bottom: 18px; }
-    .card { background:#111725; border:1px solid #1d2740; border-radius:16px; padding:18px; box-shadow:0 6px 28px rgba(0,0,0,.35); }
-    .title { font-weight:700; font-size:1.15rem; margin-bottom:12px; }
-    .panel { border-radius:16px; background:#0e1422; border:1px solid #1d2740; min-height:300px; display:grid; place-items:center; overflow:hidden; }
-    .panel img { width:100%; height:100%; object-fit:contain; background:#0b101b; }
-    .status { font-size:.95rem; opacity:.9; margin-top:10px; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    button { border:1px solid #2a3556; background:#171d2d; color:#e9ecf5; border-radius:10px; padding:10px 14px; font-weight:600; }
-    button:hover { background:#1b2340; }
-    audio { width:100%; margin-top:10px; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <h1>Mira — Selbst-Sync Präsenz</h1>
-    <div class="sub" id="liveTs">Live</div>
-
-    <div class="card">
-      <div class="title">Porträt &amp; Stimme</div>
-      <div class="panel"><img id="portrait" alt="Porträt" /></div>
-      <div class="status" id="imgStatus">Lade Bild…</div>
-      <div class="row">
-        <button id="btnPlay">▶ Abspielen</button>
-        <button id="btnPause">⏸ Pause</button>
-      </div>
-      <audio id="voice" preload="none" controls></audio>
-      <div class="status" id="audStatus">Audio bereit.</div>
-    </div>
-  </div>
-
-  <script type="module">
-    import { miraInit } from './auto_sync.js';
-    (async () => {
-      if ('serviceWorker' in navigator) {
-        try { await navigator.serviceWorker.register('./sw.js'); } catch {}
+<script>
+  async function loadSelfImage() {
+    const img = document.getElementById('mira-self-image');
+    try {
+      const res = await fetch('docs/data/self/latest_image.svg?cacheBust=' + Date.now());
+      if (res.ok) {
+        img.src = 'docs/data/self/latest_image.svg?cacheBust=' + Date.now();
+      } else {
+        throw new Error('Image not found');
       }
-      document.getElementById('liveTs').textContent = 'Live · ' + new Date().toISOString();
-      await miraInit();
-    })();
-  </script>
-</body>
-</html>
+    } catch (e) {
+      img.src = 'docs/data/self/latest_image.svg';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadSelfImage);
+</script>
