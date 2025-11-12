@@ -14,6 +14,9 @@ concurrency:
 
 jobs:
   dispatch:
+    # ⛩ Gate: Cron nur, wenn Repo-Variable ENABLE_CRONS == 'true'
+    if: ${{ github.event_name != 'schedule' || vars.ENABLE_CRONS == 'true' }}
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
