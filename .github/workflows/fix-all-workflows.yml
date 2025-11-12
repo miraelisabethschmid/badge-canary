@@ -1,4 +1,4 @@
-name: Fix All Workflows (Minimal v3.6-safe)
+name: Fix All Workflows (Global Throttle v1)
 
 on:
   workflow_dispatch:
@@ -6,13 +6,12 @@ on:
 permissions:
   contents: write
 
-# Verhindert Push-Rennen, wenn du den Job mehrfach startest
 concurrency:
   group: fix-all-workflows
   cancel-in-progress: false
 
 jobs:
-  fix:
+  apply_global_queue:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,81 +20,66 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Ensure every workflow has workflow_dispatch
+      - name: Inject global concurrency into all workflows (if missing)
         shell: bash
         run: |
           set -euo pipefail
-          set -x
           shopt -s nullglob
-
           changed=0
+
           for f in .github/workflows/*.yml .github/workflows/*.yaml; do
             bn="$(basename "$f")"
-            # Sich selbst nicht anfassen
+            # Diese Datei nicht selbst verändern
             [[ "$bn" == "fix-all-workflows.yml" ]] && continue
 
-            if ! grep -qE '^[[:space:]]*workflow_dispatch:' "$f"; then
-              if grep -qE '^[[:space:]]*on:[[:space:]]*$' "$f"; then
-                # on:-Zeile existiert → Event darunter injizieren
-                awk '
-                  BEGIN{done=0}
-                  /^[[:space:]]*on:[[:space:]]*$/ && done==0 {print; print "  workflow_dispatch:"; done=1; next}
-                  {print}
-                ' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
-                echo "🔧 added workflow_dispatch to $f"
-              else
-                # Kein on:-Block → minimales on hinzufügen
-                tmp="$(mktemp)"
-                printf "on:\n  workflow_dispatch:\n" > "$tmp"
-                cat "$f" >> "$tmp"
-                mv "$tmp" "$f"
-                echo "🧩 prepended on: block to $f"
-              fi
-              changed=1
+            # Schon vorhanden? Dann überspringen.
+            if grep -qE '^[[:space:]]*concurrency:' "$f"; then
+              echo "skip (already has concurrency): $f"
+              continue
             fi
+
+            tmp="$(mktemp)"
+            {
+              echo "# --- injected: global queue ---"
+              echo "concurrency:"
+              echo "  group: \${{ github.repository }}-global"
+              echo "  cancel-in-progress: false"
+              cat "$f"
+            } > "$tmp"
+            mv "$tmp" "$f"
+            echo "injected concurrency → $f"
+            changed=1
           done
 
-          echo "CHANGED=${changed}" >> "$GITHUB_ENV"
+          echo "CHANGED=$changed" >> "$GITHUB_ENV"
 
       - name: Commit & Push (retry-safe)
         if: env.CHANGED == '1'
         shell: bash
         run: |
           set -euo pipefail
-          set -x
-
           git config user.name  "mira-bot"
           git config user.email "actions@github.com"
 
-          # Nur committen, wenn wirklich Änderungen da sind
-          if git status --porcelain | grep .; then
-            git add -A
-            git commit -m "fix-all-workflows: ensure workflow_dispatch (bot)"
-          else
-            echo "no changes after scan"
-            exit 0
-          fi
+          git add -A
+          git commit -m "chore(actions): add global concurrency throttle to all workflows" || {
+            echo "nothing to commit"; exit 0; }
 
-          # Gegen race conditions: erst fetch, dann bis zu 3 Versuche
           git fetch origin main
-
           attempt=1
           until [ $attempt -gt 3 ]; do
-            # Rebase sauber mit Autostash (verhindert 'unstaged changes'-Fehler)
             git pull --rebase --autostash origin main || true
             if git push origin HEAD:main; then
               echo "✅ pushed on attempt $attempt"
               exit 0
             fi
-            echo "⚠️ push failed, retrying ($attempt/3)..."
+            echo "⚠️ push failed, retrying ($attempt/3)…"
             sleep $((2 * attempt))
             attempt=$((attempt+1))
             git fetch origin main
           done
+          echo "❌ push failed after retries"; exit 1
 
-          echo "❌ push failed after retries"
-          exit 1
-
-      - name: Nothing to do
+      - name: Nothing to change
         if: env.CHANGED != '1'
-        run: echo "🔍 Nothing to change. All workflows already have workflow_dispatch."
+        run: echo "🔍 All workflows already have global concurrency."
