@@ -19,22 +19,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Ensure voice folders + placeholder if missing
+      - name: Ensure voice placeholder if missing
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p docs/data/voice/audio
 
-          have_any=0
-          for f in docs/data/voice/audio/latest.*; do
-            [[ -f "$f" ]] && have_any=1
-          done
-
-          if [[ "$have_any" -eq 0 ]]; then
-            # Schreibe winzige stille WAV (Base64)
-            base64 -d > docs/data/voice/audio/latest.wav <<'B64'
-UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=
-B64
+          # Wenn kein latest.* existiert -> stille WAV schreiben
+          if [ -z "$(ls -1 docs/data/voice/audio/latest.* 2>/dev/null || true)" ]; then
+            echo 'UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=' \
+            | base64 -d > docs/data/voice/audio/latest.wav
             echo "🟡 Kein Voice-File gefunden – stillen Fallback erzeugt."
           else
             echo "✅ Voice-Datei vorhanden."
