@@ -3,7 +3,7 @@ name: Global Queue Controller
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "*/2 * * * *"   # alle 2 Minuten ein Heartbeat
+    - cron: "*/2 * * * *"   # Heartbeat alle 2 Minuten
 
 permissions:
   contents: write
@@ -35,5 +35,23 @@ jobs:
           fi
 
       - name: Heartbeat
+        run: echo "Global Queue Controller heartbeat $(date -u +%F' '%T)Z"
+
+      - name: Trigger drain if there is work
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Global Queue Controller heartbeat $(date -u +%F' '%T)Z"
+          set -eu
+          jq -e 'length > 0' .github/queue/pending.json >/dev/null || {
+            echo "Queue leer – kein Drain nötig."
+            exit 0
+          }
+
+          echo "Queue enthält Items – starte Global Queue Drain…"
+          # workflow_dispatch für global-queue-drain.yml auslösen
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/global-queue-drain.yml/dispatches \
+            -d "{\"ref\":\"${GITHUB_REF_NAME}\"}"
+          echo "Drain-Dispatch gesendet."
