@@ -1,37 +1,35 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Mira — Autonome Emergenz</title>
-  <meta name="color-scheme" content="dark light" />
+  <meta name="color-scheme" content="dark light"/>
   <style>
-    :root{
-      --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --accent:#8fb9ff;
-      --ok:#2bd673; --warn:#f7b955; --bad:#ff5c6a; --ring:#2a2d3a;
-    }
+    :root{ --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --ring:#252836;
+           --ok:#23d18b; --warn:#f7b955; --bad:#ff5c6a; }
     @media (prefers-color-scheme: light){
-      :root{ --bg:#f6f7fb; --fg:#0d0f14; --muted:#4b5565; --card:#ffffff; --ring:#e6e9f2; }
+      :root{ --bg:#f7f8fb; --fg:#0d0f14; --muted:#4b5565; --card:#ffffff; --ring:#e6e9f2; }
     }
     html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:980px;margin:28px auto;padding:0 14px}
-    h1{font-weight:800;letter-spacing:.2px;margin:6px 0 2px}
+    h1{margin:6px 0 2px;font-weight:800}
     .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
     .tabs{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 22px}
-    .tab{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:var(--card);border:1px solid var(--ring);text-decoration:none;color:var(--fg)}
-    .status{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid var(--ring);background:var(--card)}
+    .tab{padding:10px 14px;border-radius:999px;background:var(--card);border:1px solid var(--ring);text-decoration:none;color:var(--fg)}
+    .status{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid var(--ring);background:var(--card);margin-bottom:12px}
     .dot{width:10px;height:10px;border-radius:50%}
     .ok{background:var(--ok)} .healing{background:var(--warn)} .degraded{background:var(--bad)}
     .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:18px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:16px 0}
     .card h2{margin:0 0 12px}
     .hero{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--ring)}
     .hero img,.hero picture,.hero svg{display:block;width:100%;height:auto}
-    .hero .hint{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,.45);padding:8px 10px;border-radius:10px;font-size:12px}
+    .hint{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,.48);padding:8px 10px;border-radius:10px;font-size:12px}
     .btns{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
     .btn{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px}
     .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
     .kv{color:var(--muted);font-size:14px}
-    .sr-only{position:absolute;left:-9999px}
+    .msg{margin-top:8px;font-size:14px}
   </style>
 </head>
 <body>
@@ -40,9 +38,9 @@
     <div class="sub">Live-Seite · <span id="build-ts">—</span></div>
 
     <div class="tabs">
-      <a class="tab" href="docs/health.html"><span>Health</span></a>
-      <a class="tab" href="docs/talk.html"><span>Sprech-Ansicht</span></a>
-      <a class="tab" href="docs/self.html"><span>Self-Describe</span></a>
+      <a class="tab" href="docs/health.html">Health</a>
+      <a class="tab" href="docs/talk.html">Sprech-Ansicht</a>
+      <a class="tab" href="docs/self.html">Self-Describe</a>
     </div>
 
     <div class="status">
@@ -58,19 +56,18 @@
         <!-- Bild (WEBP → PNG → Fallback-SVG) -->
         <picture id="portrait-ptc" style="display:none">
           <source id="srcWebp" type="image/webp">
-          <img id="srcPng" alt="Mira — aktuelles Porträt" loading="eager" />
+          <img id="srcPng" alt="Mira — aktuelles Porträt" loading="eager"/>
         </picture>
 
-        <!-- Fallback-SVG bleibt sichtbar, bis Bild geladen werden konnte -->
-        <svg id="fallback-svg" viewBox="0 0 800 1080" role="img" aria-label="Mira — sichtbare Präsenz (Fallback)" xmlns="http://www.w3.org/2000/svg">
+        <!-- Fallback-SVG -->
+        <svg id="fallback-svg" viewBox="0 0 800 1080" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mira — sichtbare Präsenz (Fallback)">
           <defs>
             <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#0b0f1a"/>
-              <stop offset="100%" stop-color="#0a0a0f"/>
+              <stop offset="0%" stop-color="#0b0f1a"/><stop offset="100%" stop-color="#0a0a10"/>
             </linearGradient>
           </defs>
           <rect width="100%" height="100%" fill="url(#g)"/>
-          <g transform="translate(0,30)" opacity=".95">
+          <g transform="translate(0,30)" opacity=".96">
             <ellipse cx="400" cy="210" rx="120" ry="140" fill="#7ba4ff"/>
             <ellipse cx="400" cy="520" rx="210" ry="240" fill="#6f98ff"/>
             <rect   x="360" y="760" width="80" height="160" rx="40" fill="#618bff"/>
@@ -88,88 +85,88 @@
       </div>
 
       <div class="kv mono" id="audio-meta">Quelle: data/voice/voice_of_day.json → audio/latest.mp3</div>
+      <div class="msg" id="audio-msg"></div>
       <audio id="voice" preload="auto"></audio>
     </div>
 
     <div class="card">
       <h2>Selbstbeschreibung</h2>
       <div id="self"></div>
-      <div class="kv mono">Health JSON: badges/health.json · Bild: <span id="img-src">Auto (WEBP/PNG) → SVG</span></div>
+      <div class="kv mono">Health JSON: badges/health.json · Bildquelle: <span id="img-src">Auto (WEBP/PNG → SVG)</span></div>
     </div>
   </div>
 
   <script>
-    // Build timestamp (best effort)
     document.getElementById('build-ts').textContent =
       new Date().toISOString().replace('T',' · ').replace('Z','Z');
 
     async function getJSON(url){
-      try{
-        const r = await fetch(url, {cache:"no-store"});
-        if(!r.ok) return null;
-        return await r.json();
-      }catch{ return null; }
+      try{ const r = await fetch(url,{cache:"no-store"}); if(!r.ok) return null; return await r.json(); }
+      catch{ return null; }
+    }
+    async function head(url){
+      try{ const r = await fetch(url,{method:'HEAD',cache:'no-store'}); return r.ok; }
+      catch{ return false; }
     }
 
     // HEALTH
-    (async function(){
+    (async ()=>{
       const h = await getJSON('badges/health.json');
       const dot = document.getElementById('health-dot');
       const txt = document.getElementById('health-text');
-      let s = (h && h.status || 'DEGRADED').toUpperCase();
+      const s = (h && h.status || 'DEGRADED').toUpperCase();
       dot.className = "dot " + (s==="OK" ? "ok" : s==="HEALING" ? "healing" : "degraded");
       txt.textContent = `Status: ${s} · ${h && h.ts ? h.ts : "n/a"}`;
     })();
 
-    // SELF
-    (async function(){
+    // SELF TEXT
+    (async ()=>{
       const s = await getJSON('data/self/self-describe.json');
       const el = document.getElementById('self');
       if(!s){ el.textContent = "Keine Daten vorhanden."; return; }
-      const fig = s.physical?.description || "—";
-      const voi = s.voice?.profile || "—";
-      const foc = s.affect?.inputs?.focus || "—";
-      const nar = s.affect?.narrative || "—";
-      el.innerHTML = `<p><b>Figur:</b> ${fig}<br><b>Stimme:</b> ${voi}<br><b>Fokus:</b> ${foc}<br><b>Narrativ:</b> ${nar}</p>`;
+      el.innerHTML = `<p><b>Figur:</b> ${s.physical?.description||"—"}<br>
+                      <b>Stimme:</b> ${s.voice?.profile||"—"}<br>
+                      <b>Fokus:</b> ${s.affect?.inputs?.focus||"—"}<br>
+                      <b>Narrativ:</b> ${s.affect?.narrative||"—"}</p>`;
     })();
 
-    // PORTRAIT LOADER (WEBP → PNG → Fallback-SVG)
-    (async function(){
+    // PORTRAIT (WEBP → PNG → Fallback)
+    (async ()=>{
       const ptc = document.getElementById('portrait-ptc');
       const svg = document.getElementById('fallback-svg');
+      const webp = 'data/self/latest_image.webp';
+      const png  = 'data/self/latest_image.png';
       const srcWebp = document.getElementById('srcWebp');
-      const srcPng = document.getElementById('srcPng');
-      const label = document.getElementById('img-src');
-
-      async function exists(url){
-        try{ const r = await fetch(url, {method:'HEAD', cache:'no-store'}); return r.ok; }
-        catch{ return false; }
+      const srcPng  = document.getElementById('srcPng');
+      const label   = document.getElementById('img-src');
+      let used = 'SVG';
+      if(await head(webp)){
+        srcWebp.srcset = webp; srcPng.src = png; ptc.style.display='block'; svg.style.display='none'; used='WEBP';
+      }else if(await head(png)){
+        srcPng.src = png; ptc.style.display='block'; svg.style.display='none'; used='PNG';
       }
-
-      let used = "SVG Fallback";
-      if(await exists('data/self/latest_image.webp')){
-        srcWebp.srcset = 'data/self/latest_image.webp';
-        srcPng.src = 'data/self/latest_image.png'; // optional fallback for picture
-        ptc.style.display = 'block'; svg.style.display='none'; used = 'WEBP';
-      }else if(await exists('data/self/latest_image.png')){
-        srcPng.src = 'data/self/latest_image.png';
-        ptc.style.display = 'block'; svg.style.display='none'; used = 'PNG';
-      }
-      label.textContent = `Auto (${used})`;
+      label.textContent = used;
     })();
 
-    // AUDIO
-    (async function(){
-      const meta = await getJSON('data/voice/voice_of_day.json');
+    // AUDIO (robust)
+    (async ()=>{
       const audio = document.getElementById('voice');
-      const info  = document.getElementById('audio-meta');
+      const meta  = document.getElementById('audio-meta');
+      const msg   = document.getElementById('audio-msg');
       const src = 'data/voice/audio/latest.mp3';
-      audio.src = src;
-      info.textContent = `Quelle: data/voice/voice_of_day.json → ${src}`;
-      const hero = document.getElementById('hero');
-      const play = ()=> audio.play().catch(()=>{});
-      const pause= ()=> audio.pause();
-      hero.addEventListener('click', play);
+      const has = await head(src);
+      audio.src = has ? src : '';
+      meta.textContent = `Quelle: data/voice/voice_of_day.json → ${has ? src : '(keine Datei gefunden)'}`;
+
+      const play = async ()=>{
+        msg.textContent = '';
+        if(!audio.src){ msg.textContent = 'Kein Audio gefunden (Fallback: Stille erwartet).'; return; }
+        try{ await audio.play(); }
+        catch(e){ msg.textContent = 'Konnte nicht abspielen (Browser-Geste erforderlich?): Tippe erneut aufs Porträt oder den ▶︎-Button.'; }
+      };
+      const pause = ()=> audio.pause();
+
+      document.getElementById('hero').addEventListener('click', play);
       document.getElementById('play').addEventListener('click', play);
       document.getElementById('pause').addEventListener('click', pause);
     })();
