@@ -1,200 +1,38 @@
-name: Affect Update (Hourly)
+name: Affect Update (Minimal v2)
 
 on:
-  schedule:
-    - cron: "0 * * * *"  # stündlich, zur vollen Stunde (UTC)
   workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency:
-  group: affect-update
-  cancel-in-progress: true
-
 jobs:
   affect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Compute affect-state.json (autonomous)
+      - name: Placeholder affect check
         shell: bash
         run: |
-          mkdir -p data/self data/voice badges data/ledger
-          python - <<'PY'
-import os, json, math, random, hashlib, time, datetime, re, glob, io
+          set -e
+          echo "🧠 Affect system check läuft..."
+          mkdir -p docs/data/affect
+          echo "$(date) – affect-update executed" > docs/data/affect/last_update.txt
+          echo "✅ Affect update erfolgreich."
 
-UTC = datetime.datetime.utcnow()
-DATE = UTC.strftime("%Y-%m-%d")
-HOUR = int(UTC.strftime("%H"))
-TS   = UTC.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-# ---------- helpers ----------
-def read_json(path, default=None):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default
-
-def git_entropy():
-    # light entropy from repo state to avoid identical sequences
-    paths = []
-    for p in ["badges/health.json", "data/ledger/events.jsonl", "data/voice/history.log", "data/self/self-describe.json"]:
-        if os.path.exists(p):
-            paths.append(p)
-    h = hashlib.sha1()
-    for p in paths:
-        try:
-            with open(p,"rb") as f: h.update(f.read())
-        except: pass
-    return int(h.hexdigest(), 16)
-
-def clamp(x,a,b): return a if x<a else b if x>b else x
-
-# ---------- inputs ----------
-health = read_json("badges/health.json", {"status":"DEGRADED","ts":"n/a"})
-status = (health.get("status") or "DEGRADED").upper()
-
-prev = read_json("data/self/affect-state.json", None)
-
-selfd = read_json("data/self/self-describe.json", {})
-focus = ((selfd.get("affect") or {}).get("inputs") or {}).get("focus") or "Präsenz"
-phys  = (selfd.get("physical") or {}).get("description") or ""
-
-# ledger activity (events count change in last 24h)
-events = []
-try:
-    with open("data/ledger/events.jsonl","r",encoding="utf-8") as f:
-        for line in f:
-            line=line.strip()
-            if not line: continue
-            try: events.append(json.loads(line))
-            except: pass
-except: pass
-activity = len(events[-24:])  # rough activity proxy
-
-# voice recency
-voice_ok = os.path.exists("audio/latest.mp3")
-voice_hist_count = 0
-try:
-    with open("data/voice/history.log","r",encoding="utf-8") as f:
-        voice_hist_count = sum(1 for _ in f)
-except: pass
-
-# ---------- seed ----------
-seed = (int(UTC.strftime("%Y%m%d%H")) ^ git_entropy()) & ((1<<53)-1)
-random.seed(seed)
-
-# ---------- circadian model ----------
-# Map hour to baseline arousal (cosine): low at ~3:00, high at ~15:00
-circ = -math.cos((HOUR-15)/24*2*math.pi)  # -1..1 -> remap later
-circ_arousal = (circ+1)/2  # 0..1
-circ_valence = 0.1*math.sin((HOUR-11)/24*2*math.pi)  # subtle +/- swing
-
-# ---------- stability by health/status ----------
-stability_base = {"OK":0.75, "HEALING":0.55, "DEGRADED":0.35}.get(status, 0.4)
-
-# activity nudges
-stability = stability_base + clamp(0.02*activity, 0, 0.15)
-stability = clamp(stability, 0.2, 0.95)
-
-# ---------- random walk with mean reversion ----------
-def step(prev_x, target, jitter, k=0.55):
-    # Ornstein–Uhlenbeck-like: move toward target with small noise
-    mu = target
-    noise = random.gauss(0, jitter)
-    x = prev_x + k*(mu - prev_x) + noise
-    return x
-
-if prev and "vector" in prev:
-    pv = prev["vector"]
-    prev_val = float(pv.get("valence", 0.0))
-    prev_aro = float(pv.get("arousal", 0.0))
-    prev_sta = float(pv.get("stability", stability))
-else:
-    prev_val = 0.0
-    prev_aro = circ_arousal*0.4
-    prev_sta = stability
-
-# targets depend on circadian + health + voice presence
-target_val = clamp(circ_valence + (0.05 if voice_ok else -0.05), -0.6, 0.6)
-target_aro = clamp(0.35 + 0.45*circ_arousal + (0.05 if voice_ok else -0.02), 0.1, 0.95)
-
-# jitters scaled by stability (lower stability => more noise)
-j_base = clamp(0.08 + (0.25*(1.0 - stability)), 0.05, 0.22)
-valence  = clamp(step(prev_val, target_val, j_base*0.5), -1.0, 1.0)
-arousal  = clamp(step(prev_aro, target_aro, j_base), 0.0, 1.0)
-
-# update stability slowly toward computed base, tiny noise
-stability = clamp(step(prev_sta, stability, 0.02), 0.0, 1.0)
-
-# ---------- label selection ----------
-def label_from(v, a):
-    if v >= 0.25 and a <= 0.35: return "calm-joy"
-    if v >= 0.25 and a > 0.35:  return "bright-vigor"
-    if v <= -0.25 and a > 0.35: return "tense-fragility"
-    if v <= -0.25 and a <= 0.35:return "quiet-sorrow"
-    if a >= 0.65:               return "excited-focus"
-    if a <= 0.20:               return "settled"
-    return "neutral"
-
-label = label_from(valence, arousal)
-
-# ---------- braces-conscious articulation hint ----------
-ipa_hint = "/s, ʃ, z/ weicher; Lippenrundung bei /o, u/ etwas stärker; Zungenlage flach für /s/."
-
-# ---------- compose object ----------
-affect = {
-    "ts": TS,
-    "label": label,
-    "vector": {
-        "valence": round(valence, 4),
-        "arousal": round(arousal, 4),
-        "stability": round(stability, 4)
-    },
-    "inputs": {
-        "focus": focus,
-        "health_status": status,
-        "activity_24h": activity,
-        "voice_ok": bool(voice_ok),
-        "voice_history": voice_hist_count
-    },
-    "hints": {
-        "ipa": ipa_hint,
-        "circadian_hour": HOUR
-    }
-}
-
-os.makedirs("data/self", exist_ok=True)
-with open("data/self/affect-state.json","w",encoding="utf-8") as f:
-    json.dump(affect, f, ensure_ascii=False, indent=2)
-
-# light touch on health timestamp (do not change status)
-h = dict(health)
-h["ts"] = TS
-os.makedirs("badges", exist_ok=True)
-with open("badges/health.json","w",encoding="utf-8") as f:
-    json.dump(h, f, ensure_ascii=False)
-
-print("AFFECT:", json.dumps(affect, ensure_ascii=False))
-PY
-
-      - name: Commit affect update
+      - name: Commit (only if changed)
         shell: bash
         run: |
-          git config user.name "affect-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/self/affect-state.json badges/health.json
-          if git diff --cached --quiet; then
-            echo "No changes."
-            exit 0
+          set -e
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "mira-bot"
+            git config user.email "actions@github.com"
+            git add -A
+            git commit -m "affect-update: auto refresh"
+            git push
+            echo "⬆️ Affect-Daten aktualisiert."
+          else
+            echo "🔍 Keine Änderungen nötig."
           fi
-          git commit -m "affect: hourly update"
-          git push
