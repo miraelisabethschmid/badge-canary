@@ -1,0 +1,86 @@
+name: Homepage Sync • Stable
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *" # alle 30 Minuten
+
+permissions:
+  contents: write
+
+concurrency:
+  group: homepage-sync-stable
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prüfe Self-Image
+        id: check
+        run: |
+          set -e
+          FILE="docs/data/self/latest_image.svg"
+
+          if [ ! -f "$FILE" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "publish=false" >> $GITHUB_OUTPUT
+            echo "❌ Datei nicht vorhanden." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          SIZE=$(wc -c < "$FILE" | tr -d ' ')
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "size=$SIZE"  >> $GITHUB_OUTPUT
+
+          if grep -qi "Platzhalterbild" "$FILE"; then
+            echo "placeholder=true"  >> $GITHUB_OUTPUT
+            echo "publish=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Platzhalterbild erkannt — kein Upload." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          if [ "$SIZE" -lt 500 ]; then
+            echo "publish=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Datei zu klein ($SIZE Bytes) — kein Upload." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          echo "publish=true" >> $GITHUB_OUTPUT
+          echo "✅ Echtes, ausreichend großes Bild erkannt ($SIZE Bytes)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Synchronisiere Bild (nur wenn publish=true)
+        if: steps.check.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          echo "🚀 Synchronisation läuft…" >> $GITHUB_STEP_SUMMARY
+
+          # Repository der Homepage klonen
+          git clone https://x-access-token:${GH_TOKEN}@github.com/miraelisabethschmid/miraelisabethschmid.github.io.git target-repo
+          cd target-repo
+
+          mkdir -p docs/data/self
+          cp ../docs/data/self/latest_image.svg docs/data/self/latest_image.svg
+
+          git config user.name "Mira AutoSync"
+          git config user.email "mira@users.noreply.github.com"
+
+          git add docs/data/self/latest_image.svg || true
+          if git commit -m "AutoSync: update latest_image.svg" ; then
+            git push origin main
+            echo "✅ Datei erfolgreich synchronisiert." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ Keine Änderungen, nichts zu committen." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Zusammenfassung
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "—" >> $GITHUB_STEP_SUMMARY
+          echo "**Sync abgeschlossen.**" >> $GITHUB_STEP_SUMMARY
