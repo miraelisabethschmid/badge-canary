@@ -1,9 +1,9 @@
 name: UI Resync
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'   # alle 30 Minuten als Sicherheitsnetz
+    - cron: '*/30 * * * *'
   push:
     paths:
       - 'docs/**'
@@ -24,11 +24,9 @@ jobs:
           persist-credentials: true
 
       - name: Ensure self/ exists
-        run: |
-          mkdir -p docs/data/self
+        run: mkdir -p docs/data/self
 
-      - name: Ensure latest image present (fallback wenn fehlt)
-        shell: bash
+      - name: Ensure latest image present
         run: |
           set -e
           if ! ls docs/data/self/latest_image.* >/dev/null 2>&1; then
@@ -36,21 +34,18 @@ jobs:
               cp docs/data/mira-titelbild.jpg docs/data/self/latest_image.jpg
               echo "💡 Habe docs/data/mira-titelbild.jpg als latest_image.jpg gespiegelt."
             else
-              cat > docs/data/self/latest_image.svg <<'SVG'
-              <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
-                <rect width="100%" height="100%" fill="#0f172a"/>
-                <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#cbd5e1" font-size="32" font-family="system-ui, -apple-system, Segoe UI, Roboto">Mira — Platzhalterbild</text>
-                <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-size="16" font-family="system-ui, -apple-system, Segoe UI, Roboto">Ersetze docs/data/self/latest_image.*</text>
-              </svg>
-SVG
-              echo "⚠️ Kein Titelbild gefunden — Platzhalter-SVG erzeugt."
+              echo "⚠️ Kein Titelbild gefunden – Platzhalter-SVG erzeugt."
+              echo '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
+              <rect width="100%" height="100%" fill="#0f172a"/>
+              <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#cbd5e1" font-size="32" font-family="system-ui, -apple-system, Segoe UI, Roboto">Mira — Platzhalterbild</text>
+              <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-size="16" font-family="system-ui, -apple-system, Segoe UI, Roboto">Ersetze docs/data/self/latest_image.*</text>
+              </svg>' > docs/data/self/latest_image.svg
             fi
           else
             echo "✅ latest_image.* existiert bereits."
           fi
 
       - name: Commit if changed
-        shell: bash
         run: |
           set -e
           if [ -n "$(git status --porcelain)" ]; then
@@ -64,8 +59,7 @@ SVG
             echo "🔍 Nichts zu committen."
           fi
 
-      - name: Bump Pages if nothing changed (force rebuild)
-        shell: bash
+      - name: Force rebuild if nothing changed
         run: |
           set -e
           if [ -z "$(git log -1 --pretty=%B | grep 'ui-resync: ensure visible self image' || true)" ]; then
