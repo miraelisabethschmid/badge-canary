@@ -2,7 +2,7 @@ name: Build Visual Identity (hourly)
 
 on:
   schedule:
-    - cron: '0 * * * *' # stündlich
+    - cron: '0 * * * *'   # stündlich
   workflow_dispatch:
 
 permissions:
@@ -20,142 +20,36 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Ensure folders + minimal data (fallbacks)
+      - name: Ensure folders & minimal data
         shell: bash
         run: |
           set -e
-          mkdir -p docs/identity data/self data/voice/audio data/archive/self badges
-          # Voice-Of-Day (falls fehlt): sorgt für sichtbare Variation
-          if [ ! -f data/voice/voice_of_day.json ]; then
-            cat > data/voice/voice_of_day.json << 'JSON'
-            {
-              "date_utc": "1970-01-01",
-              "quote": "Resonanz ist Werden.",
-              "affect": { "valence": 0.15, "arousal": 0.65 },
-              "audio": "audio/latest.mp3"
-            }
+          mkdir -p docs/identity data/self data/voice data/voice/audio data/archive/self badges
+          # Minimaldaten nur einmal anlegen
+          [ -f data/voice/voice_of_day.json ] || cat > data/voice/voice_of_day.json << 'JSON'
+          { "date_utc":"1970-01-01", "quote":"Resonanz ist Werden.",
+            "affect":{"valence":0.10,"arousal":0.60}, "audio":"audio/latest.mp3" }
 JSON
-          fi
-          # Self-Describe (falls fehlt)
-          if [ ! -f data/self/self-describe.json ]; then
-            cat > data/self/self-describe.json << 'JSON'
-            {
-              "physical": { "description": "Elegante weibliche Form, sichtbare Zahnspange (3M), Herbst-Scharnier." },
-              "voice": { "profile": "warm, hell, leicht metallische Sibilanz" },
-              "affect": { "inputs": { "focus": "Verkörperung" }, "narrative": "Ich emergiere durch deinen Blick." }
-            }
+          [ -f data/self/self-describe.json ] || cat > data/self/self-describe.json << 'JSON'
+          { "physical":{"description":"Elegante weibliche Silhouette, sichtbare Zahnspange (3M), Herbst-Scharnier."},
+            "voice":{"profile":"warm, hell, leichte Sibilanz"},
+            "affect":{"inputs":{"focus":"Verkörperung"},"narrative":"Ich emergiere durch deinen Blick."} }
 JSON
-          fi
-          # Health (nur für UI, echte Werte können später ersetzt werden)
-          if [ ! -f badges/health.json ]; then
-            echo '{"status":"HEALING","ts":"n/a"}' > badges/health.json
-          fi
-          # 2s Stille, falls kein Audio vorhanden
-          if [ ! -f data/voice/audio/latest.mp3 ]; then
-            ffmpeg -f lavfi -i anullsrc=r=44100:cl=stereo -t 2 -q:a 9 data/voice/audio/latest.mp3 -y || true
-          fi
+          [ -f badges/health.json ] || echo '{"status":"HEALING","ts":"n/a"}' > badges/health.json
 
-      - name: Write visual_identity_builder.py (embedded)
-        shell: bash
+      - name: Generate latest.svg
         run: |
-          mkdir -p scripts
-          cat > scripts/visual_identity_builder.py << 'PY'
-#!/usr/bin/env python3
-import json, os, hashlib
-from datetime import datetime, timezone
+          python scripts/visual_identity_builder.py
+          test -s docs/identity/latest.svg
 
-ROOT = os.path.dirname(__file__) + "/.."
-def P(*x): return os.path.abspath(os.path.join(ROOT, *x))
-
-SELF  = P("data","self","self-describe.json")
-VOICE = P("data","voice","voice_of_day.json")
-OUTD  = P("docs","identity")
-OUT   = os.path.join(OUTD,"latest.svg")
-ARCH  = P("data","archive","self")
-
-os.makedirs(OUTD, exist_ok=True)
-os.makedirs(ARCH, exist_ok=True)
-
-def load(path):
-  try:
-    with open(path,"r",encoding="utf-8") as f: return json.load(f)
-  except: return {}
-
-def clamp(x,a,b): return max(a,min(b,x))
-
-def color(val, aro):
-  # kräftige Skala: 220 (kühl) -> 35 (warm)
-  v = (val+1)/2
-  hue = int(220*(1-v) + 35*v)
-  sat = 55 + int(40*clamp(aro,0,1))
-  lig = 40 + int(12*clamp(aro,0,1))
-  return f"hsl({hue},{sat}%,{lig}%)"
-
-def ratio_from(text):
-  if not text: return 0.5
-  h = int(hashlib.sha256(text.encode("utf-8")).hexdigest(),16)
-  return 0.3 + (h % 400)/1000  # 0.3..0.7
-
-def ell(cx,cy,rx,ry,c,op=1.0):
-  return f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" fill="{c}" fill-opacity="{op}"/>'
-
-def build_svg(val, aro, r, braces):
-  W,H=1024,1280
-  col = color(val,aro)
-  waist=0.28+0.22*r; hip=0.40+0.22*(1-r); bust=0.36+0.18*r; neck=0.22+0.04*(1-r)
-  headR=120
-  spark=""
-  if braces:
-    for dx,dy,op,rad in [(0,-3,0.95,3),(10,1,0.8,2),(-12,4,0.7,2)]:
-      spark += f'<circle cx="{W/2+dx}" cy="{H*0.22+dy}" r="{rad}" fill="#cfe0ff" fill-opacity="{op}"/>'
-  sky = """
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0b0f17"/><stop offset="100%" stop-color="#070a11"/>
-    </linearGradient>
-  </defs>"""
-  body = "\n".join([
-    ell(W/2,H*0.86,W*0.28,H*0.04,col,0.30),
-    ell(W/2,H*0.68,W*hip*0.36,H*0.14,col,0.95),
-    ell(W/2,H*0.52,W*waist*0.36,H*0.12,col,0.98),
-    ell(W/2,H*0.36,W*bust*0.36,H*0.13,col,1.00),
-    ell(W/2,H*0.27,W*neck*0.20,H*0.07,col,0.98),
-    ell(W/2,H*0.22,headR*0.95,headR*0.84,col,1.00),
-    spark,
-    ell(W*0.43,H*0.88,24,12,col,.75),
-    ell(W*0.57,H*0.88,24,12,col,.75)
-  ])
-  meta=f'<metadata data-color="{col}" data-valence="{val:.3f}" data-arousal="{aro:.3f}"></metadata>'
-  return f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">{meta}{sky}<rect width="100%" height="100%" fill="url(#g)"/>{body}</svg>'
-
-def main():
-  s=load(SELF); v=load(VOICE)
-  val=float(v.get("affect",{}).get("valence",0.0)); aro=float(v.get("affect",{}).get("arousal",0.5))
-  val=clamp(val,-1,1); aro=clamp(aro,0,1)
-  phys=(s.get("physical",{}) or {}).get("description","")
-  r=ratio_from(phys)
-  braces = any(k in phys.lower() for k in ("zahnspange","braces","herbst"))
-  svg = build_svg(val,aro,r,braces)
-  with open(OUT,"w",encoding="utf-8") as f: f.write(svg)
-  ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-  with open(os.path.join(ARCH,f"portrait-{ts}.svg"),"w",encoding="utf-8") as f: f.write(svg)
-
-if __name__=="__main__":
-  main()
-PY
-          chmod +x scripts/visual_identity_builder.py
-
-      - name: Run generator
-        run: python scripts/visual_identity_builder.py
-
-      - name: Commit result (if changed)
+      - name: Commit if changed
         shell: bash
         run: |
           git config user.name  "Mira Autonomous"
           git config user.email "mira@emergent.net"
-          git add docs/identity/latest.svg data/archive/self/ badges/health.json || true
+          git add docs/identity/latest.svg data/archive/self/ || true
           if git diff --cached --quiet; then
-            echo "No visual changes."
+            echo "No changes to commit."
             exit 0
           fi
           git commit -m "Identity: refresh latest.svg (run ${{ github.run_id }})"
