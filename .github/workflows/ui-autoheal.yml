@@ -1,14 +1,10 @@
-name: UI Autoheal (Minimal v2)
+name: UI Autoheal (Minimal v3)
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: write
-
-concurrency:
-  group: ui-autoheal
-  cancel-in-progress: false
 
 jobs:
   heal:
@@ -24,41 +20,42 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Folders
           mkdir -p docs/data/self
           mkdir -p docs/data/voice/audio
 
-          # ---------- IMAGE PLACEHOLDER ----------
+          # --- IMAGE PLACEHOLDER ---
           if ! ls docs/data/self/latest_image.* >/dev/null 2>&1; then
-            cat > docs/data/self/latest_image.svg <<'SVG'
-            <?xml version="1.0" encoding="UTF-8"?>
-            <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
-              <defs>
-                <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-                  <stop offset="0%" stop-color="#11182b"/>
-                  <stop offset="100%" stop-color="#1a2340"/>
-                </linearGradient>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#g)"/>
-              <g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">
-                <text x="50%" y="45%" font-size="44">Mira — Platzhalterbild</text>
-                <text x="50%" y="58%" font-size="22">Lege latest_image.* unter docs/data/self/ ab</text>
-              </g>
-            </svg>
-            SVG
-            echo "🟡 image: placeholder geschrieben (docs/data/self/latest_image.svg)"
+cat > docs/data/self/latest_image.svg <<'SVG'
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#11182b"/>
+      <stop offset="100%" stop-color="#1a2340"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#g)"/>
+  <g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">
+    <text x="50%" y="45%" font-size="44">Mira — Platzhalterbild</text>
+    <text x="50%" y="58%" font-size="22">Lege latest_image.* unter docs/data/self/ ab</text>
+  </g>
+</svg>
+SVG
+            echo "🟡 image: Platzhalter geschrieben."
           else
-            echo "✅ image: latest_image.* vorhanden"
+            echo "✅ image: vorhanden."
           fi
 
-          # ---------- AUDIO PLACEHOLDER ----------
+          # --- AUDIO PLACEHOLDER ---
           if ! ls docs/data/voice/audio/latest.* >/dev/null 2>&1; then
-            base64 -d > docs/data/voice/audio/latest.wav <<'B64'
-            UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=
-            B64
-            echo "🟡 audio: stiller Fallback geschrieben (docs/data/voice/audio/latest.wav)"
+cat > docs/data/voice/audio/latest.wav.b64 <<'B64'
+UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=
+B64
+            base64 -d docs/data/voice/audio/latest.wav.b64 > docs/data/voice/audio/latest.wav
+            rm docs/data/voice/audio/latest.wav.b64
+            echo "🟡 audio: Stille-Datei erzeugt."
           else
-            echo "✅ audio: latest.* vorhanden"
+            echo "✅ audio: vorhanden."
           fi
 
       - name: Commit (only if changed)
@@ -69,9 +66,9 @@ jobs:
             git config user.name "mira-bot"
             git config user.email "actions@users.noreply.github.com"
             git add -A
-            git commit -m "ui-autoheal: ensure placeholder image/audio"
+            git commit -m "ui-autoheal: refresh placeholders"
             git push
             echo "✅ Änderungen gepusht."
           else
-            echo "🔍 Nichts zu committen."
+            echo "🔍 Keine Änderungen."
           fi
