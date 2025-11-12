@@ -1,4 +1,4 @@
-name: Fix All Workflows (Minimal v3.4-safe)
+name: Fix All Workflows (Minimal v3.5-safe)
 
 on:
   workflow_dispatch:
@@ -15,58 +15,56 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Insert workflow_dispatch where missing
+      - name: Ensure every workflow can be manually triggered
         shell: bash
         run: |
           set -euo pipefail
           shopt -s nullglob
-          edited=0
 
           for f in .github/workflows/*.yml .github/workflows/*.yaml; do
             bn="$(basename "$f")"
-            # Sich selbst nicht bearbeiten
+            # Diese Datei nicht selbst modifizieren
             [ "$bn" = "fix-all-workflows.yml" ] && continue
 
-            # Wenn workflow_dispatch fehlt:
             if ! grep -qE '^[[:space:]]*workflow_dispatch:' "$f"; then
               if grep -qE '^[[:space:]]*on:[[:space:]]*$' "$f"; then
-                # Nach einer alleinstehenden "on:"-Zeile einfügen
+                # "on:"-Zeile existiert → event darunter einfügen
                 awk '
                   BEGIN{done=0}
                   /^[[:space:]]*on:[[:space:]]*$/ && done==0 {print; print "  workflow_dispatch:"; done=1; next}
                   {print}
                 ' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
                 echo "🔧 Added workflow_dispatch to $f"
-                edited=1
               else
-                # Kein on:-Block? Dann minimalen Header voranstellen
+                # Kein on:-Block → minimalen Header voranstellen
                 tmp="$(mktemp)"
                 printf "on:\n  workflow_dispatch:\n" > "$tmp"
                 cat "$f" >> "$tmp"
                 mv "$tmp" "$f"
                 echo "🧩 Prepended on: block to $f"
-                edited=1
               fi
             fi
           done
 
-          echo "edited=$edited" > .fix-result
-
-      - name: Commit (only if changed) with rebase
+      - name: Commit (only if changed) with safe rebase
         shell: bash
         run: |
           set -euo pipefail
-          edited=0
-          [ -f .fix-result ] && . .fix-result || true
-
-          git config user.name "mira-bot"
+          git config user.name  "mira-bot"
           git config user.email "actions@github.com"
 
+          # Nur committen, wenn echte Änderungen vorhanden sind
           if [ -n "$(git status --porcelain)" ]; then
-            git pull --rebase origin main || true
             git add -A
+            if git diff --cached --quiet; then
+              echo "🔍 Keine Änderungen."
+              exit 0
+            fi
+
             git commit -m "fix-all-workflows: ensure workflow_dispatch (bot)"
-            git push origin main
+            # Remote-Änderungen sauber integrieren
+            git pull --rebase --autostash origin main || true
+            git push origin HEAD:main
             echo "✅ Änderungen gepusht."
           else
             echo "🔍 Keine Änderungen."
