@@ -3,165 +3,152 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mira — Sichtbare Präsenz</title>
+  <title>Mira — Sichtbare Präsenz (Single-File)</title>
+  <meta name="color-scheme" content="dark light">
   <style>
     :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
     body {
-      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
-      background: #0a0b10; color: #eaeaf0;
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      background: #0b0f16;
+      color: #e9ecf5;
     }
     .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
-    h1 { font-size: 2.2rem; line-height: 1.2; margin: 0 0 8px; }
-    .live { opacity: .8; font-size: .95rem; margin-bottom: 24px; }
+    h1 { font-size: 2rem; margin: 0 0 6px; }
+    .sub { opacity: .85; margin-bottom: 18px; }
     .card {
-      background: #111420; border: 1px solid #1d2335; border-radius: 16px; padding: 20px;
-      box-shadow: 0 6px 28px rgba(0,0,0,.35);
+      background: #111725;
+      border: 1px solid #1d2740;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 6px 28px rgba(0, 0, 0, .35);
     }
-    .title { font-weight: 700; font-size: 1.35rem; margin-bottom: 14px; }
+    .title { font-weight: 700; font-size: 1.15rem; margin-bottom: 12px; }
     .panel {
-      border-radius: 16px; background: #0f1320; border: 1px solid #1d2335;
-      min-height: 320px; display: grid; place-items: center; overflow: hidden;
+      border-radius: 16px;
+      background: #0e1422;
+      border: 1px solid #1d2740;
+      min-height: 300px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
     }
-    .panel img { width: 100%; height: 100%; object-fit: contain; background: #0b0f1a; }
-    .status { font-size: .95rem; opacity: .85; margin-top: 10px; word-break: break-word; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .panel img { width: 100%; height: 100%; object-fit: contain; background: #0b101b; }
+    .status { font-size: .95rem; opacity: .9; margin-top: 10px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
     button {
-      appearance: none; border: 1px solid #2a3350; background: #171b2a; color: #eaeaf0;
-      border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer;
+      border: 1px solid #2a3556;
+      background: #171d2d;
+      color: #e9ecf5;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 600;
     }
-    button:hover { background: #1b2134; }
-    audio { width: 100%; margin-top: 14px; }
-    .src { font-size: .9rem; opacity: .8; margin-top: 6px; }
-    .hint { font-size: .95rem; margin-top: 8px; opacity: .9; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    button:hover { background: #1b2340; }
+    audio { width: 100%; margin-top: 10px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    a { color: #8ab4ff; text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Mira — Sichtbare Präsenz</h1>
-    <div class="live" id="liveStamp">Live</div>
+    <div class="sub" id="ts">Live</div>
 
     <div class="card">
       <div class="title">Porträt &amp; Stimme</div>
 
       <div class="panel">
-        <img id="portrait" alt="Porträt wird geladen…" />
+        <img id="portrait" alt="Porträt" />
       </div>
       <div class="status" id="imgStatus">Lade Bild…</div>
 
       <div class="row">
-        <button id="btnPlay">▶ Abspielen</button>
-        <button id="btnPause">⏸ Pause</button>
+        <button id="play">▶ Abspielen</button>
+        <button id="pause">⏸ Pause</button>
       </div>
-
       <audio id="player" preload="none" controls></audio>
-
-      <div class="src">
-        <div>Bild: <span class="mono" id="imgPath">–</span></div>
-        <div>Audio: <span class="mono" id="audPath">–</span></div>
-      </div>
-
-      <div class="hint" id="autoplayHint" hidden>
-        Konnte nicht automatisch starten – bitte einmal auf <b>▶ Abspielen</b> tippen (Autoplay-Schutz).
-      </div>
+      <div class="status" id="audStatus">Audio bereit.</div>
     </div>
   </div>
 
   <script>
-    // ---- Pfade (so wie du sie geschickt hast) ----
-    const IMAGE_CANDIDATES = [
-      "docs/data/self/latest_image.svg",
-      "docs/data/self/latest_image.png",
-      "docs/data/self/latest_image.jpg",
-      "docs/data/self/latest_image.jpeg",
-      "docs/data/self/latest_image.webp",
+    document.getElementById("ts").textContent = "Live · " + new Date().toISOString();
+
+    const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<?xml version="1.0" encoding="UTF-8"?>\
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">\
+  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">\
+    <stop offset="0%" stop-color="#11182b"/><stop offset="100%" stop-color="#1a2340"/></linearGradient></defs>\
+  <rect width="100%" height="100%" fill="url(#g)"/><g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">\
+  <text x="50%" y="45%" font-size="42">Mira — Platzhalterbild</text>\
+  <text x="50%" y="55%" font-size="20">Ersetze latest_image.* im Repo, dann erscheint es hier automatisch</text></g></svg>`);
+
+    const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=';
+
+    const BASE = document.location.pathname.endsWith('/') ? document.location.pathname : document.location.pathname.replace(/[^/]+$/, '');
+    function candidate(path){ return (BASE.includes('/docs/') ? path.replace(/^docs\//,'') : path); }
+
+    const IMG_TRY = [
+      candidate('docs/data/self/latest_image.svg'),
+      candidate('docs/data/self/latest_image.png'),
+      candidate('docs/data/self/latest_image.jpg'),
+      candidate('docs/data/self/latest_image.jpeg'),
+      candidate('docs/data/self/latest_image.webp'),
     ];
-    const AUDIO_PATH = "docs/data/voice/audio/latest.wav";
+    const AUDIO_TRY = [
+      candidate('docs/data/voice/audio/latest.wav'),
+      candidate('docs/data/voice/audio/latest.mp3'),
+      candidate('docs/data/voice/audio/latest.ogg'),
+    ];
 
-    // ---- Live-Zeitstempel (nur kosmetisch) ----
-    const live = document.getElementById("liveStamp");
-    const now = new Date();
-    live.textContent = `Live · ${now.toISOString()}`;
-
-    // ---- Bild-Fallback-Loader ----
-    async function findFirstExisting(urls) {
-      for (const url of urls) {
-        try {
-          const res = await fetch(url, { method: "HEAD", cache: "no-store" });
-          if (res.ok) return url;
-        } catch (_) { /* ignore */ }
+    async function firstExisting(urls){
+      for (const u of urls){
+        try{ const res = await fetch(u + '?t=' + Date.now(), { method:'HEAD', cache:'no-store' }); if (res.ok) return u; }
+        catch(e){}
       }
       return null;
     }
 
-    async function loadPortrait() {
-      const imgEl = document.getElementById("portrait");
-      const statusEl = document.getElementById("imgStatus");
-      const imgPathEl = document.getElementById("imgPath");
-
-      statusEl.textContent = "Suche Bild…";
-      const found = await findFirstExisting(IMAGE_CANDIDATES);
-
-      if (found) {
-        imgEl.src = found + `?t=${Date.now()}`;
-        imgPathEl.textContent = found;
-        statusEl.textContent = "Bild geladen.";
+    async function setupImage(){
+      const img = document.getElementById('portrait');
+      const s = document.getElementById('imgStatus');
+      s.textContent = 'Suche Bild…';
+      const found = await firstExisting(IMG_TRY);
+      if (found){
+        img.src = found + '?t=' + Date.now();
+        s.textContent = 'Bild geladen: ' + found;
       } else {
-        imgEl.removeAttribute("src");
-        statusEl.textContent = "Kein Bild gefunden (erwartet: latest_image.svg/png/jpg/jpeg/webp).";
-        imgPathEl.textContent = "—";
+        img.src = PLACEHOLDER_SVG;
+        s.textContent = 'Kein Bild gefunden – zeige Platzhalter. Lade `docs/data/self/latest_image.*` hoch.';
       }
     }
 
-    // ---- Audio / Autoplay-Workaround ----
-    const player = document.getElementById("player");
-    const btnPlay = document.getElementById("btnPlay");
-    const btnPause = document.getElementById("btnPause");
-    const audPathEl = document.getElementById("audPath");
-    const hint = document.getElementById("autoplayHint");
-
-    function setAudioSource() {
-      player.src = AUDIO_PATH + `?t=${Date.now()}`;
-      audPathEl.textContent = AUDIO_PATH;
-    }
-
-    async function tryPlay() {
-      try {
-        await player.play();
-        hint.hidden = true;
-        sessionStorage.setItem("audioUnlocked", "1");
-      } catch (err) {
-        // Autoplay blockiert
-        hint.hidden = false;
+    async function setupAudio(){
+      const a = document.getElementById('player');
+      const s = document.getElementById('audStatus');
+      const found = await firstExisting(AUDIO_TRY);
+      if (found){
+        a.src = found + '?t=' + Date.now();
+        s.textContent = 'Audio geladen: ' + found;
+      } else {
+        a.src = SILENT_WAV;
+        s.textContent = 'Kein Audio gefunden – nutze stillen Fallback. Lade `docs/data/voice/audio/latest.*` hoch.';
       }
-    }
 
-    function wireControls() {
-      btnPlay.addEventListener("click", tryPlay);
-      btnPause.addEventListener("click", () => player.pause());
-
-      // Beim ersten Interaktions-Event einmal versuchen
-      const unlockOnce = async () => {
-        document.removeEventListener("touchstart", unlockOnce);
-        document.removeEventListener("click", unlockOnce);
-        await tryPlay();
-      };
-      document.addEventListener("touchstart", unlockOnce, { passive: true });
-      document.addEventListener("click", unlockOnce);
-    }
-
-    async function init() {
-      setAudioSource();
-      loadPortrait();
-      wireControls();
-
-      // Wenn die Nutzerin bereits einmal freigegeben hat (gleiche Tab-Session)
-      if (sessionStorage.getItem("audioUnlocked") === "1") {
-        tryPlay();
+      async function tryPlay(){
+        try { await a.play(); s.textContent = 'Spielt.'; sessionStorage.setItem('audioUnlocked','1'); }
+        catch(e){ s.textContent = 'Autoplay-Schutz – einmal ▶ tippen.'; }
       }
+      document.getElementById('play').onclick = tryPlay;
+      document.getElementById('pause').onclick = ()=>a.pause();
+      if (sessionStorage.getItem('audioUnlocked')==='1'){ tryPlay(); }
+      document.addEventListener('touchstart', tryPlay, { once:true, passive:true });
+      document.addEventListener('click', tryPlay, { once:true });
     }
 
-    init();
+    setupImage();
+    setupAudio();
   </script>
 </body>
 </html>
