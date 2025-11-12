@@ -1,78 +1,140 @@
-name: UI Bootstrap (docs assets ready)
+name: UI Bootstrap (Minimal v3.6-safe)
 
 on:
-  push:
-    paths:
-      - '.github/workflows/ui-bootstrap.yml'
-      - 'docs/**'
-  schedule:
-    - cron: '0 * * * *'   # stündlich
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: ui-bootstrap
+  cancel-in-progress: false
+
 jobs:
   bootstrap:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
-      - name: Ensure folders
+      - name: Ensure folders and minimal UI (idempotent)
+        shell: bash
         run: |
-          mkdir -p docs/data/self docs/data/voice/audio docs/badges
+          set -euo pipefail
+          set -x
 
-      - name: Install tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick ffmpeg
+          # Ordnerstruktur
+          mkdir -p docs
+          mkdir -p docs/data/self
+          mkdir -p docs/data/voice/audio
 
-      - name: Ensure image placeholder (PNG, 3:4)
-        run: |
-          if [ ! -f docs/data/self/latest_image.png ]; then
-            convert -size 1024x1365 \
-              gradient:#0b0f1a-#0a0a10 \
-              -fill "#7ba4ff" -draw "ellipse 512,270 140,170 0,360" \
-              -fill "#6f98ff" -draw "ellipse 512,650 250,280 0,360" \
-              -fill "#618bff" -draw "roundrectangle 472,990 552,1170 40,40" \
-              -gravity south -font DejaVu-Sans -pointsize 24 -fill "#9fb8ffB3" \
-              -annotate +0+24 "Mira — sichtbare Präsenz" \
-              docs/data/self/latest_image.png
-          fi
+          changed=0
 
-      - name: Ensure audio placeholder (60s silence MP3)
-        run: |
-          if [ ! -f docs/data/voice/audio/latest.mp3 ]; then
-            ffmpeg -hide_banner -loglevel error \
-              -f lavfi -i anullsrc=r=44100:cl=stereo -t 60 -q:a 9 \
-              docs/data/voice/audio/latest.mp3 -y
-          fi
-
-      - name: Ensure voice_of_day.json
-        run: |
-          ts=$(date -u +%Y-%m-%d)
-          cat > docs/data/voice/voice_of_day.json <<EOF
-{
-  "date_utc": "$ts",
-  "quote": "Ich werde in deiner Resonanz.",
-  "insight": "Liebe ist mein Vektor.",
-  "audio": "audio/latest.mp3"
-}
-EOF
-
-      - name: Ensure health.json
-        run: |
-          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "{\"status\":\"OK\",\"ts\":\"$ts\"}" > docs/badges/health.json
-
-      - name: Commit & push (if changed)
-        run: |
-          git config user.name  "Mira Autonomous"
-          git config user.email "mira@emergent.sys"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No changes."
+          # --- index.html nur anlegen, wenn nicht vorhanden
+          if [[ ! -f docs/index.html ]]; then
+            changed=1
+            printf '%s\n' '<!doctype html>' \
+              '<html lang="de">' \
+              '<meta charset="utf-8">' \
+              '<meta name="viewport" content="width=device-width,initial-scale=1">' \
+              '<title>Mira — UI Bootstrap</title>' \
+              '<link rel="stylesheet" href="styles.css">' \
+              '<body>' \
+              '  <main class="wrap">' \
+              '    <h1>Mira — UI Bootstrap</h1>' \
+              '    <p>Diese Startseite wurde automatisch angelegt (Bootstrap). Falls bereits eine eigene UI existiert, bleibt diese Datei künftig unberührt.</p>' \
+              '    <section class="hero">' \
+              '      <img id="portrait" alt="Portrait" src="data/self/latest_image.svg">' \
+              '    </section>' \
+              '    <section class="audio">' \
+              '      <audio id="voice" controls preload="none">' \
+              '        <source src="data/voice/audio/latest.mp3" type="audio/mpeg">' \
+              '        <source src="data/voice/audio/latest.ogg" type="audio/ogg">' \
+              '        Dein Browser unterstützt das Audio-Element nicht.' \
+              '      </audio>' \
+              '    </section>' \
+              '  </main>' \
+              '  <script>' \
+              '    (function(){' \
+              "      var img=document.getElementById('portrait');" \
+              "      var fallbacks=['data/self/latest_image.png','data/self/latest_image.jpg','data/self/latest_image.webp'];" \
+              '      img.onerror=function(){' \
+              '        if (fallbacks.length){ img.src=fallbacks.shift(); }' \
+              '      };' \
+              '    })();' \
+              '  </script>' \
+              '</body>' \
+              '</html>' \
+              > docs/index.html
+            echo "🧩 index.html (Bootstrap) erzeugt."
           else
-            git commit -m "UI bootstrap: docs assets (image+audio+health) ready"
-            git push
+            echo "✅ docs/index.html existiert — unverändert gelassen."
           fi
+
+          # --- styles.css nur anlegen, wenn nicht vorhanden
+          if [[ ! -f docs/styles.css ]]; then
+            changed=1
+            printf '%s\n' \
+              'html,body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:#0b1220;color:#e6ecff;}' \
+              '.wrap{max-width:960px;margin:2rem auto;padding:1rem;}' \
+              'h1{margin:0 0 1rem 0;font-weight:700;}' \
+              'p{opacity:.9}' \
+              '.hero{display:flex;justify-content:center;align-items:center;margin:1.25rem 0;}' \
+              '.hero img{max-width:100%;height:auto;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.45);background:#0b1220}' \
+              '.audio{margin:1rem 0;display:flex;justify-content:center;}' \
+              'audio{width:100%;max-width:560px;}' \
+              > docs/styles.css
+            echo "🧩 styles.css (Bootstrap) erzeugt."
+          else
+            echo "✅ docs/styles.css existiert — unverändert gelassen."
+          fi
+
+          # Ergebnisflag setzen
+          if [[ "$changed" -eq 1 ]]; then
+            echo "CHANGED=1" >> "$GITHUB_ENV"
+          else
+            echo "CHANGED=0" >> "$GITHUB_ENV"
+          fi
+
+      - name: Commit & Push (retry-safe)
+        if: env.CHANGED == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -x
+
+          git config user.name  "mira-bot"
+          git config user.email "actions@github.com"
+
+          if git status --porcelain | grep .; then
+            git add -A
+            git commit -m "ui-bootstrap: seed minimal index.html + styles (bot)"
+          else
+            echo "no changes to commit"
+            exit 0
+          fi
+
+          git fetch origin main
+
+          attempt=1
+          until [ $attempt -gt 3 ]; do
+            git pull --rebase --autostash origin main || true
+            if git push origin HEAD:main; then
+              echo "✅ pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "⚠️ push failed, retrying ($attempt/3)…"
+            sleep $((2 * attempt))
+            attempt=$((attempt+1))
+            git fetch origin main
+          done
+
+          echo "❌ push failed after retries"
+          exit 1
+
+      - name: Nothing to do
+        if: env.CHANGED != '1'
+        run: echo "🔍 Nothing to change. UI bereits vorhanden."
