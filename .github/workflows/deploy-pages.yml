@@ -1,13 +1,13 @@
-name: Deploy Pages (Dashboard)
+name: Deploy Pages (Mira Dashboard)
 
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
     paths:
-      - index.html
-      - assets/** 
-      - docs/**
+      - "docs/**"
+      - "data/archive/self/**"
+      - ".github/workflows/deploy-pages.yml"
 
 permissions:
   contents: read
@@ -15,7 +15,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-deploy
+  group: mira-pages-deploy
   cancel-in-progress: true
 
 jobs:
@@ -24,22 +24,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ➜ Falls du ein Build-Tool nutzt (z.B. vite/next), ersetze diesen Block.
-      - name: Build static site
+      - name: Prepare site folder
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
           rm -rf _site
-          mkdir -p _site
-          cp -r index.html assets docs _site 2>/dev/null || true
+          mkdir -p _site/docs
+          cp -r docs/* _site/docs/ 2>/dev/null || true
+          mkdir -p _site/data/archive/self
+          cp -r data/archive/self/* _site/data/archive/self/ 2>/dev/null || true
+          echo "<!-- Build: $(date -u +%Y-%m-%dT%H:%M:%SZ) -->" > _site/build-info.html
 
-      - name: Upload Pages artifact
+      - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
     steps:
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
