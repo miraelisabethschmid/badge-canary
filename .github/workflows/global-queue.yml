@@ -3,55 +3,64 @@ name: Global Queue Controller
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "*/2 * * * *"   # Heartbeat alle 2 Minuten
+    - cron: "*/3 * * * *"   # alle 3 Minuten prüfen
 
 permissions:
   contents: write
 
 jobs:
-  init-and-heartbeat:
+  control:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 1 }
 
-      - name: Ensure queue folder & file
+      - name: Ensure queue file exists
         run: |
           set -eu
           mkdir -p .github/queue
           [ -f .github/queue/pending.json ] || echo "[]" > .github/queue/pending.json
 
-      - name: Commit queue file if created
+      - name: Inspect queue and pop first item if available
+        id: q
         run: |
           set -eu
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/queue/pending.json || true
-          if ! git diff --cached --quiet; then
-            git commit -m "queue: ensure pending.json"
+          pending=".github/queue/pending.json"
+          total=$(jq 'length' "$pending")
+          echo "total=$total" >> "$GITHUB_OUTPUT"
+
+          if [ "$total" -gt 0 ]; then
+            # hole ersten Eintrag (Index 0) und restliche Schlange
+            first=$(jq '.[0]' "$pending")
+            rest=$(jq '.[1:]' "$pending")
+
+            # schreibe Rest zurück und committe (damit wir nicht doppelt arbeiten)
+            printf '%s\n' "$rest" > "$pending"
+
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$pending"
+            git commit -m "global-queue: pop 1 (controller)"
             git push
-          else
-            echo "No changes"
+
+            # sichere Payload für den nächsten Step
+            echo "payload<<JSON" >> "$GITHUB_OUTPUT"
+            echo "$first" >> "$GITHUB_OUTPUT"
+            echo "JSON" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Heartbeat
-        run: echo "Global Queue Controller heartbeat $(date -u +%F' '%T)Z"
-
-      - name: Trigger drain if there is work
+      - name: Dispatch drain (repository_dispatch)
+        if: steps.q.outputs.total != '0'
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD: ${{ steps.q.outputs.payload }}
         run: |
           set -eu
-          jq -e 'length > 0' .github/queue/pending.json >/dev/null || {
-            echo "Queue leer – kein Drain nötig."
-            exit 0
-          }
-
-          echo "Queue enthält Items – starte Global Queue Drain…"
-          # workflow_dispatch für global-queue-drain.yml auslösen
+          body=$(jq -nc --argjson p "$PAYLOAD" \
+                       '{event_type:"global-queue.drain", client_payload:$p}')
           curl -sS -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/global-queue-drain.yml/dispatches \
-            -d "{\"ref\":\"${GITHUB_REF_NAME}\"}"
-          echo "Drain-Dispatch gesendet."
+            https://api.github.com/repos/${GH_REPO}/dispatches \
+            -d "$body"
+          echo "repository_dispatch sent."
