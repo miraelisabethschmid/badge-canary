@@ -1,0 +1,19 @@
+{
+  "updated": "2025-11-12T00:00:00Z",
+  "image": {
+    "candidates": [
+      "docs/data/self/latest_image.svg",
+      "docs/data/self/latest_image.png",
+      "docs/data/self/latest_image.jpg",
+      "docs/data/self/latest_image.jpeg",
+      "docs/data/self/latest_image.webp"
+    ]
+  },
+  "audio": {
+    "candidates": [
+      "docs/data/voice/audio/latest.wav",
+      "docs/data/voice/audio/latest.mp3",
+      "docs/data/voice/audio/latest.ogg"
+    ]
+  }
+}
