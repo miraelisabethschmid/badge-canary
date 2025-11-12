@@ -1,7 +1,7 @@
 /* Mira Auto-Sync — nie leer, immer live */
 const STATE = {
   manifestUrl: (function(){
-    // Funktioniert sowohl bei Root-Hosting als auch bei /docs
+    // funktioniert bei Root-Hosting und /docs
     const base = location.pathname.endsWith('/') ? location.pathname : location.pathname.replace(/[^/]+$/, '');
     return (base.includes('/docs/') ? 'data/manifest.json' : 'docs/data/manifest.json');
   })(),
@@ -133,4 +133,4 @@ export async function miraInit() {
   const m = await fetchManifest();
   await applyManifest(m);
   poll();
-      }
+}
