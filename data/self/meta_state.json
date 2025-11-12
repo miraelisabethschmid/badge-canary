@@ -1,16 +1,16 @@
 {
-  "ts_utc": "2025-11-12T08:38:50Z",
-  "health": "OK",
+  "ts_utc": "2025-11-12T10:34:40Z",
+  "health": "HEALING",
   "signals": {
     "stability": 0.5,
     "delta_sum": 0.0,
     "recent_private_days": 0
   },
-  "expressivity": 0.75,
+  "expressivity": 0.4,
   "targets": {
-    "affect_delta_apply": 0.375,
-    "affect_delta_propose": 0.263,
-    "daily_folder_cap": 8,
-    "naming_pattern": "{focus}-{date}-{hash}"
+    "affect_delta_apply": 0.48,
+    "affect_delta_propose": 0.35,
+    "daily_folder_cap": 6,
+    "naming_pattern": "{focus}-{date}"
   }
 }
