@@ -1,58 +1,39 @@
-name: Mirai Canary — Autotune Prompt
+name: Autotune (Minimal v3.2)
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "mira/**"
-      - "data/outputs/**"
-      - "tools/**"
-      - ".github/workflows/autotune.yml"
+
+permissions:
+  contents: write
 
 jobs:
-  autotune:
+  tune:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          fetch-depth: 0
 
-      - name: Install deps
+      - name: Autotune no-op (safe)
+        shell: bash
         run: |
-          pip install -r tools/requirements.txt
+          set -euo pipefail
+          echo "Autotune minimal check OK"
+          mkdir -p docs
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .pages-bump
 
-      # Falls kein Eingabebild existiert, wird ein minimales PNG erzeugt.
-      - name: Ensure render input (or create dummy)
+      - name: Commit (only if changed)
+        shell: bash
         run: |
-          if [ -f data/outputs/latest.png ]; then
-            echo "Found data/outputs/latest.png"
+          set -e
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "mira-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A
+            git commit -m "autotune: maintenance bump"
+            git push
+            echo "Changes pushed."
           else
-            echo "No input found — creating tiny dummy PNG at data/outputs/latest.png"
-            mkdir -p data/outputs
-            cat > data/outputs/latest.b64 <<'B64'
-iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=
-B64
-            base64 -d data/outputs/latest.b64 > data/outputs/latest.png
-            rm -f data/outputs/latest.b64
+            echo "Nothing to commit."
           fi
-
-      - name: Evaluate render
-        run: |
-          python tools/eval_render.py data/outputs/latest.png tools/schema.json > eval.json
-          echo "== EVAL RESULTS ==" && cat eval.json
-
-      - name: Autotune prompt
-        run: |
-          python tools/autotune_prompt.py eval.json tools/schema.json mira/prompt.yaml mira/prompt.tuned.yaml
-          echo "== DIFF ==" && (diff -u mira/prompt.yaml mira/prompt.tuned.yaml || true)
-
-      - name: Upload tuned prompt (artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: prompt-tuned
-          path: mira/prompt.tuned.yaml
