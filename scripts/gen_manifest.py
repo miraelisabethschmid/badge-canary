@@ -2,9 +2,9 @@
 import os, json, hashlib, wave, contextlib, datetime
 
 BASE = os.path.dirname(os.path.dirname(__file__))  # repo root
-DOCS = os.path.join(BASE, 'docs')
 
 def sha256_file(p):
+    import hashlib
     h = hashlib.sha256()
     with open(p, 'rb') as f:
         for chunk in iter(lambda: f.read(8192), b''):
@@ -67,7 +67,7 @@ manifest = {
     }
 }
 
-out = os.path.join(DOCS, 'data', 'manifest.json')
+out = os.path.join(BASE, 'docs', 'data', 'manifest.json')
 os.makedirs(os.path.dirname(out), exist_ok=True)
 with open(out, 'w', encoding='utf-8') as f:
     json.dump(manifest, f, indent=2)
