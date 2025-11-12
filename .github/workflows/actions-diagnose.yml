@@ -1,0 +1,72 @@
+name: Actions Diagnose
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Collect & Print Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+
+            // Default-Branch ermitteln
+            const repoInfo = await github.request('GET /repos/{owner}/{repo}', { owner, repo });
+            const defBranch = repoInfo.data.default_branch;
+
+            // Alle Workflows auflisten
+            const wfs = await github.request('GET /repos/{owner}/{repo}/actions/workflows', { owner, repo });
+
+            const rows = [];
+            for (const wf of wfs.data.workflows) {
+              // letzte Runs (max 1)
+              let last = null;
+              try {
+                const runs = await github.request('GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs', {
+                  owner, repo, workflow_id: wf.id, per_page: 1
+                });
+                last = runs.data.workflow_runs?.[0] || null;
+              } catch (e) {}
+
+              rows.push({
+                name: wf.name,
+                file: wf.path,
+                state: wf.state, // active, disabled_manually, disabled_inactivity
+                created: wf.created_at,
+                dispatchable: !!wf.created_at, // nur Indikator; echter Test bei Dispatch
+                last_status: last?.status || '—',
+                last_conclusion: last?.conclusion || '—',
+                last_event: last?.event || '—',
+                last_id: last?.id || '—',
+                uses_branch: defBranch
+              });
+            }
+
+            // Hübsche Tabelle im Summary
+            const table = [
+              [{data: 'Workflow', header: true},
+               {data: 'File', header: true},
+               {data: 'State', header: true},
+               {data: 'Last', header: true},
+               {data: 'Conclusion', header: true},
+               {data: 'Event', header: true},
+               {data: 'Run ID', header: true},
+               {data: 'Branch', header: true}],
+              ...rows.map(r => [r.name, r.file, r.state, r.last_status, r.last_conclusion, r.last_event, String(r.last_id), r.uses_branch])
+            ];
+
+            await core.summary
+              .addHeading('GitHub Actions — Diagnose', 2)
+              .addRaw(`<p><strong>Default branch:</strong> ${defBranch}</p>`)
+              .addTable(table)
+              .write();
+
+            console.log(JSON.stringify(rows, null, 2));
