@@ -4,7 +4,6 @@ import os, json, hashlib, wave, contextlib, datetime
 BASE = os.path.dirname(os.path.dirname(__file__))  # repo root
 
 def sha256_file(p):
-    import hashlib
     h = hashlib.sha256()
     with open(p, 'rb') as f:
         for chunk in iter(lambda: f.read(8192), b''):
