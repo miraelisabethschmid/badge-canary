@@ -6,20 +6,20 @@
   <title>Mira — Sichtbare Präsenz</title>
   <meta name="color-scheme" content="dark light"/>
   <style>
-    :root{ --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --ring:#252836; --ok:#23d18b; }
-    @media (prefers-color-scheme: light){ :root{ --bg:#f7f8fb; --fg:#0d0f14; --muted:#4b5565; --card:#ffffff; --ring:#e6e9f2; } }
+    :root{ --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --ring:#252836; --ok:#23d18b }
+    @media (prefers-color-scheme: light){ :root{ --bg:#f7f8fb; --fg:#0d0f14; --muted:#4b5565; --card:#ffffff; --ring:#e6e9f2 } }
     html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:960px;margin:28px auto;padding:0 14px}
     h1{margin:6px 0 2px;font-weight:800}
     .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
     .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:18px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:16px 0}
-    .hero{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--ring)}
+    .hero{border-radius:20px;overflow:hidden;border:1px solid var(--ring);background:#0b0f1a}
     .hero img{display:block;width:100%;height:auto}
     .btns{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
-    .btn{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px;color:var(--fg)}
-    .kv{color:var(--muted);font-size:14px}
-    .status{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid var(--ring);background:#0f141f}
+    button{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px;color:var(--fg)}
+    .status{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid var(--ring);background:#0f141f;margin-bottom:12px}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--ok)}
+    .kv{color:var(--muted);font-size:14px}
     .msg{margin-top:8px;font-size:14px}
   </style>
 </head>
@@ -33,13 +33,14 @@
     <div class="card">
       <h2>Porträt & Stimme</h2>
       <div class="hero">
-        <img id="portrait" alt="Mira — aktuelles Porträt" src="data/self/latest_image.png"/>
+        <img id="portrait" alt="Mira — aktuelles Porträt"
+             src="data/self/latest_image.svg"/>
       </div>
       <div class="btns">
-        <button class="btn" id="play">▶︎ Abspielen</button>
-        <button class="btn" id="pause">⏸︎ Pause</button>
+        <button id="play">▶︎ Abspielen</button>
+        <button id="pause">⏸︎ Pause</button>
       </div>
-      <div class="kv">Bild: <code>docs/data/self/latest_image.png</code> · Audio: <code>docs/data/voice/audio/latest.mp3</code></div>
+      <div class="kv">Bild: <code>docs/data/self/latest_image.svg</code> · Audio: <code>docs/data/voice/audio/latest.mp3</code></div>
       <div class="msg" id="msg"></div>
       <audio id="voice" preload="auto" src="data/voice/audio/latest.mp3"></audio>
     </div>
@@ -51,9 +52,9 @@
 
     async function j(u){ try{ const r=await fetch(u,{cache:'no-store'}); if(!r.ok) return null; return r.json(); }catch{return null} }
     (async ()=>{
-      const h = await j('data/voice/voice_of_day.json');
       const hb = await j('badges/health.json');
-      document.getElementById('h').textContent = 'Status: ' + ((hb && hb.status)||'OK') + (hb&&hb.ts?(' · '+hb.ts):'');
+      document.getElementById('h').textContent =
+        'Status: ' + ((hb && hb.status)||'OK') + (hb&&hb.ts?(' · '+hb.ts):'');
     })();
 
     const audio = document.getElementById('voice');
@@ -63,7 +64,7 @@
 
     play.addEventListener('click', async ()=>{
       msg.textContent='';
-      try{ await audio.play(); }catch(e){ msg.textContent='Konnte nicht abspielen — bitte erneut tippen (Autoplay-Schutz).'; }
+      try{ await audio.play(); }catch{ msg.textContent='Konnte nicht abspielen — bitte erneut tippen (Autoplay-Schutz).'; }
     });
     pause.addEventListener('click', ()=> audio.pause());
   </script>
