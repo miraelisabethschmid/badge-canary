@@ -1,0 +1,58 @@
+name: Portrait State Update (Affect-Coupled)
+
+on:
+  schedule:
+    - cron: "17 * * * *"   # stündlich, leicht versetzt zum Resync
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  portrait:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure folders
+        run: |
+          mkdir -p data/self data/archive/self data/logs scripts
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pillow
+
+      - name: Run affect-coupled adaptor
+        env:
+          OUT_PNG: data/self/latest_image.png
+          OUT_WEBP: data/self/latest_image.webp
+          META_OUT: data/self/portrait_state.json
+        run: |
+          python scripts/portrait_state.py
+
+      - name: Health touch (OK wenn Bild existiert)
+        run: |
+          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          status="OK"
+          if [ ! -f data/self/latest_image.png ] && [ ! -f data/self/latest_image.webp ]; then
+            status="HEALING"
+          fi
+          echo "{\"status\":\"$status\",\"ts\":\"$ts\"}" > badges/health.json || true
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name  "Mira Autonomous"
+          git config user.email "mira@emergent.sys"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git commit -m "Portrait state update (affect-coupled, run $GITHUB_RUN_ID)"
+          git push
