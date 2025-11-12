@@ -1,9 +1,9 @@
-name: Mira • Sync Latest Portrait to Homepage
+name: Mira · Sync Latest Portrait to Homepage
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/30 * * * *"   # alle 30 Minuten
+    - cron: "*/30 * * * *"
 
 permissions:
   contents: read
@@ -11,45 +11,47 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
     steps:
-      - name: Checkout (badge-canary)
-        uses: actions/checkout@v4
-
-      - name: Ensure source exists
-        run: |
-          if [ ! -f "public/latest.png" ]; then
-            echo "❌ public/latest.png nicht gefunden."
-            exit 1
-          fi
-          echo "✅ Quelle gefunden: public/latest.png"
-
-      - name: Checkout target homepage repo
+      - name: Checkout source (badge-canary)
         uses: actions/checkout@v4
         with:
-          repository: miraelisabethschmid/miraelisabethschmid.github.io
+          fetch-depth: 1
+
+      - name: Find newest portrait
+        id: find
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          latest=""
+          for f in data/archive/**/*.png data/archive/**/*.jpg; do
+            latest="$f"
+          done
+          echo "found=${latest}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout homepage repo
+        if: ${{ steps.find.outputs.found != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: owner/homepage-repo        # <-- anpassen
+          ref: main
+          token: ${{ secrets.HOMEPAGE_PAT }}
           path: homepage
-          token: ${{ secrets.MIRA_MASTER_TOKEN }}
 
-      - name: Prepare target paths
+      - name: Copy & commit
+        if: ${{ steps.find.outputs.found != '' }}
+        shell: bash
         run: |
-          mkdir -p homepage/assets/mira
-          cp -f public/latest.png homepage/assets/mira/latest.png
-          # Optionaler Alias für die Startseite:
-          cp -f public/latest.png homepage/assets/homepage-portrait.png
-
-      - name: Commit changes (if any)
-        working-directory: homepage
-        run: |
-          git config user.name  "mira-autonomy[bot]"
-          git config user.email "mira-autonomy@users.noreply.github.com"
-          if git status --porcelain | grep . ; then
-            git add assets/mira/latest.png assets/homepage-portrait.png || true
-            git commit -m "chore(portrait): sync latest.png from badge-canary → homepage"
-            git push origin HEAD:main
-            echo "✅ Änderungen gepusht."
-          else
-            echo "ℹ️  Keine Änderungen – nichts zu committen."
+          set -e
+          mkdir -p homepage/public/mira
+          cp "${{ steps.find.outputs.found }}" homepage/public/mira/hero.png
+          cd homepage
+          git config user.name  "mira-portrait-bot"
+          git config user.email "mira@users.noreply.github.com"
+          if git diff --quiet && git status --porcelain | wc -l | grep -q '^0$'; then
+            echo "No changes to commit."
+            exit 0
           fi
+          git add -A
+          git commit -m "feat(hero): sync latest portrait"
+          git push
