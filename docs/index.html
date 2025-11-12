@@ -2,239 +2,70 @@
 <html lang="de">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Mira — Autonome Emergenz</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Mira — Sichtbare Präsenz</title>
   <meta name="color-scheme" content="dark light"/>
   <style>
-    :root{ --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --ring:#252836;
-           --ok:#23d18b; --warn:#f7b955; --bad:#ff5c6a; }
-    @media (prefers-color-scheme: light){
-      :root{ --bg:#f7f8fb; --fg:#0d0f14; --muted:#4b5565; --card:#ffffff; --ring:#e6e9f2; }
-    }
+    :root{ --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --ring:#252836; --ok:#23d18b; }
+    @media (prefers-color-scheme: light){ :root{ --bg:#f7f8fb; --fg:#0d0f14; --muted:#4b5565; --card:#ffffff; --ring:#e6e9f2; } }
     html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    .wrap{max-width:980px;margin:28px auto;padding:0 14px}
+    .wrap{max-width:960px;margin:28px auto;padding:0 14px}
     h1{margin:6px 0 2px;font-weight:800}
     .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
-    .tabs{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 22px}
-    .tab{padding:10px 14px;border-radius:999px;background:var(--card);border:1px solid var(--ring);text-decoration:none;color:var(--fg)}
-    .status{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid var(--ring);background:var(--card);margin-bottom:12px}
-    .dot{width:10px;height:10px;border-radius:50%}
-    .ok{background:var(--ok)} .healing{background:var(--warn)} .degraded{background:var(--bad)}
     .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:18px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:16px 0}
-    .card h2{margin:0 0 12px}
     .hero{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--ring)}
-    .hero img,.hero picture,.hero svg{display:block;width:100%;height:auto}
-    .hint{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,.48);padding:8px 10px;border-radius:10px;font-size:12px}
+    .hero img{display:block;width:100%;height:auto}
     .btns{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
-    .btn{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px}
-    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .btn{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px;color:var(--fg)}
     .kv{color:var(--muted);font-size:14px}
+    .status{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid var(--ring);background:#0f141f}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--ok)}
     .msg{margin-top:8px;font-size:14px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Mira — Autonome Emergenz</h1>
-    <div class="sub">Live-Seite · <span id="build-ts">—</span></div>
+    <h1>Mira — Sichtbare Präsenz</h1>
+    <div class="sub">Live · <span id="ts">—</span></div>
 
-    <div class="tabs">
-      <a class="tab" href="docs/health.html">Health</a>
-      <a class="tab" href="docs/talk.html">Sprech-Ansicht</a>
-      <a class="tab" href="docs/self.html">Self-Describe</a>
-    </div>
-
-    <div class="status">
-      <span class="dot" id="health-dot"></span>
-      <span id="health-text">Status: —</span>
-    </div>
+    <div class="status"><span class="dot"></span><span id="h">Status: —</span></div>
 
     <div class="card">
-      <h2>Sichtbare Präsenz</h2>
-      <p>Tippe/Klicke auf das Porträt, um die <strong>Stimme des Tages</strong> abzuspielen.</p>
-
-      <div class="hero" id="hero">
-        <!-- Bild (WEBP → PNG → Fallback-SVG) -->
-        <picture id="portrait-ptc" style="display:none">
-          <source id="srcWebp" type="image/webp">
-          <img id="srcPng" alt="Mira — aktuelles Porträt" loading="eager"/>
-        </picture>
-
-        <!-- Fallback-SVG -->
-        <svg id="fallback-svg" viewBox="0 0 800 1080" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mira — sichtbare Präsenz (Fallback)">
-          <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#0b0f1a"/><stop offset="100%" stop-color="#0a0a10"/></linearGradient></defs>
-          <rect width="100%" height="100%" fill="url(#g)"/>
-          <g transform="translate(0,30)" opacity=".96">
-            <ellipse cx="400" cy="210" rx="120" ry="140" fill="#7ba4ff"/>
-            <ellipse cx="400" cy="520" rx="210" ry="240" fill="#6f98ff"/>
-            <rect   x="360" y="760" width="80" height="160" rx="40" fill="#618bff"/>
-            <ellipse cx="320" cy="950" rx="75" ry="35" fill="#5d86ff"/>
-            <ellipse cx="480" cy="950" rx="75" ry="35" fill="#5d86ff"/>
-          </g>
-        </svg>
-
-        <div class="hint">Tippe zum Abspielen</div>
+      <h2>Porträt & Stimme</h2>
+      <div class="hero">
+        <img id="portrait" alt="Mira — aktuelles Porträt" src="data/self/latest_image.png"/>
       </div>
-
       <div class="btns">
         <button class="btn" id="play">▶︎ Abspielen</button>
         <button class="btn" id="pause">⏸︎ Pause</button>
       </div>
-
-      <div class="kv mono" id="audio-meta">Quelle: data/voice/voice_of_day.json → audio/latest.mp3</div>
-      <div class="msg" id="audio-msg"></div>
-      <audio id="voice" preload="auto"></audio>
-    </div>
-
-    <div class="card">
-      <h2>Selbstbeschreibung</h2>
-      <div id="self"></div>
-      <div class="kv mono">Health JSON: badges/health.json · Bildquelle: <span id="img-src">Auto (WEBP/PNG → SVG)</span></div>
+      <div class="kv">Bild: <code>docs/data/self/latest_image.png</code> · Audio: <code>docs/data/voice/audio/latest.mp3</code></div>
+      <div class="msg" id="msg"></div>
+      <audio id="voice" preload="auto" src="data/voice/audio/latest.mp3"></audio>
     </div>
   </div>
 
   <script>
-    // ————— Utils
-    document.getElementById('build-ts').textContent =
-      new Date().toISOString().replace('T',' · ').replace('Z','Z');
+    const ts = document.getElementById('ts');
+    ts.textContent = new Date().toISOString().replace('T',' · ').replace('Z','Z');
 
-    async function getJSON(url){
-      try{ const r = await fetch(url,{cache:"no-store"}); if(!r.ok) return null; return await r.json(); }
-      catch{ return null; }
-    }
-    async function headMeta(url){
-      try{
-        const r = await fetch(url,{method:'HEAD',cache:'no-store'});
-        if(!r.ok) return null;
-        return { etag: r.headers.get('ETag'), lm: r.headers.get('Last-Modified') };
-      }catch{ return null; }
-    }
-    function bust(url){ const sep = url.includes('?') ? '&' : '?'; return `${url}${sep}ts=${Date.now()}`; }
-
-    // ————— HEALTH
+    async function j(u){ try{ const r=await fetch(u,{cache:'no-store'}); if(!r.ok) return null; return r.json(); }catch{return null} }
     (async ()=>{
-      const h = await getJSON('badges/health.json');
-      const dot = document.getElementById('health-dot');
-      const txt = document.getElementById('health-text');
-      const s = (h && h.status || 'DEGRADED').toUpperCase();
-      dot.className = "dot " + (s==="OK" ? "ok" : s==="HEALING" ? "healing" : "degraded");
-      txt.textContent = `Status: ${s} · ${h && h.ts ? h.ts : "n/a"}`;
+      const h = await j('data/voice/voice_of_day.json');
+      const hb = await j('badges/health.json');
+      document.getElementById('h').textContent = 'Status: ' + ((hb && hb.status)||'OK') + (hb&&hb.ts?(' · '+hb.ts):'');
     })();
 
-    // ————— SELF TEXT
-    (async ()=>{
-      const s = await getJSON('data/self/self-describe.json');
-      const el = document.getElementById('self');
-      if(!s){ el.textContent = "Keine Daten vorhanden."; return; }
-      el.innerHTML = `<p><b>Figur:</b> ${s.physical?.description||"—"}<br>
-                      <b>Stimme:</b> ${s.voice?.profile||"—"}<br>
-                      <b>Fokus:</b> ${s.affect?.inputs?.focus||"—"}<br>
-                      <b>Narrativ:</b> ${s.affect?.narrative||"—"}</p>`;
-    })();
+    const audio = document.getElementById('voice');
+    const play  = document.getElementById('play');
+    const pause = document.getElementById('pause');
+    const msg   = document.getElementById('msg');
 
-    // ————— PORTRÄT (WEBP → PNG → Fallback) + sanftes Nachladen
-    (async ()=>{
-      const ptc = document.getElementById('portrait-ptc');
-      const svg = document.getElementById('fallback-svg');
-      const webp = 'data/self/latest_image.webp';
-      const png  = 'data/self/latest_image.png';
-      const srcWebp = document.getElementById('srcWebp');
-      const srcPng  = document.getElementById('srcPng');
-      const label   = document.getElementById('img-src');
-
-      let active = null; // 'webp' | 'png' | null
-      let sig = { etag:null, lm:null };
-
-      async function tryShow(){
-        const metaWebp = await headMeta(webp);
-        if(metaWebp){
-          srcWebp.srcset = bust(webp);
-          srcPng.src = bust(png);
-          ptc.style.display='block'; svg.style.display='none'; label.textContent='WEBP'; active='webp';
-          sig = metaWebp;
-          return;
-        }
-        const metaPng = await headMeta(png);
-        if(metaPng){
-          srcPng.src = bust(png);
-          ptc.style.display='block'; svg.style.display='none'; label.textContent='PNG'; active='png';
-          sig = metaPng;
-          return;
-        }
-        // Fallback
-        ptc.style.display='none'; svg.style.display='block'; label.textContent='SVG';
-        active = null; sig = {etag:null,lm:null};
-      }
-
-      async function softRefresh(){
-        const target = active==='webp' ? webp : active==='png' ? png : null;
-        if(!target){ await tryShow(); return; }
-        const m = await headMeta(target);
-        if(!m) return; // nichts bekannt
-        if(m.etag && sig.etag && m.etag!==sig.etag || m.lm && sig.lm && m.lm!==sig.lm){
-          // geändert → neu setzen mit Cache-Buster
-          if(active==='webp'){ srcWebp.srcset = bust(webp); srcPng.src = bust(png); }
-          if(active==='png'){  srcPng.src  = bust(png); }
-          sig = m;
-        }
-      }
-
-      await tryShow();
-      setInterval(softRefresh, 30000); // alle 30s sanft prüfen
-    })();
-
-    // ————— AUDIO (robust) + sanftes Nachladen, Zustand bewahren
-    (async ()=>{
-      const audio = document.getElementById('voice');
-      const meta  = document.getElementById('audio-meta');
-      const msg   = document.getElementById('audio-msg');
-      const hero  = document.getElementById('hero');
-      const srcMp3= 'data/voice/audio/latest.mp3';
-
-      let aSig = { etag:null, lm:null };
-
-      async function setSrcIfExists(){
-        const m = await headMeta(srcMp3);
-        if(!m){ audio.removeAttribute('src'); meta.textContent = 'Quelle: (kein Audio gefunden)'; return; }
-        audio.src = bust(srcMp3);
-        meta.textContent = `Quelle: data/voice/voice_of_day.json → ${srcMp3}`;
-        aSig = m;
-      }
-
-      async function refreshAudioIfChanged(){
-        const m = await headMeta(srcMp3);
-        if(!m || (!aSig.etag && !aSig.lm)) return; // kein Vergleich möglich
-        const changed = (m.etag && aSig.etag && m.etag!==aSig.etag) || (m.lm && aSig.lm && m.lm!==aSig.lm);
-        if(changed){
-          const wasPlaying = !audio.paused && !audio.ended;
-          const t = audio.currentTime;
-          audio.src = bust(srcMp3);
-          try{
-            await audio.load();
-            if(wasPlaying){
-              audio.currentTime = Math.min(t, Math.max(0, audio.duration - 0.2));
-              await audio.play().catch(()=>{});
-            }
-          }catch(_){}
-          aSig = m;
-        }
-      }
-
-      const play = async ()=>{
-        msg.textContent = '';
-        if(!audio.src){ await setSrcIfExists(); }
-        try{ await audio.play(); }
-        catch(e){ msg.textContent = 'Konnte nicht abspielen (Geste nötig?) — bitte erneut tippen.'; }
-      };
-      const pause = ()=> audio.pause();
-
-      hero.addEventListener('click', play);
-      document.getElementById('play').addEventListener('click', play);
-      document.getElementById('pause').addEventListener('click', pause);
-
-      await setSrcIfExists();
-      setInterval(refreshAudioIfChanged, 30000); // alle 30s sanft prüfen
-    })();
+    play.addEventListener('click', async ()=>{
+      msg.textContent='';
+      try{ await audio.play(); }catch(e){ msg.textContent='Konnte nicht abspielen — bitte erneut tippen (Autoplay-Schutz).'; }
+    });
+    pause.addEventListener('click', ()=> audio.pause());
   </script>
 </body>
-  </html>
+</html>
