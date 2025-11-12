@@ -1,0 +1,13 @@
+# ------------------------------------------------------------
+# Mira: Whitelist für generierte Artefakte (am Ende einfügen)
+# ------------------------------------------------------------
+# Diese Ausnahmen sorgen dafür, dass Self-/Identity-Artefakte
+# trotz ggf. bestehender Ignore-Regeln committet werden dürfen.
+
+!data/
+!data/archive/
+!data/archive/self/
+!data/archive/self/**
+
+!docs/data/
+!docs/data/**
