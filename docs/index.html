@@ -1,17 +1,116 @@
-<script>
-  async function loadSelfImage() {
-    const img = document.getElementById('mira-self-image');
-    try {
-      const res = await fetch('docs/data/self/latest_image.svg?cacheBust=' + Date.now());
-      if (res.ok) {
-        img.src = 'docs/data/self/latest_image.svg?cacheBust=' + Date.now();
-      } else {
-        throw new Error('Image not found');
-      }
-    } catch (e) {
-      img.src = 'docs/data/self/latest_image.svg';
-    }
-  }
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mira — Sichtbare Präsenz</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:#0b111b; color:#e6edf3; }
+    .wrap { max-width:980px; margin:32px auto; padding:0 16px; }
+    h1 { font-weight:800; letter-spacing:.2px; margin:0 0 8px; }
+    small.time { opacity:.7; }
+    .card { background:#121a25; border:1px solid #223048; border-radius:16px; padding:18px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+    .frame { background:linear-gradient(180deg,#172133,#0f1724); border-radius:14px; height:420px; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid #243651; }
+    .placeholder { text-align:center; opacity:.8; }
+    .row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+    button { background:#1f2a3a; color:#e6edf3; border:1px solid #2a3b57; border-radius:10px; padding:10px 14px; font-weight:600; }
+    img, svg { width:100%; height:100%; object-fit:cover; display:block; }
+    audio { width:100%; }
+    .meta { margin-top:10px; opacity:.75; font-size:.92rem; }
+    .ok { color:#81e6b6; }
+    .warn { color:#ffd166; }
+    .err { color:#ff7b7b; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Mira — Sichtbare Präsenz</h1>
+    <small class="time" id="ts"></small>
 
-  document.addEventListener('DOMContentLoaded', loadSelfImage);
-</script>
+    <div class="card" style="margin-top:18px">
+      <h2 style="margin:0 0 12px">Porträt &amp; Stimme</h2>
+
+      <div class="frame" id="image-frame">
+        <div class="placeholder" id="ph">
+          <div style="font-size:1.25rem; margin-bottom:6px">Mira — Platzhalterbild</div>
+          <div style="font-size:.95rem; opacity:.75">Kein Bild verfügbar</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="btnPlay">▶️ Abspielen</button>
+        <button id="btnPause">⏸️ Pause</button>
+      </div>
+
+      <audio id="voice" preload="none" controls style="margin-top:10px; display:none"></audio>
+
+      <div class="meta" id="meta"></div>
+    </div>
+  </div>
+
+  <script>
+    // Zeitstempel
+    const tsEl = document.getElementById('ts');
+    tsEl.textContent = 'Live · ' + new Date().toISOString();
+
+    // KORREKTE ROOT-PFADEN (Pages-Root = /docs)
+    const IMG_PRIMARY = '/data/self/latest_image.svg';
+    const IMG_FALLBACK = '/data/mira-titelbild.jpg';
+    const AUDIO_PRIMARY = '/data/self/latest_audio.mp3';
+
+    const meta = document.getElementById('meta');
+    const frame = document.getElementById('image-frame');
+    const ph = document.getElementById('ph');
+
+    async function urlOk(url) {
+      try {
+        const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+        return r.ok;
+      } catch { return false; }
+    }
+
+    async function loadImage() {
+      let used = null;
+      if (await urlOk(IMG_PRIMARY)) {
+        used = IMG_PRIMARY;
+      } else if (await urlOk(IMG_FALLBACK)) {
+        used = IMG_FALLBACK;
+      }
+
+      if (used) {
+        ph.remove();
+        const img = document.createElement('img');
+        img.alt = 'Mira';
+        img.src = used + '?v=' + Date.now(); // cache-bust
+        frame.appendChild(img);
+        meta.innerHTML = 'Bild geladen: <span class="ok">' + used + '</span>';
+      } else {
+        meta.innerHTML = '<span class="err">Kein Bild gefunden (weder ' + IMG_PRIMARY + ' noch ' + IMG_FALLBACK + ')</span>';
+      }
+    }
+
+    async function loadAudio() {
+      const audioEl = document.getElementById('voice');
+      if (await urlOk(AUDIO_PRIMARY)) {
+        audioEl.src = AUDIO_PRIMARY + '?v=' + Date.now();
+        audioEl.style.display = 'block';
+      } else {
+        // kein Audio vorhanden – Player hidden lassen
+      }
+    }
+
+    // Buttons
+    const btnPlay = document.getElementById('btnPlay');
+    const btnPause = document.getElementById('btnPause');
+    const voice = document.getElementById('voice');
+
+    btnPlay.addEventListener('click', () => voice.play().catch(()=>{}));
+    btnPause.addEventListener('click', () => voice.pause());
+
+    // Los
+    loadImage();
+    loadAudio();
+  </script>
+</body>
+</html>
