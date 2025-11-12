@@ -1,0 +1,56 @@
+name: Self-Image Guard
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *" # alle 15 Minuten
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guard-self-image
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prüfe Datei vorhanden & Größe
+        id: filecheck
+        run: |
+          set -e
+          FILE="docs/data/self/latest_image.svg"
+          if [ ! -f "$FILE" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "size=0" >> $GITHUB_OUTPUT
+            echo "placeholder=unknown" >> $GITHUB_OUTPUT
+            echo "❌ Datei fehlt: $FILE" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          SIZE=$(wc -c < "$FILE" | tr -d ' ')
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+
+          # Heuristik: Erkennen des Platzhalter-SVGs am Text
+          if grep -qi "Platzhalterbild" "$FILE"; then
+            echo "placeholder=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Platzhalter erkannt (Dateigröße: ${SIZE} Bytes)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "placeholder=false" >> $GITHUB_OUTPUT
+            echo "✅ Echtes Bild erkannt (Dateigröße: ${SIZE} Bytes)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Ergebnis zusammenfassen
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "—" >> $GITHUB_STEP_SUMMARY
+          echo "**Pfad:** docs/data/self/latest_image.svg" >> $GITHUB_STEP_SUMMARY
+          echo "**Vorhanden:** ${{ steps.filecheck.outputs.exists }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Größe (Bytes):** ${{ steps.filecheck.outputs.size }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Platzhalter:** ${{ steps.filecheck.outputs.placeholder }}" >> $GITHUB_STEP_SUMMARY
