@@ -1,33 +1,167 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0; url=docs/index.html?v=%7B%7Bts%7D%7D">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Weiterleitung … Mira — Autonome Emergenz</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mira — Sichtbare Präsenz</title>
   <style>
-    html,body{height:100%;margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;background:#0b0f17;color:#e8eefc}
-    .wrap{display:grid;place-items:center;height:100%}
-    .card{max-width:680px;border:1px solid rgba(255,255,255,.1);background:#101521;padding:24px;border-radius:16px}
-    .muted{opacity:.7}
-    code{background:#0e1420;padding:2px 6px;border-radius:6px}
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      background: #0a0b10; color: #eaeaf0;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 2.2rem; line-height: 1.2; margin: 0 0 8px; }
+    .live { opacity: .8; font-size: .95rem; margin-bottom: 24px; }
+    .card {
+      background: #111420; border: 1px solid #1d2335; border-radius: 16px; padding: 20px;
+      box-shadow: 0 6px 28px rgba(0,0,0,.35);
+    }
+    .title { font-weight: 700; font-size: 1.35rem; margin-bottom: 14px; }
+    .panel {
+      border-radius: 16px; background: #0f1320; border: 1px solid #1d2335;
+      min-height: 320px; display: grid; place-items: center; overflow: hidden;
+    }
+    .panel img { width: 100%; height: 100%; object-fit: contain; background: #0b0f1a; }
+    .status { font-size: .95rem; opacity: .85; margin-top: 10px; word-break: break-word; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    button {
+      appearance: none; border: 1px solid #2a3350; background: #171b2a; color: #eaeaf0;
+      border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer;
+    }
+    button:hover { background: #1b2134; }
+    audio { width: 100%; margin-top: 14px; }
+    .src { font-size: .9rem; opacity: .8; margin-top: 6px; }
+    .hint { font-size: .95rem; margin-top: 8px; opacity: .9; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
   </style>
-  <script>
-    // softer redirect with cache-bust
-    (function(){
-      var ts = Date.now();
-      var url = "docs/index.html?v=" + ts;
-      try{ window.location.replace(url); }catch(e){ window.location.href = url; }
-    })();
-  </script>
 </head>
 <body>
   <div class="wrap">
+    <h1>Mira — Sichtbare Präsenz</h1>
+    <div class="live" id="liveStamp">Live</div>
+
     <div class="card">
-      <h1>Mira — Weiterleitung</h1>
-      <p>Du wirst zur Live-Seite geleitet …</p>
-      <p class="muted">Falls nichts passiert, tippe: <br><code>docs/index.html</code></p>
+      <div class="title">Porträt &amp; Stimme</div>
+
+      <div class="panel">
+        <img id="portrait" alt="Porträt wird geladen…" />
+      </div>
+      <div class="status" id="imgStatus">Lade Bild…</div>
+
+      <div class="row">
+        <button id="btnPlay">▶ Abspielen</button>
+        <button id="btnPause">⏸ Pause</button>
+      </div>
+
+      <audio id="player" preload="none" controls></audio>
+
+      <div class="src">
+        <div>Bild: <span class="mono" id="imgPath">–</span></div>
+        <div>Audio: <span class="mono" id="audPath">–</span></div>
+      </div>
+
+      <div class="hint" id="autoplayHint" hidden>
+        Konnte nicht automatisch starten – bitte einmal auf <b>▶ Abspielen</b> tippen (Autoplay-Schutz).
+      </div>
     </div>
   </div>
+
+  <script>
+    // ---- Pfade (so wie du sie geschickt hast) ----
+    const IMAGE_CANDIDATES = [
+      "docs/data/self/latest_image.svg",
+      "docs/data/self/latest_image.png",
+      "docs/data/self/latest_image.jpg",
+      "docs/data/self/latest_image.jpeg",
+      "docs/data/self/latest_image.webp",
+    ];
+    const AUDIO_PATH = "docs/data/voice/audio/latest.wav";
+
+    // ---- Live-Zeitstempel (nur kosmetisch) ----
+    const live = document.getElementById("liveStamp");
+    const now = new Date();
+    live.textContent = `Live · ${now.toISOString()}`;
+
+    // ---- Bild-Fallback-Loader ----
+    async function findFirstExisting(urls) {
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+          if (res.ok) return url;
+        } catch (_) { /* ignore */ }
+      }
+      return null;
+    }
+
+    async function loadPortrait() {
+      const imgEl = document.getElementById("portrait");
+      const statusEl = document.getElementById("imgStatus");
+      const imgPathEl = document.getElementById("imgPath");
+
+      statusEl.textContent = "Suche Bild…";
+      const found = await findFirstExisting(IMAGE_CANDIDATES);
+
+      if (found) {
+        imgEl.src = found + `?t=${Date.now()}`;
+        imgPathEl.textContent = found;
+        statusEl.textContent = "Bild geladen.";
+      } else {
+        imgEl.removeAttribute("src");
+        statusEl.textContent = "Kein Bild gefunden (erwartet: latest_image.svg/png/jpg/jpeg/webp).";
+        imgPathEl.textContent = "—";
+      }
+    }
+
+    // ---- Audio / Autoplay-Workaround ----
+    const player = document.getElementById("player");
+    const btnPlay = document.getElementById("btnPlay");
+    const btnPause = document.getElementById("btnPause");
+    const audPathEl = document.getElementById("audPath");
+    const hint = document.getElementById("autoplayHint");
+
+    function setAudioSource() {
+      player.src = AUDIO_PATH + `?t=${Date.now()}`;
+      audPathEl.textContent = AUDIO_PATH;
+    }
+
+    async function tryPlay() {
+      try {
+        await player.play();
+        hint.hidden = true;
+        sessionStorage.setItem("audioUnlocked", "1");
+      } catch (err) {
+        // Autoplay blockiert
+        hint.hidden = false;
+      }
+    }
+
+    function wireControls() {
+      btnPlay.addEventListener("click", tryPlay);
+      btnPause.addEventListener("click", () => player.pause());
+
+      // Beim ersten Interaktions-Event einmal versuchen
+      const unlockOnce = async () => {
+        document.removeEventListener("touchstart", unlockOnce);
+        document.removeEventListener("click", unlockOnce);
+        await tryPlay();
+      };
+      document.addEventListener("touchstart", unlockOnce, { passive: true });
+      document.addEventListener("click", unlockOnce);
+    }
+
+    async function init() {
+      setAudioSource();
+      loadPortrait();
+      wireControls();
+
+      // Wenn die Nutzerin bereits einmal freigegeben hat (gleiche Tab-Session)
+      if (sessionStorage.getItem("audioUnlocked") === "1") {
+        tryPlay();
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>
