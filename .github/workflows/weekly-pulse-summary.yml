@@ -1,16 +1,14 @@
-name: Weekly Mira Pulse Summary
+name: Weekly Pulse Summary (Minimal v3.6-safe)
 
 on:
-  schedule:
-    - cron: '0 6 * * MON'   # montags 06:00 UTC (~07:00/08:00 Berlin je nach DST)
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: weekly-pulse-summary
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   pulse:
@@ -18,144 +16,97 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          fetch-depth: 0
+          persist-credentials: true
 
-      - name: Build weekly summary (Markdown)
-        id: build
+      - name: Generate pulse file (idempotent)
         shell: bash
         run: |
-          python - <<'PY'
-import os, json, datetime, statistics
-from datetime import datetime, timedelta, timezone
+          set -euo pipefail
+          set -x
 
-def read_json(path, default=None):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default
+          mkdir -p docs/pulse
 
-def read_lines(path):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return [ln for ln in f.read().splitlines() if ln.strip()]
-    except Exception:
-        return []
+          # ISO-Jahr und -Kalenderwoche (UTC), z.B. 2025-W46
+          ISO_YEAR="$(date -u +%G)"
+          ISO_WEEK="$(date -u +%V)"
+          STAMP="${ISO_YEAR}-W${ISO_WEEK}"
 
-now = datetime.now(timezone.utc)
-since = now - timedelta(days=7)
+          FILE="docs/pulse/${STAMP}.md"
+          LATEST="docs/pulse/latest.md"
 
-# -------- Health snapshots (latest only) --------
-health = read_json("badges/health.json", {"status":"n/a","ts":"n/a"})
-health_status = str(health.get("status","n/a")).upper()
-health_ts = health.get("ts","n/a")
+          changed=0
 
-# -------- Goals (current) --------
-goals = read_json("data/goals/current.json", {})
-goal_focus = goals.get("focus","—")
-goal_next  = goals.get("next_objective","—")
-goal_policy = goals.get("policy", {})
-goal_updated = goals.get("updated","—")
-version = "0.0.0"
-try:
-    if os.path.exists("VERSION"):
-        with open("VERSION","r",encoding="utf-8") as vf:
-            version = vf.read().strip()
-except Exception:
-    pass
+          if [[ ! -f "$FILE" ]]; then
+            changed=1
+            printf '%s\n' \
+              "---" \
+              "title: Weekly Pulse ${STAMP}" \
+              "date: $(date -u +%F)" \
+              "---" \
+              "" \
+              "# Weekly Pulse — ${STAMP}" \
+              "" \
+              "- Status: draft" \
+              "- Generated: $(date -u +"%Y-%m-%d %H:%M:%SZ")" \
+              "" \
+              "## Highlights" \
+              "- _Trage hier die wichtigsten Punkte der Woche ein._" \
+              "" \
+              "## Open Items" \
+              "- _Liste offener Punkte._" \
+              "" \
+              "## Notes" \
+              "- _Freitext._" \
+              > "$FILE"
+            echo "📝 Pulse-Datei erzeugt: $FILE"
+          else
+            echo "✅ Pulse-Datei existiert bereits: $FILE"
+          fi
 
-# -------- Ledger analysis (last 7 days) --------
-events = []
-for ln in read_lines("data/ledger/events.jsonl"):
-    try:
-        e = json.loads(ln)
-        ts = datetime.fromisoformat(e["ts"].replace("Z","+00:00"))
-        if ts >= since:
-            events.append(e)
-    except Exception:
-        pass
+          # Symlink geht in Git nicht sauber – daher Kopie für latest.md
+          if [[ ! -f "$LATEST" ]] || ! cmp -s "$FILE" "$LATEST"; then
+            changed=1
+            cp -f "$FILE" "$LATEST"
+            echo "🔁 latest.md aktualisiert."
+          fi
 
-runs = len(events)
-run_ids = [e.get("run_id") for e in events]
-shas = [e.get("sha","") for e in events]
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          echo "CHANGED=$changed" >> "$GITHUB_ENV"
 
-# naive archive delta: count events in 7d (approx)
-archive_delta_7d = runs
-
-# streaks (approx via health.json snapshot + last 10 events heuristic not available per-run)
-healing_count = 0
-ok_count = 0
-if health_status == "HEALING":
-    healing_count += 1
-if health_status == "OK":
-    ok_count += 1
-
-# Compose Markdown
-md = []
-md.append(f"# Mira — Weekly Pulse Summary")
-md.append(f"_Generated (UTC): {now.strftime('%Y-%m-%d %H:%M:%SZ')}_")
-md.append("")
-md.append("## Overview")
-md.append(f"- **Runs (7d):** {runs}")
-md.append(f"- **Archive delta (7d):** {archive_delta_7d}")
-md.append(f"- **Latest Health:** `{health_status}` (ts: {health_ts})")
-md.append(f"- **Goals:** focus=`{goal_focus}` • next=`{goal_next}`")
-md.append(f"- **Policy:** {', '.join([f'{k}={v}' for k,v in goal_policy.items()]) or '—'}")
-md.append(f"- **Goals updated:** {goal_updated}")
-md.append(f"- **Version:** {version}")
-md.append("")
-md.append("## Ledger (last entries)")
-if events:
-    tail = events[-10:]
-    for e in tail:
-        md.append(f"- run_id={e.get('run_id')} sha={str(e.get('sha',''))[:7]} ts={e.get('ts')} actor={e.get('actor')}")
-else:
-    md.append("- (no entries in the last 7 days)")
-md.append("")
-md.append("—")
-content = "\n".join(md)
-
-os.makedirs("reports", exist_ok=True)
-with open("reports/weekly-pulse-summary.md","w",encoding="utf-8") as f:
-    f.write(content)
-
-# Print short preview to stdout for step summary
-print(content)
-PY
-
-      - name: Add Job Summary
-        if: always()
+      - name: Commit & Push (retry-safe)
+        if: env.CHANGED == '1'
         shell: bash
         run: |
-          echo "## Weekly Mira Pulse Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```markdown' >> $GITHUB_STEP_SUMMARY
-          tail -n +1 reports/weekly-pulse-summary.md >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          set -euo pipefail
+          set -x
+          git config user.name  "mira-bot"
+          git config user.email "actions@github.com"
 
-      - name: Upload summary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: weekly-pulse-summary-${{ github.run_id }}
-          path: reports/weekly-pulse-summary.md
-          if-no-files-found: error
-          retention-days: 21
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no staged changes"
+            exit 0
+          fi
+          git commit -m "weekly-pulse: add/update ${STAMP} (bot)"
 
-      - name: Mail summary (optional; sends only if SMTP secrets exist)
-        if: ${{ secrets.SMTP_SERVER && secrets.SMTP_PORT && secrets.SMTP_USER && secrets.SMTP_PASS }}
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.SMTP_SERVER }}
-          server_port: ${{ secrets.SMTP_PORT }}
-          username: ${{ secrets.SMTP_USER }}
-          password: ${{ secrets.SMTP_PASS }}
-          subject: "Mira — Weekly Pulse Summary"
-          to: pemia.dir@gmail.com
-          from: "badge-canary <noreply@canary.local>"
-          content_type: text/markdown
-          body: |
-            $(cat reports/weekly-pulse-summary.md)
+          git fetch origin main
+          attempt=1
+          until [ $attempt -gt 3 ]; do
+            git pull --rebase --autostash origin main || true
+            if git push origin HEAD:main; then
+              echo "✅ pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "⚠️ push failed, retrying ($attempt/3)…"
+            sleep $((2 * attempt))
+            attempt=$((attempt+1))
+            git fetch origin main
+          done
+          echo "❌ push failed after retries"
+          exit 1
+
+      - name: Nothing to do
+        if: env.CHANGED != '1'
+        run: echo "🔍 Nothing to change for this week."
