@@ -1,0 +1,129 @@
+name: Orchestrator • Key Workflows (throttled)
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # alle 10 Minuten
+  workflow_dispatch:
+
+permissions:
+  actions: write   # damit wir andere Workflows dispatchen dürfen
+  contents: read
+
+concurrency:
+  group: orchestrator-global
+  cancel-in-progress: false
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup tools
+        run: |
+          sudo apt-get update -y >/dev/null 2>&1 || true
+          sudo apt-get install -y jq >/dev/null 2>&1 || true
+          echo "✅ jq bereit" >> $GITHUB_STEP_SUMMARY
+
+      - name: Rate-Limit prüfen
+        id: rate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          RL=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/rate_limit)
+          REM=$(echo "$RL" | jq '.resources.core.remaining')
+          RES=$(echo "$RL" | jq '.resources.core.reset')
+          NOW=$(date +%s)
+          SEC=$((RES-NOW))
+          [ $SEC -lt 0 ] && SEC=0
+
+          echo "remaining=$REM" >> $GITHUB_OUTPUT
+          echo "reset_in=$SEC"   >> $GITHUB_OUTPUT
+
+          if [ "$REM" -lt 300 ]; then
+            echo "⏸️  Rate-Limit niedrig (remaining=$REM). Orchestrator pausiert bis Reset (~${SEC}s)." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "🟢 Rate-Limit ok (remaining=$REM)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Orchestriere Kern-Workflows
+        if: steps.rate.outputs.remaining != '' && steps.rate.outputs.remaining >= 300
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
+        run: |
+          set -e
+
+          # --- Helfer: dispatch wenn sinnvoll ---------------------------------
+          trigger_if_needed () {
+            local WF_FILE="$1"
+            local LABEL="$2"
+            local MIN_AGE_MIN=10   # Mindestalters-Kriterium
+
+            echo "—" >> $GITHUB_STEP_SUMMARY
+            echo "🔎 Prüfe **$LABEL** ($WF_FILE)" >> $GITHUB_STEP_SUMMARY
+
+            # Workflow-ID via API (brauchen wir zum Abfragen & Dispatch)
+            WF=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$REPO/actions/workflows/$WF_FILE")
+
+            WF_ID=$(echo "$WF" | jq -r '.id')
+            if [ "$WF_ID" = "null" ] || [ -z "$WF_ID" ]; then
+              echo "❌ Workflow $WF_FILE nicht gefunden." >> $GITHUB_STEP_SUMMARY
+              return 0
+            fi
+
+            # Läuft gerade etwas?
+            INPROG=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$REPO/actions/workflows/$WF_ID/runs?status=in_progress&per_page=1" \
+              | jq '.total_count')
+
+            if [ "$INPROG" -gt 0 ]; then
+              echo "⏳ Läuft bereits — kein Dispatch." >> $GITHUB_STEP_SUMMARY
+              return 0
+            fi
+
+            # Letzter Abschluss
+            LAST_JSON=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$REPO/actions/workflows/$WF_ID/runs?status=completed&per_page=1")
+            LAST_AT=$(echo "$LAST_JSON" | jq -r '.workflow_runs[0].updated_at // empty')
+
+            if [ -n "$LAST_AT" ]; then
+              LAST_TS=$(date -d "$LAST_AT" +%s)
+              NOW_TS=$(date +%s)
+              AGE_MIN=$(( (NOW_TS - LAST_TS) / 60 ))
+              if [ "$AGE_MIN" -lt "$MIN_AGE_MIN" ]; then
+                echo "🕒 Zu frisch (vor ${AGE_MIN}min) — Mindestalter ${MIN_AGE_MIN}min. Kein Dispatch." >> $GITHUB_STEP_SUMMARY
+                return 0
+              fi
+            else
+              echo "ℹ️ Kein Completed-Run gefunden — erster Dispatch erlaubt." >> $GITHUB_STEP_SUMMARY
+            fi
+
+            # Dispatch POST
+            RESP=$(curl -sS -o /dev/null -w "%{http_code}" \
+              -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPO/actions/workflows/$WF_FILE/dispatches" \
+              -d "{\"ref\":\"$REF\"}")
+
+            if [ "$RESP" = "204" ]; then
+              echo "🚀 Dispatch gesendet: $LABEL" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ Dispatch fehlgeschlagen (HTTP $RESP) für $LABEL" >> $GITHUB_STEP_SUMMARY
+            fi
+          }
+
+          # --- Reihenfolge: erst Smoke, dann Hero, dann Homepage-Sync ----------
+          trigger_if_needed ".github/workflows/self-image-smoke.yml" "Self-Image Smoke Test"
+          trigger_if_needed ".github/workflows/hero-sync.yml"         "Hero Sync (latest self-image)"
+          trigger_if_needed ".github/workflows/homepage-sync-stable.yml" "Homepage Sync • Stable"
+
+      - name: Fertig
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Orchestrator-Durchlauf abgeschlossen." >> $GITHUB_STEP_SUMMARY
