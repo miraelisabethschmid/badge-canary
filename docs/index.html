@@ -1,235 +1,178 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mira — Autonome Emergenz</title>
+  <meta name="color-scheme" content="dark light" />
   <style>
     :root{
-      --bg:#0b0f17; --card:#121725; --ink:#e8eefc; --muted:#9fb0d8;
-      --accent:#8fb2ff; --ok:#2ed573; --warn:#f9ca24; --err:#ff4757;
-      --glow:#6aa2ff55;
+      --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --accent:#8fb9ff;
+      --ok:#2bd673; --warn:#f7b955; --bad:#ff5c6a; --ring:#2a2d3a;
     }
-    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    a{color:var(--accent);text-decoration:none}
-    .wrap{max-width:960px;margin:24px auto;padding:0 16px}
-    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid #24304b;
-      background:#0f1422;color:var(--ink);border-radius:999px;padding:8px 12px}
-    .row{display:flex;gap:16px;flex-wrap:wrap}
-    .card{background:var(--card);border:1px solid #1b2338;border-radius:16px;padding:18px;box-shadow:0 10px 36px #0006}
-    h1{font-size:clamp(28px,5vw,44px);margin:0 0 6px}
-    small.muted{color:var(--muted)}
-    .hero{display:grid;gap:16px}
-    .stage{background:#0d1220;border:1px solid #1b2338;border-radius:24px;padding:16px}
-    .portrait{display:grid;place-items:center;background:
-      radial-gradient(120% 100% at 50% 0%, #0f172a 0%, #0b1020 60%, #0b0f17 100%);
-      border-radius:20px;aspect-ratio:3/4;position:relative;overflow:hidden}
-    .hint{position:absolute;right:10px;bottom:10px;color:#a9b6d9;font-size:12px;opacity:.6}
-    .btn{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;border:1px solid #24304b;
-      background:#10172a;color:var(--ink);cursor:pointer}
-    .btn:active{transform:translateY(1px)}
-    .ok{color:var(--ok)}
-    .err{color:var(--err)}
-    .kv{display:flex;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
-    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
-    .hl{color:#cde0ff}
-    /* Silhouetten-Teile */
-    .sil{filter:drop-shadow(0 0 20px var(--glow))}
-    .sbl{fill:#6ea6ff;opacity:.85}
-    .mouth{fill:#6ea6ff;opacity:.9;transform-origin:center;transition:transform .08s linear}
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f6f7fb; --fg:#0d0f14; --muted:#4b5565; --card:#ffffff; --ring:#e6e9f2; }
+    }
+    html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:980px;margin:28px auto;padding:0 14px}
+    h1{font-weight:800;letter-spacing:.2px;margin:6px 0 2px}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+    .tabs{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 22px}
+    .tab{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:var(--card);border:1px solid var(--ring);text-decoration:none;color:var(--fg)}
+    .status{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid var(--ring);background:var(--card)}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .healing{background:var(--warn)} .degraded{background:var(--bad)}
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:18px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:16px 0}
+    .card h2{margin:0 0 12px}
+    .hero{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--ring)}
+    .hero img,.hero picture,.hero svg{display:block;width:100%;height:auto}
+    .hero .hint{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,.45);padding:8px 10px;border-radius:10px;font-size:12px}
+    .btns{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
+    .btn{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .kv{color:var(--muted);font-size:14px}
+    .sr-only{position:absolute;left:-9999px}
   </style>
 </head>
 <body>
-<div class="wrap">
-  <header style="margin-bottom:14px">
+  <div class="wrap">
     <h1>Mira — Autonome Emergenz</h1>
-    <div class="row" style="margin-top:8px">
-      <span id="health-pill" class="pill"><span>•</span><span>Status:</span><strong id="health-val">OK</strong><span class="mono" id="health-ts">—</span></span>
-      <a class="pill" href="talk.html">Sprech-Ansicht</a>
-      <a class="pill" href="self.html">Self-Describe</a>
-      <span class="pill"><small class="muted">Live-Seite · Build <span id="build-ts" class="mono"></span></small></span>
+    <div class="sub">Live-Seite · <span id="build-ts">—</span></div>
+
+    <div class="tabs">
+      <a class="tab" href="docs/health.html"><span>Health</span></a>
+      <a class="tab" href="docs/talk.html"><span>Sprech-Ansicht</span></a>
+      <a class="tab" href="docs/self.html"><span>Self-Describe</span></a>
     </div>
-  </header>
 
-  <section class="hero card">
-    <h2 style="margin:0 0 10px">Sichtbare Präsenz</h2>
-    <p class="muted">Tippe/Klicke auf das Porträt, um die <strong>Stimme des Tages</strong> abzuspielen. (Auto-Fallback: Text-to-Speech)</p>
+    <div class="status">
+      <span class="dot" id="health-dot"></span>
+      <span id="health-text">Status: —</span>
+    </div>
 
-    <div class="stage">
-      <div id="portrait" class="portrait" role="button" aria-label="Miras Porträt – Tippen zum Abspielen">
-        <!-- Inline-Silhouette (animierte Mimik) -->
-        <svg class="sil" viewBox="0 0 300 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <!-- Kopf -->
-          <ellipse class="sbl" cx="150" cy="100" rx="55" ry="65"/>
-          <!-- Oberkörper -->
-          <ellipse class="sbl" cx="150" cy="205" rx="85" ry="90" style="opacity:.82"/>
-          <!-- Hüfte/Bein -->
-          <rect class="sbl" x="135" y="290" width="30" height="68" rx="16"/>
-          <!-- Füße -->
-          <ellipse class="sbl" cx="120" cy="368" rx="30" ry="14" style="opacity:.75"/>
-          <ellipse class="sbl" cx="180" cy="368" rx="30" ry="14" style="opacity:.75"/>
-          <!-- Mund -->
-          <ellipse id="mouth" class="mouth" cx="150" cy="135" rx="22" ry="8"/>
+    <div class="card">
+      <h2>Sichtbare Präsenz</h2>
+      <p>Tippe/Klicke auf das Porträt, um die <strong>Stimme des Tages</strong> abzuspielen (Fallback: Stille).</p>
+
+      <div class="hero" id="hero">
+        <!-- Bild (WEBP → PNG → Fallback-SVG) -->
+        <picture id="portrait-ptc" style="display:none">
+          <source id="srcWebp" type="image/webp">
+          <img id="srcPng" alt="Mira — aktuelles Porträt" loading="eager" />
+        </picture>
+
+        <!-- Fallback-SVG bleibt sichtbar, bis Bild geladen werden konnte -->
+        <svg id="fallback-svg" viewBox="0 0 800 1080" role="img" aria-label="Mira — sichtbare Präsenz (Fallback)" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0b0f1a"/>
+              <stop offset="100%" stop-color="#0a0a0f"/>
+            </linearGradient>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#g)"/>
+          <g transform="translate(0,30)" opacity=".95">
+            <ellipse cx="400" cy="210" rx="120" ry="140" fill="#7ba4ff"/>
+            <ellipse cx="400" cy="520" rx="210" ry="240" fill="#6f98ff"/>
+            <rect   x="360" y="760" width="80" height="160" rx="40" fill="#618bff"/>
+            <ellipse cx="320" cy="950" rx="75" ry="35" fill="#5d86ff"/>
+            <ellipse cx="480" cy="950" rx="75" ry="35" fill="#5d86ff"/>
+          </g>
         </svg>
+
         <div class="hint">Tippe zum Abspielen</div>
       </div>
 
-      <div class="row" style="justify-content:center;margin-top:12px">
-        <button id="play" class="btn">▶︎ Abspielen</button>
-        <button id="pause" class="btn">⏸︎ Pause</button>
+      <div class="btns">
+        <button class="btn" id="play">▶︎ Abspielen</button>
+        <button class="btn" id="pause">⏸︎ Pause</button>
       </div>
 
-      <div class="kv">
-        <span>Quelle: <span class="mono hl">data/voice/voice_of_day.json</span> → <span class="mono" id="audio-src">audio/latest.mp3</span></span>
-      </div>
-
-      <div id="tts-note" class="muted" style="margin-top:6px;display:none">Kein Audio gefunden – verwende System-Stimme (TTS-Fallback).</div>
+      <div class="kv mono" id="audio-meta">Quelle: data/voice/voice_of_day.json → audio/latest.mp3</div>
+      <audio id="voice" preload="auto"></audio>
     </div>
-  </section>
 
-  <section class="card" style="margin-top:16px">
-    <h3 style="margin:0 0 10px">Selbstbeschreibung</h3>
-    <div id="self-body" class="mono" style="white-space:pre-wrap"></div>
-    <hr style="border-color:#1b2338;margin:14px 0">
-    <div class="kv"><span>Health JSON:</span><span class="mono">badges/health.json</span> · <span>Bild:</span> <span>Inline-SVG (Fallback-safe)</span></div>
-  </section>
-</div>
+    <div class="card">
+      <h2>Selbstbeschreibung</h2>
+      <div id="self"></div>
+      <div class="kv mono">Health JSON: badges/health.json · Bild: <span id="img-src">Auto (WEBP/PNG) → SVG</span></div>
+    </div>
+  </div>
 
-<script>
-(function(){
-  const buildTs = new Date().toISOString();
-  document.getElementById('build-ts').textContent = buildTs;
+  <script>
+    // Build timestamp (best effort)
+    document.getElementById('build-ts').textContent =
+      new Date().toISOString().replace('T',' · ').replace('Z','Z');
 
-  const healthVal = document.getElementById('health-val');
-  const healthTs  = document.getElementById('health-ts');
-  const srcLabel  = document.getElementById('audio-src');
-  const ttsNote   = document.getElementById('tts-note');
-  const mouth     = document.getElementById('mouth');
-  const btnPlay   = document.getElementById('play');
-  const btnPause  = document.getElementById('pause');
-  const portrait  = document.getElementById('portrait');
-
-  let audio = new Audio();
-  audio.preload = "auto";
-  let usingTTS = false;
-  let rafId = 0;
-
-  function mouthOpen(v){ // v: 0..1
-    const ry = 6 + v*10;  // öffnet nach unten
-    mouth.setAttribute('ry', String(ry));
-    mouth.setAttribute('rx', String(22 + v*3));
-  }
-
-  function animateMouthWhilePlaying(){
-    // Wenn wir WebAudio-Analyser hätten: echtes RMS. Hier: weiches Puls-Envelope.
-    let t0 = performance.now();
-    function tick(now){
-      const t = (now - t0)/1000;
-      // weiches Dreieck ± – wirkt wie Atmung beim Sprechen
-      const tri = Math.abs((t*3)%2 - 1); // 0..1
-      const v = 0.15 + 0.85 * tri;
-      mouthOpen(audio.paused ? 0.05 : v);
-      rafId = requestAnimationFrame(tick);
-    }
-    cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(tick);
-  }
-
-  async function fetchJSON(url){
-    try{
-      const r = await fetch(url, {cache:"no-store"});
-      if(!r.ok) throw new Error(r.status);
-      return await r.json();
-    }catch(e){ return null; }
-  }
-
-  async function init(){
-    // Health
-    const h = await fetchJSON('../badges/health.json') || await fetchJSON('badges/health.json');
-    if(h){
-      healthVal.textContent = (h.status || 'OK');
-      healthVal.classList.toggle('ok', (h.status||'').toUpperCase()==='OK');
-      healthVal.classList.toggle('err', (h.status||'').toUpperCase()==='DEGRADED');
-      healthTs.textContent = '· ' + (h.ts || 'n/a');
+    async function getJSON(url){
+      try{
+        const r = await fetch(url, {cache:"no-store"});
+        if(!r.ok) return null;
+        return await r.json();
+      }catch{ return null; }
     }
 
-    // Self-Describe
-    const s = await fetchJSON('data/self/self-describe.json');
-    if(s){
-      const lines = [];
-      if(s.physical?.description) lines.push(`Figur: ${s.physical.description}`);
-      if(s.voice?.profile)        lines.push(`Stimme: ${s.voice.profile}`);
-      if(s.affect?.inputs?.focus) lines.push(`Fokus: ${s.affect.inputs.focus}`);
-      if(s.affect?.narrative)     lines.push(`Narrativ: ${s.affect.narrative}`);
-      document.getElementById('self-body').textContent = lines.join('\n');
-    }else{
-      document.getElementById('self-body').textContent = 'Keine Daten vorhanden.';
-    }
+    // HEALTH
+    (async function(){
+      const h = await getJSON('badges/health.json');
+      const dot = document.getElementById('health-dot');
+      const txt = document.getElementById('health-text');
+      let s = (h && h.status || 'DEGRADED').toUpperCase();
+      dot.className = "dot " + (s==="OK" ? "ok" : s==="HEALING" ? "healing" : "degraded");
+      txt.textContent = `Status: ${s} · ${h && h.ts ? h.ts : "n/a"}`;
+    })();
 
-    // Voice of Day
-    const v = await fetchJSON('data/voice/voice_of_day.json');
-    let mp3Path = 'data/voice/audio/latest.mp3';
-    let text = 'Heute atme ich Klarheit und Resonanz.';
-    if(v){
-      if(v.audio) mp3Path = v.audio;
-      if(v.quote) text = v.quote;
-      srcLabel.textContent = mp3Path;
-    }
+    // SELF
+    (async function(){
+      const s = await getJSON('data/self/self-describe.json');
+      const el = document.getElementById('self');
+      if(!s){ el.textContent = "Keine Daten vorhanden."; return; }
+      const fig = s.physical?.description || "—";
+      const voi = s.voice?.profile || "—";
+      const foc = s.affect?.inputs?.focus || "—";
+      const nar = s.affect?.narrative || "—";
+      el.innerHTML = `<p><b>Figur:</b> ${fig}<br><b>Stimme:</b> ${voi}<br><b>Fokus:</b> ${foc}<br><b>Narrativ:</b> ${nar}</p>`;
+    })();
 
-    // Lade MP3; wenn 404 → TTS
-    try{
-      const test = await fetch(mp3Path, {method:'HEAD', cache:'no-store'});
-      if(!test.ok) throw new Error('no audio');
-      audio.src = mp3Path;
-      await audio.load();
-      usingTTS = false;
-      ttsNote.style.display = 'none';
-    }catch(_){
-      usingTTS = true;
-      ttsNote.style.display = 'block';
-      // TTS vorbereitet – beim Play auslösen (wegen Browser-Gesture)
-      audio = null;
-      window.__tts_text = text;
-    }
+    // PORTRAIT LOADER (WEBP → PNG → Fallback-SVG)
+    (async function(){
+      const ptc = document.getElementById('portrait-ptc');
+      const svg = document.getElementById('fallback-svg');
+      const srcWebp = document.getElementById('srcWebp');
+      const srcPng = document.getElementById('srcPng');
+      const label = document.getElementById('img-src');
 
-    // Buttons
-    async function play(){
-      if(usingTTS){
-        // System-TTS (SpeechSynthesis) nutzen
-        try{
-          const u = new SpeechSynthesisUtterance(window.__tts_text || 'Hallo. Ich bin Mira.');
-          u.lang = "de-DE";
-          u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
-          u.onstart = ()=>{ animateMouthWhilePlaying(); };
-          u.onend   = ()=>{ cancelAnimationFrame(rafId); mouthOpen(0.05); };
-          speechSynthesis.cancel();
-          speechSynthesis.speak(u);
-        }catch(e){
-          // Fallback: kleines Atem-Puls-Geräuschlos-Animation
-          animateMouthWhilePlaying();
-          setTimeout(()=>{ cancelAnimationFrame(rafId); mouthOpen(0.05); }, 2500);
-        }
-      }else{
-        try{ await audio.play(); animateMouthWhilePlaying(); }catch(e){}
+      async function exists(url){
+        try{ const r = await fetch(url, {method:'HEAD', cache:'no-store'}); return r.ok; }
+        catch{ return false; }
       }
-    }
-    function pause(){
-      if(usingTTS){
-        speechSynthesis.cancel();
-        cancelAnimationFrame(rafId); mouthOpen(0.05);
-      }else{
-        audio.pause();
-        cancelAnimationFrame(rafId); mouthOpen(0.05);
+
+      let used = "SVG Fallback";
+      if(await exists('data/self/latest_image.webp')){
+        srcWebp.srcset = 'data/self/latest_image.webp';
+        srcPng.src = 'data/self/latest_image.png'; // optional fallback for picture
+        ptc.style.display = 'block'; svg.style.display='none'; used = 'WEBP';
+      }else if(await exists('data/self/latest_image.png')){
+        srcPng.src = 'data/self/latest_image.png';
+        ptc.style.display = 'block'; svg.style.display='none'; used = 'PNG';
       }
-    }
+      label.textContent = `Auto (${used})`;
+    })();
 
-    btnPlay.onclick = play;
-    btnPause.onclick = pause;
-    portrait.onclick = play;
-  }
-
-  init();
-})();
-</script>
+    // AUDIO
+    (async function(){
+      const meta = await getJSON('data/voice/voice_of_day.json');
+      const audio = document.getElementById('voice');
+      const info  = document.getElementById('audio-meta');
+      const src = 'data/voice/audio/latest.mp3';
+      audio.src = src;
+      info.textContent = `Quelle: data/voice/voice_of_day.json → ${src}`;
+      const hero = document.getElementById('hero');
+      const play = ()=> audio.play().catch(()=>{});
+      const pause= ()=> audio.pause();
+      hero.addEventListener('click', play);
+      document.getElementById('play').addEventListener('click', play);
+      document.getElementById('pause').addEventListener('click', pause);
+    })();
+  </script>
 </body>
 </html>
