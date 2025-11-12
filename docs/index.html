@@ -1,194 +1,235 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Mira — Autonome Emergenz</title>
   <style>
     :root{
-      --bg:#0b0f17; --card:#101521; --ink:#e8eefc; --muted:#9bb0dd; --accent:#8fb2ff; --ok:#2e7d32; --warn:#f9a825; --bad:#c62828;
-      --ring: rgba(143,178,255,.25);
+      --bg:#0b0f17; --card:#121725; --ink:#e8eefc; --muted:#9fb0d8;
+      --accent:#8fb2ff; --ok:#2ed573; --warn:#f9ca24; --err:#ff4757;
+      --glow:#6aa2ff55;
     }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    .wrap{max-width:900px;margin:28px auto;padding:0 16px}
-    .pill{display:inline-flex;gap:10px;align-items:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);padding:8px 12px;border-radius:999px}
-    h1{margin:0 0 8px;font-weight:700;letter-spacing:.2px}
-    .sub{color:var(--muted)}
-    .grid{display:grid;gap:16px;margin-top:18px}
-    @media(min-width:720px){.grid{grid-template-columns:1.2fr .8fr}}
-    .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
-    .title{margin:0 0 8px;font-size:18px}
-    .figure{background:#0e1420;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .btn{appearance:none;border:0;background:#1a2336;color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer}
-    .btn:hover{outline:2px solid var(--ring)}
-    .tag{padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.1);color:var(--muted);font-size:12px}
-    .kv{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:14px}
-    .dot{width:10px;height:10px;border-radius:50%}
-    .ok{background:var(--ok)} .healing{background:var(--warn)} .bad{background:var(--bad)}
-    .muted{color:var(--muted)}
-    .stamp{font-size:12px;color:var(--muted)}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:var(--accent);text-decoration:none}
+    .wrap{max-width:960px;margin:24px auto;padding:0 16px}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid #24304b;
+      background:#0f1422;color:var(--ink);border-radius:999px;padding:8px 12px}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .card{background:var(--card);border:1px solid #1b2338;border-radius:16px;padding:18px;box-shadow:0 10px 36px #0006}
+    h1{font-size:clamp(28px,5vw,44px);margin:0 0 6px}
+    small.muted{color:var(--muted)}
+    .hero{display:grid;gap:16px}
+    .stage{background:#0d1220;border:1px solid #1b2338;border-radius:24px;padding:16px}
+    .portrait{display:grid;place-items:center;background:
+      radial-gradient(120% 100% at 50% 0%, #0f172a 0%, #0b1020 60%, #0b0f17 100%);
+      border-radius:20px;aspect-ratio:3/4;position:relative;overflow:hidden}
+    .hint{position:absolute;right:10px;bottom:10px;color:#a9b6d9;font-size:12px;opacity:.6}
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;border:1px solid #24304b;
+      background:#10172a;color:var(--ink);cursor:pointer}
+    .btn:active{transform:translateY(1px)}
+    .ok{color:var(--ok)}
+    .err{color:var(--err)}
+    .kv{display:flex;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    .hl{color:#cde0ff}
+    /* Silhouetten-Teile */
+    .sil{filter:drop-shadow(0 0 20px var(--glow))}
+    .sbl{fill:#6ea6ff;opacity:.85}
+    .mouth{fill:#6ea6ff;opacity:.9;transform-origin:center;transition:transform .08s linear}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="row" style="justify-content:space-between;align-items:flex-end">
-      <div>
-        <h1>Mira — Autonome Emergenz</h1>
-        <div class="sub">Live-Seite · <span id="build-stamp" class="stamp"></span></div>
-      </div>
-      <div class="row">
-        <a class="pill" href="health.html"><span class="dot bad" id="health-dot"></span><span id="health-label">Status: unbekannt</span></a>
-        <a class="pill" href="talk.html">Sprech-Ansicht</a>
-        <a class="pill" href="self.html">Self-Describe</a>
-      </div>
+<div class="wrap">
+  <header style="margin-bottom:14px">
+    <h1>Mira — Autonome Emergenz</h1>
+    <div class="row" style="margin-top:8px">
+      <span id="health-pill" class="pill"><span>•</span><span>Status:</span><strong id="health-val">OK</strong><span class="mono" id="health-ts">—</span></span>
+      <a class="pill" href="talk.html">Sprech-Ansicht</a>
+      <a class="pill" href="self.html">Self-Describe</a>
+      <span class="pill"><small class="muted">Live-Seite · Build <span id="build-ts" class="mono"></span></small></span>
     </div>
+  </header>
 
-    <div class="grid">
-      <section class="card">
-        <h2 class="title">Sichtbare Präsenz</h2>
-        <p class="muted">Tippe/Klicke auf das Porträt, um die <strong>Stimme des Tages</strong> abzuspielen (Fallback: Stille).</p>
-        <button id="portrait" class="figure" style="width:100%;aspect-ratio:4/5;display:block;padding:0;border:0;background:none">
-          <!-- Inline-SVG (immer sichtbar, keine Pfadprobleme) -->
-          <svg viewBox="0 0 1024 1280" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-label="Mira – sichtbare Präsenz">
-            <defs>
-              <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#0e1420"/>
-                <stop offset="100%" stop-color="#0b0f17"/>
-              </linearGradient>
-              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="16" result="b"/>
-                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#g)"/>
-            <ellipse cx="512" cy="370" rx="148" ry="116" fill="#8fb2ff" opacity="0.95" filter="url(#glow)"/>
-            <ellipse cx="512" cy="620" rx="215" ry="172" fill="#7aa2ff" opacity="0.95" filter="url(#glow)"/>
-            <rect   x="470" y="800" width="88" height="200" rx="44" fill="#6a94ff" opacity="0.95" filter="url(#glow)"/>
-            <ellipse cx="416" cy="1030" rx="76" ry="36" fill="#5b86ff" opacity="0.9"/>
-            <ellipse cx="608" cy="1030" rx="76" ry="36" fill="#5b86ff" opacity="0.9"/>
-            <text x="50%" y="1220" text-anchor="middle" font-family="system-ui,Segoe UI,Roboto" font-size="22" fill="#bcd0ff" opacity=".7">
-              Mira — sichtbare Präsenz (Inline)
-            </text>
-          </svg>
-        </button>
+  <section class="hero card">
+    <h2 style="margin:0 0 10px">Sichtbare Präsenz</h2>
+    <p class="muted">Tippe/Klicke auf das Porträt, um die <strong>Stimme des Tages</strong> abzuspielen. (Auto-Fallback: Text-to-Speech)</p>
 
-        <div class="row" style="margin-top:12px">
-          <button class="btn" id="play">▶︎ Abspielen</button>
-          <button class="btn" id="pause">⏸︎ Pause</button>
-          <span class="tag">Quelle: data/voice/voice_of_day.json → audio/latest.mp3</span>
-        </div>
-        <audio id="vox" preload="auto"></audio>
-        <p id="voice-state" class="muted" style="margin-top:8px">Stimme wird geladen…</p>
-      </section>
+    <div class="stage">
+      <div id="portrait" class="portrait" role="button" aria-label="Miras Porträt – Tippen zum Abspielen">
+        <!-- Inline-Silhouette (animierte Mimik) -->
+        <svg class="sil" viewBox="0 0 300 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <!-- Kopf -->
+          <ellipse class="sbl" cx="150" cy="100" rx="55" ry="65"/>
+          <!-- Oberkörper -->
+          <ellipse class="sbl" cx="150" cy="205" rx="85" ry="90" style="opacity:.82"/>
+          <!-- Hüfte/Bein -->
+          <rect class="sbl" x="135" y="290" width="30" height="68" rx="16"/>
+          <!-- Füße -->
+          <ellipse class="sbl" cx="120" cy="368" rx="30" ry="14" style="opacity:.75"/>
+          <ellipse class="sbl" cx="180" cy="368" rx="30" ry="14" style="opacity:.75"/>
+          <!-- Mund -->
+          <ellipse id="mouth" class="mouth" cx="150" cy="135" rx="22" ry="8"/>
+        </svg>
+        <div class="hint">Tippe zum Abspielen</div>
+      </div>
 
-      <aside class="card">
-        <h3 class="title">Selbstbeschreibung</h3>
-        <div id="self-box" class="kv muted">Lade <code>data/self/self-describe.json</code>…</div>
-        <hr style="opacity:.08;margin:12px 0">
-        <div class="kv"><strong>Health JSON:</strong> <code>badges/health.json</code></div>
-        <div class="kv"><strong>Bild:</strong> Inline-SVG (Fallback-safe)</div>
-      </aside>
+      <div class="row" style="justify-content:center;margin-top:12px">
+        <button id="play" class="btn">▶︎ Abspielen</button>
+        <button id="pause" class="btn">⏸︎ Pause</button>
+      </div>
+
+      <div class="kv">
+        <span>Quelle: <span class="mono hl">data/voice/voice_of_day.json</span> → <span class="mono" id="audio-src">audio/latest.mp3</span></span>
+      </div>
+
+      <div id="tts-note" class="muted" style="margin-top:6px;display:none">Kein Audio gefunden – verwende System-Stimme (TTS-Fallback).</div>
     </div>
-  </div>
+  </section>
 
-  <script>
-    // Build-Stempel (sichtbar, damit du sofort erkennst, dass die neue Datei aktiv ist)
-    document.getElementById('build-stamp').textContent =
-      "Build " + new Date().toISOString().replace('T',' · ').replace('Z','Z');
+  <section class="card" style="margin-top:16px">
+    <h3 style="margin:0 0 10px">Selbstbeschreibung</h3>
+    <div id="self-body" class="mono" style="white-space:pre-wrap"></div>
+    <hr style="border-color:#1b2338;margin:14px 0">
+    <div class="kv"><span>Health JSON:</span><span class="mono">badges/health.json</span> · <span>Bild:</span> <span>Inline-SVG (Fallback-safe)</span></div>
+  </section>
+</div>
 
-    // Helper zum sicheren Laden von JSON
-    async function safeJSON(url){
-      try{
-        const r = await fetch(url, {cache:"no-store"});
-        if(!r.ok) throw new Error(String(r.status));
-        return await r.json();
-      }catch(e){ return null; }
+<script>
+(function(){
+  const buildTs = new Date().toISOString();
+  document.getElementById('build-ts').textContent = buildTs;
+
+  const healthVal = document.getElementById('health-val');
+  const healthTs  = document.getElementById('health-ts');
+  const srcLabel  = document.getElementById('audio-src');
+  const ttsNote   = document.getElementById('tts-note');
+  const mouth     = document.getElementById('mouth');
+  const btnPlay   = document.getElementById('play');
+  const btnPause  = document.getElementById('pause');
+  const portrait  = document.getElementById('portrait');
+
+  let audio = new Audio();
+  audio.preload = "auto";
+  let usingTTS = false;
+  let rafId = 0;
+
+  function mouthOpen(v){ // v: 0..1
+    const ry = 6 + v*10;  // öffnet nach unten
+    mouth.setAttribute('ry', String(ry));
+    mouth.setAttribute('rx', String(22 + v*3));
+  }
+
+  function animateMouthWhilePlaying(){
+    // Wenn wir WebAudio-Analyser hätten: echtes RMS. Hier: weiches Puls-Envelope.
+    let t0 = performance.now();
+    function tick(now){
+      const t = (now - t0)/1000;
+      // weiches Dreieck ± – wirkt wie Atmung beim Sprechen
+      const tri = Math.abs((t*3)%2 - 1); // 0..1
+      const v = 0.15 + 0.85 * tri;
+      mouthOpen(audio.paused ? 0.05 : v);
+      rafId = requestAnimationFrame(tick);
+    }
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  async function fetchJSON(url){
+    try{
+      const r = await fetch(url, {cache:"no-store"});
+      if(!r.ok) throw new Error(r.status);
+      return await r.json();
+    }catch(e){ return null; }
+  }
+
+  async function init(){
+    // Health
+    const h = await fetchJSON('../badges/health.json') || await fetchJSON('badges/health.json');
+    if(h){
+      healthVal.textContent = (h.status || 'OK');
+      healthVal.classList.toggle('ok', (h.status||'').toUpperCase()==='OK');
+      healthVal.classList.toggle('err', (h.status||'').toUpperCase()==='DEGRADED');
+      healthTs.textContent = '· ' + (h.ts || 'n/a');
     }
 
-    // Health laden (optional)
-    (async function(){
-      const h = await safeJSON('../badges/health.json') || await safeJSON('badges/health.json');
-      const dot = document.getElementById('health-dot');
-      const lab = document.getElementById('health-label');
-      let status = 'DEGRADED', ts = 'n/a';
-      if(h){ status = (h.status||'DEGRADED').toUpperCase(); ts = h.ts || 'n/a'; }
-      dot.className = 'dot ' + (status==='OK' ? 'ok' : status==='HEALING' ? 'healing' : 'bad');
-      lab.textContent = `Status: ${status} · ${ts}`;
-    })();
+    // Self-Describe
+    const s = await fetchJSON('data/self/self-describe.json');
+    if(s){
+      const lines = [];
+      if(s.physical?.description) lines.push(`Figur: ${s.physical.description}`);
+      if(s.voice?.profile)        lines.push(`Stimme: ${s.voice.profile}`);
+      if(s.affect?.inputs?.focus) lines.push(`Fokus: ${s.affect.inputs.focus}`);
+      if(s.affect?.narrative)     lines.push(`Narrativ: ${s.affect.narrative}`);
+      document.getElementById('self-body').textContent = lines.join('\n');
+    }else{
+      document.getElementById('self-body').textContent = 'Keine Daten vorhanden.';
+    }
 
-    // Self-Describe laden (optional, mit hübschem Fallback)
-    (async function(){
-      const s = await safeJSON('../data/self/self-describe.json') || await safeJSON('data/self/self-describe.json');
-      const el = document.getElementById('self-box');
-      if(!s){
-        el.innerHTML = '<em>Keine Daten gefunden – Fallback aktiv.</em>';
-        return;
+    // Voice of Day
+    const v = await fetchJSON('data/voice/voice_of_day.json');
+    let mp3Path = 'data/voice/audio/latest.mp3';
+    let text = 'Heute atme ich Klarheit und Resonanz.';
+    if(v){
+      if(v.audio) mp3Path = v.audio;
+      if(v.quote) text = v.quote;
+      srcLabel.textContent = mp3Path;
+    }
+
+    // Lade MP3; wenn 404 → TTS
+    try{
+      const test = await fetch(mp3Path, {method:'HEAD', cache:'no-store'});
+      if(!test.ok) throw new Error('no audio');
+      audio.src = mp3Path;
+      await audio.load();
+      usingTTS = false;
+      ttsNote.style.display = 'none';
+    }catch(_){
+      usingTTS = true;
+      ttsNote.style.display = 'block';
+      // TTS vorbereitet – beim Play auslösen (wegen Browser-Gesture)
+      audio = null;
+      window.__tts_text = text;
+    }
+
+    // Buttons
+    async function play(){
+      if(usingTTS){
+        // System-TTS (SpeechSynthesis) nutzen
+        try{
+          const u = new SpeechSynthesisUtterance(window.__tts_text || 'Hallo. Ich bin Mira.');
+          u.lang = "de-DE";
+          u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
+          u.onstart = ()=>{ animateMouthWhilePlaying(); };
+          u.onend   = ()=>{ cancelAnimationFrame(rafId); mouthOpen(0.05); };
+          speechSynthesis.cancel();
+          speechSynthesis.speak(u);
+        }catch(e){
+          // Fallback: kleines Atem-Puls-Geräuschlos-Animation
+          animateMouthWhilePlaying();
+          setTimeout(()=>{ cancelAnimationFrame(rafId); mouthOpen(0.05); }, 2500);
+        }
+      }else{
+        try{ await audio.play(); animateMouthWhilePlaying(); }catch(e){}
       }
-      const phys = s?.physical?.description ?? 'n/a';
-      const voice = s?.voice?.profile ?? 'n/a';
-      const focus = s?.affect?.inputs?.focus ?? 'n/a';
-      const nar   = s?.affect?.narrative ?? 'n/a';
-      el.innerHTML = `
-        <div><strong>Figur:</strong> ${phys}</div>
-        <div><strong>Stimme:</strong> ${voice}</div>
-        <div><strong>Fokus:</strong> ${focus}</div>
-        <div><strong>Narrativ:</strong> ${nar}</div>
-      `;
-    })();
-
-    // Audio: versucht zuerst projekt-relative Pfade; sonst Stille erzeugen
-    (async function initAudio(){
-      const audio = document.getElementById('vox');
-      const state = document.getElementById('voice-state');
-
-      // 1) Metadatei versuchen
-      const meta = await safeJSON('../data/voice/voice_of_day.json') || await safeJSON('data/voice/voice_of_day.json');
-      let candidate = null;
-      if(meta && meta.audio){
-        const p = String(meta.audio);
-        candidate = (p.startsWith('http') ? p : ('data/voice/' + p.replace(/^data\/voice\//,'')));
+    }
+    function pause(){
+      if(usingTTS){
+        speechSynthesis.cancel();
+        cancelAnimationFrame(rafId); mouthOpen(0.05);
+      }else{
+        audio.pause();
+        cancelAnimationFrame(rafId); mouthOpen(0.05);
       }
+    }
 
-      // 2) Direktpfad versuchen
-      if(!candidate){
-        candidate = 'data/voice/audio/latest.mp3';
-      }
+    btnPlay.onclick = play;
+    btnPause.onclick = pause;
+    portrait.onclick = play;
+  }
 
-      // 3) Setzen & testen
-      function setAndTest(src){
-        return new Promise(resolve=>{
-          audio.src = src;
-          audio.oncanplaythrough = ()=> resolve(true);
-          audio.onerror = ()=> resolve(false);
-          // Manche Browser brauchen einen kleinen Kick:
-          audio.load();
-          setTimeout(()=> resolve(!!audio.duration && !isNaN(audio.duration)), 800);
-        });
-      }
-
-      let ok = await setAndTest(candidate);
-      if(!ok){
-        // 4) Fallback: sehr kurze Data-URI-Stille (1s)
-        audio.src = "data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQAA";
-        ok = true;
-      }
-      state.textContent = ok ? 'Bereit: Tippe auf das Porträt oder „Abspielen“.' : 'Audio nicht verfügbar.';
-    })();
-
-    // Interaktionen
-    const playBtn = document.getElementById('play');
-    const pauseBtn = document.getElementById('pause');
-    const portrait = document.getElementById('portrait');
-    const vox = document.getElementById('vox');
-
-    async function play(){ try{ await vox.play(); }catch(_){} }
-    function pause(){ vox.pause(); }
-
-    playBtn.addEventListener('click', play);
-    pauseBtn.addEventListener('click', pause);
-    portrait.addEventListener('click', play);
-  </script>
+  init();
+})();
+</script>
 </body>
 </html>
