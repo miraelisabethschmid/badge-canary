@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1280" viewBox="0 0 1024 1280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b0f17"/><stop offset="100%" stop-color="#070a11"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <ellipse cx="512" cy="1098" rx="290" ry="36" fill="#2a3550" fill-opacity="0.32"/>
+  <ellipse cx="512" cy="870" rx="245" ry="175" fill="#6da0ff" fill-opacity="0.95"/>
+  <ellipse cx="512" cy="665" rx="195" ry="150" fill="#77a7ff" fill-opacity="0.98"/>
+  <ellipse cx="512" cy="480" rx="180" ry="150" fill="#85afff"/>
+  <ellipse cx="512" cy="365" rx="120" ry="100" fill="#90b6ff"/>
+  <ellipse cx="430" cy="1010" rx="28" ry="14" fill="#6da0ff" fill-opacity="0.75"/>
+  <ellipse cx="594" cy="1010" rx="28" ry="14" fill="#6da0ff" fill-opacity="0.75"/>
+  <!-- dezenter "Braces"-Glanz -->
+  <circle cx="512" cy="380" r="3" fill="#dbe7ff" fill-opacity="0.95"/>
+  <circle cx="524" cy="384" r="2" fill="#dbe7ff" fill-opacity="0.8"/>
+  <circle cx="500" cy="388" r="2" fill="#dbe7ff" fill-opacity="0.7"/>
+  <metadata data-origin="placeholder" data-note="Will be replaced hourly by workflow"></metadata>
+</svg>
