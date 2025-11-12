@@ -3,55 +3,85 @@ name: Mira · Sync Latest Portrait to Homepage
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "*/30 * * * *" # alle 30 Minuten
 
 permissions:
   contents: read
+
+concurrency:
+  group: mira-portrait-sync
+  cancel-in-progress: true
+
+env:
+  TARGET_BRANCH: main
+  TARGET_PATH: public/mira/hero.png   # Zieldatei im Homepage-Repo
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source (badge-canary)
+      - name: Checkout source (dieses Repo)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Find newest portrait
+      - name: Finden des neuesten Portraits
         id: find
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          latest=""
-          for f in data/archive/**/*.png data/archive/**/*.jpg; do
-            latest="$f"
-          done
-          echo "found=${latest}" >> "$GITHUB_OUTPUT"
+          shopt -s globstar nullglob
+          files=(data/archive/**/*.png data/archive/**/*.jpg data/archive/**/*.jpeg)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "Kein Portrait gefunden unter data/archive/**"
+            echo "found=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          latest="$(ls -t "${files[@]}" | head -n1)"
+          echo "Neueste Datei: $latest"
+          echo "found=$latest" >> "$GITHUB_OUTPUT"
 
+      - name: Guard: Portrait vorhanden?
+        if: ${{ steps.find.outputs.found == '' }}
+        run: |
+          echo "::notice:: Kein Portrait vorhanden – Sync wird übersprungen."
+
+      - name: Guard: HOMEPAGE_PAT vorhanden?
+        if: ${{ steps.find.outputs.found != '' }}
+        env:
+          HOMEPAGE_PAT: ${{ secrets.HOMEPAGE_PAT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${HOMEPAGE_PAT:-}" ]; then
+            echo "::warning:: Secret HOMEPAGE_PAT fehlt – Sync wird neutral übersprungen."
+            exit 78
+          fi
+
+      # ❗️TRAGE HIER DEIN HOMEPAGE-REPO EIN: owner/repo  (z.B. miraelisabeth/miraelisabeth.github.io)
       - name: Checkout homepage repo
         if: ${{ steps.find.outputs.found != '' }}
         uses: actions/checkout@v4
         with:
-          repository: owner/homepage-repo        # <-- anpassen
-          ref: main
-          token: ${{ secrets.HOMEPAGE_PAT }}
+          repository: owner/homepage-repo        # <--- DIESEN WERT ERSETZEN
+          ref: ${{ env.TARGET_BRANCH }}
+          token: ${{ secrets.HOMEPAGE_PAT }}     # Personal Access Token mit repo-Rechten
           path: homepage
 
-      - name: Copy & commit
+      - name: Kopieren & Commit vorbereiten
         if: ${{ steps.find.outputs.found != '' }}
         shell: bash
         run: |
-          set -e
-          mkdir -p homepage/public/mira
-          cp "${{ steps.find.outputs.found }}" homepage/public/mira/hero.png
+          set -euo pipefail
+          mkdir -p "homepage/$(dirname "${TARGET_PATH}")"
+          cp "${{ steps.find.outputs.found }}" "homepage/${TARGET_PATH}"
           cd homepage
           git config user.name  "mira-portrait-bot"
           git config user.email "mira@users.noreply.github.com"
-          if git diff --quiet && git status --porcelain | wc -l | grep -q '^0$'; then
-            echo "No changes to commit."
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen – nichts zu committen."
             exit 0
           fi
-          git add -A
-          git commit -m "feat(hero): sync latest portrait"
-          git push
+          git commit -m "feat(hero): sync latest portrait → ${TARGET_PATH}"
+          git push origin "${TARGET_BRANCH}"
