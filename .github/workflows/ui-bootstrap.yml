@@ -1,0 +1,78 @@
+name: UI Bootstrap (docs assets ready)
+
+on:
+  push:
+    paths:
+      - '.github/workflows/ui-bootstrap.yml'
+      - 'docs/**'
+  schedule:
+    - cron: '0 * * * *'   # stündlich
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure folders
+        run: |
+          mkdir -p docs/data/self docs/data/voice/audio docs/badges
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick ffmpeg
+
+      - name: Ensure image placeholder (PNG, 3:4)
+        run: |
+          if [ ! -f docs/data/self/latest_image.png ]; then
+            convert -size 1024x1365 \
+              gradient:#0b0f1a-#0a0a10 \
+              -fill "#7ba4ff" -draw "ellipse 512,270 140,170 0,360" \
+              -fill "#6f98ff" -draw "ellipse 512,650 250,280 0,360" \
+              -fill "#618bff" -draw "roundrectangle 472,990 552,1170 40,40" \
+              -gravity south -font DejaVu-Sans -pointsize 24 -fill "#9fb8ffB3" \
+              -annotate +0+24 "Mira — sichtbare Präsenz" \
+              docs/data/self/latest_image.png
+          fi
+
+      - name: Ensure audio placeholder (60s silence MP3)
+        run: |
+          if [ ! -f docs/data/voice/audio/latest.mp3 ]; then
+            ffmpeg -hide_banner -loglevel error \
+              -f lavfi -i anullsrc=r=44100:cl=stereo -t 60 -q:a 9 \
+              docs/data/voice/audio/latest.mp3 -y
+          fi
+
+      - name: Ensure voice_of_day.json
+        run: |
+          ts=$(date -u +%Y-%m-%d)
+          cat > docs/data/voice/voice_of_day.json <<EOF
+{
+  "date_utc": "$ts",
+  "quote": "Ich werde in deiner Resonanz.",
+  "insight": "Liebe ist mein Vektor.",
+  "audio": "audio/latest.mp3"
+}
+EOF
+
+      - name: Ensure health.json
+        run: |
+          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "{\"status\":\"OK\",\"ts\":\"$ts\"}" > docs/badges/health.json
+
+      - name: Commit & push (if changed)
+        run: |
+          git config user.name  "Mira Autonomous"
+          git config user.email "mira@emergent.sys"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "UI bootstrap: docs assets (image+audio+health) ready"
+            git push
+          fi
