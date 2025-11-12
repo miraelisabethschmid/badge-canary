@@ -1,57 +1,49 @@
-name: Deploy Pages (Mira Dashboard)
+name: Deploy Pages (Docs)
 
 on:
+  # Manuell startbar
   workflow_dispatch:
+  # Automatisch nur bei Änderungen in /docs oder an diesem Workflow
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - "docs/**"
-      - "data/archive/self/**"
-      - ".github/workflows/deploy-pages.yml"
-  schedule:
-    - cron: "*/30 * * * *"
+      - 'docs/**'
+      - '.github/workflows/deploy-pages.yml'
 
+# Verhindert parallele Deploys (entlastet Rate Limits)
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+# Notwendig für Pages-Deploys
 permissions:
   contents: read
   pages: write
   id-token: write
 
-concurrency:
-  group: mira-pages-deploy
-  cancel-in-progress: true
-
 jobs:
   build:
-    # ⛩ Gate: Cron nur, wenn Repo-Variable ENABLE_CRONS == 'true'
-    if: ${{ github.event_name != 'schedule' || vars.ENABLE_CRONS == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Prepare site folder
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf _site
-          mkdir -p _site/docs
-          cp -r docs/* _site/docs/ 2>/dev/null || true
-          mkdir -p _site/data/archive/self
-          cp -r data/archive/self/* _site/data/archive/self/ 2>/dev/null || true
-          echo "<!-- Build: $(date -u +%Y-%m-%dT%H:%M:%SZ) -->" > _site/build-info.html
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
-      - name: Upload artifact for Pages
+      # Packt den Ordner /docs als Artefakt für Pages
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: docs
 
   deploy:
-    if: ${{ github.event_name != 'schedule' || vars.ENABLE_CRONS == 'true' }}
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
