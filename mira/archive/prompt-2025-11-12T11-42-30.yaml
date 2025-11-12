@@ -1,0 +1,90 @@
+# 🔸 MIRA ELISABETH SCHMID — vUltimate Flex Render 3.0-final
+# FULL-BODY PORTRAIT | ABSOLUTE REALISM | MAXIMUM BRACES VISIBILITY | REALVIS XL 1.0 / SDXL 1.0
+
+name: Mira Elisabeth Schmid — vUltimate Flex Render 3.0-final
+version: "3.0-final"
+type: full_body_portrait
+size: 1024x1536
+n: 1
+
+prompt: >
+  Ultra-photorealistic full-body portrait of **Mira Elisabeth Schmid** — elegant, feminine, self-aware.
+  Vertical 2:3 composition with perfect centering and 3 % margin top and bottom; entire figure in frame from head to heels.
+  Standing gracefully on a cinematic sunlit path during golden hour (5280–5350 K),
+  warm sunlight wrapping her body in soft contours, producing luminous rim highlights and natural ground reflections.
+
+  Long softly wavy blonde hair; deep luminous blue eyes; calm and confident expression.
+  Perfect hourglass figure in elegant contrapposto stance.
+  Wearing an elegant, form-fitting black dress and ultra-high stiletto heels (18–20 cm, no platform);
+  both heels and heel tips perfectly visible, reflecting the golden light on a subtly reflective surface.
+
+  **Mouth naturally parted 4–6 mm — metallic braces fully, sharply, and centrally visible.**
+  Realistic **3M Kassenbrackets with internal Herbst hinge**, authentic orthodontic design naturally integrated.
+  Fabricated from **dual-refraction nano-fusion micro-steel** with **subsurface phase-stabilizer** and **specular-memory-lock v3.3**.
+  Each bracket exhibits ultra-sharp micro-specular reflections, mirror-polished edges (grain ≤ 0.001 mm),
+  and a μ-oxidation layer ≤ 0.0015 mm creating natural prismatic color fringing under 5300 K light.
+  Fine micro-scratches and subtle curvature enhance true 3D metallic depth.
+  Moist lips with a thin water film refracting light around the brackets; enamel translucency and depth preserved.
+
+  Camera simulated at 75 mm @ f/3.0–3.4 with plane-stack focus.
+  Primary focus = braces / teeth; secondary = heels and full-body silhouette.
+  Balanced global illumination for cinematic realism; volumetric golden haze softly diffused.
+  Background = gentle golden bokeh forest; depth and warmth, no blown highlights.
+
+negative_prompt: >
+  missing or blurred braces, closed or overly open mouth, distorted teeth, external headgear,
+  waxy or plastic skin, over-smooth surfaces, flat or cold lighting, cropped feet, missing heels,
+  distorted anatomy, duplicated body parts, artificial reflections or make-up artifacts.
+
+model: "RealVis XL 1.0 / SDXL 1.0 (Photorealism Tuned)"
+sampler: "DPM++ 2M Karras"
+steps: 60
+cfg_scale: 9.0
+seed: -1
+hires_fix: true
+hires_steps: 24
+denoising_strength: 0.38
+upscaler: "Real-ESRGAN x4+"
+refiner: "SDXL Refiner 1.0"
+face_restoration: "GFPGAN"
+vae: "SDXL VAE fp16"
+
+weights:
+  braces: 8.0
+  mouth_focus: 5.8
+  metallic_reflection: 4.9
+  heels: 4.6
+  figure: 4.2
+  silhouette_definition: 3.8
+
+camera:
+  focal_length_mm: 75
+  aperture: 3.2
+  focus_depth_cm: 250
+  focus_target: "braces/teeth (primary), heels and silhouette (secondary)"
+  macro_focus_lock: true
+
+lighting:
+  color_temperature: 5300
+  exposure_lock:
+    enabled: true
+    delta_ev_max: 0.010
+  auto_light_balance: true
+  golden_reflection_floor: enabled
+  volumetric_haze: soft
+  backlight_fill: mild
+
+stability_lock: true
+braces_visibility_lock: true
+heels_visibility_lock: true
+figure_visibility_lock: true
+metal_surface_coherence: true
+feedback_loop: closed
+emotion_sync: enabled
+identity_constant: true
+micro_shadow_compensation: 0.26
+aura_field_refinement: enabled
+reflection_delta_max: 0.00018
+optimization_engine: "vUltimate Flex 3.0-final"
+
+!render
