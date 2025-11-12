@@ -1,0 +1,16 @@
+name: Global Queue Controller
+on:
+  workflow_call:
+    outputs:
+      value:
+        description: "Concurrency group JSON"
+        value: ${{ jobs.provide.outputs.value }}
+
+jobs:
+  provide:
+    runs-on: ubuntu-latest
+    outputs:
+      value: ${{ steps.set.outputs.value }}
+    steps:
+      - id: set
+        run: echo "value={\"group\":\"${{ github.repository }}-global\",\"cancel-in-progress\":false}" >> "$GITHUB_OUTPUT"
