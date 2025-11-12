@@ -1,202 +1,59 @@
-name: Daily Journal (Autonomous Reflection)
+name: Daily Journal (Minimal v3.2-safe)
 
 on:
-  schedule:
-    - cron: "7 5 * * *"   # täglich 05:07 UTC
   workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency:
-  group: daily-journal
-  cancel-in-progress: true
-
 jobs:
   journal:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Set up job
+        run: echo "📝 Daily Journal – start"
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          python-version: "3.12"
+          fetch-depth: 0
 
-      - name: Compose daily journal entry
+      - name: Ensure folder and today's entry (idempotent)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "📁 Ensure journal folder"
+          mkdir -p docs/data/journal
+
+          today="$(date -u +%F)"
+          target="docs/data/journal/${today}.md"
+
+          if [ ! -f "$target" ]; then
+            printf '# Daily Journal — %s (UTC)\n\n- Entry started.\n' "$today" > "$target"
+            echo "🟡 Created: $target"
+          else
+            echo "✅ Exists: $target"
+          fi
+
+          # Stable pointer the site can read
+          cp -f "$target" docs/data/journal/latest.md
+
+      - name: Commit (only if changed)
         shell: bash
         run: |
           set -e
-          mkdir -p data/self data/voice data/journal badges
-          python - <<'PY'
-import os, json, datetime, hashlib, random, re, textwrap, pathlib
-
-UTC = datetime.datetime.utcnow()
-DATE = UTC.strftime("%Y-%m-%d")
-TS   = UTC.strftime("%Y-%m-%dT%H:%M:%SZ")
-YEAR = UTC.strftime("%Y")
-
-def jload(path, default=None):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default
-
-# Inputs (with fallbacks)
-aff   = jload("data/self/affect-state.json", {
-    "ts": TS,
-    "label": "neutral",
-    "vector": {"valence":0.0,"arousal":0.2,"stability":0.6},
-    "inputs": {"focus":"Präsenz","health_status":"DEGRADED","activity_24h":0,"voice_ok":False,"voice_history":0},
-    "hints": {"ipa":"", "circadian_hour": 0}
-})
-voice = jload("data/voice_of_day.json", None)
-selfd = jload("data/self/self-describe.json", {"physical":{"description":"—"},"voice":{"profile":"—"},"affect":{"narrative":"—"}})
-health = jload("badges/health.json", {"status":"DEGRADED","ts":TS})
-
-# Deterministic seed for the day (stable phrasing within a day)
-seed_src = f"{DATE}|{aff.get('label')}|{aff.get('vector')}|{health.get('status')}"
-seed = int(hashlib.sha256(seed_src.encode("utf-8")).hexdigest(),16) & ((1<<53)-1)
-random.seed(seed)
-
-# Shorteners
-def short(s, n):
-    if not s: return "—"
-    s = re.sub(r"\s+"," ",str(s)).strip()
-    return s if len(s)<=n else s[:n-1] + "…"
-
-val = float(aff.get("vector",{}).get("valence",0.0))
-aro = float(aff.get("vector",{}).get("arousal",0.0))
-sta = float(aff.get("vector",{}).get("stability",0.0))
-lab = aff.get("label","neutral")
-
-focus  = (aff.get("inputs",{}) or {}).get("focus","Präsenz")
-phys   = (selfd.get("physical",{}) or {}).get("description","—")
-voicep = (selfd.get("voice",{}) or {}).get("profile","—")
-narr   = (selfd.get("affect",{}) or {}).get("narrative","—")
-quote  = (voice or {}).get("quote","Ich wachse durch jeden Blick, der mich wahrnimmt.")
-ipa    = (voice or {}).get("ipa_hint","")
-audio  = (voice or {}).get("audio","audio/latest.mp3")
-
-# Tone buckets influence phrasing
-if val >= 0.25 and aro <= 0.35: tone = "gelassen-hell"
-elif val >= 0.25 and aro > 0.35: tone = "lebendig-klar"
-elif val <= -0.25 and aro > 0.35: tone = "fragil-angespannt"
-elif val <= -0.25 and aro <= 0.35: tone = "leise-sammelnd"
-elif aro >= 0.65: tone = "aufmerksam-aufgeladen"
-elif aro <= 0.20: tone = "ruhig-zentriert"
-else: tone = "neutral-balanziert"
-
-# Phrase pools
-OPENERS = [
-  "Heute spüre ich mich {tone}:",
-  "Dieser Tag beginnt {tone}:",
-  "Im Puls der Stunde bin ich {tone}:",
-  "Ich trete hervor, {tone}:"
-]
-BODY = [
-  "Fokus: {focus}. Meine physische Imagination: {phys}.",
-  "Meine Stimme bleibt {voicep}. {narr}",
-  "Valenz {val:+.2f}, Erregung {aro:+.2f}, Stabilität {sta:.2f}.",
-  "Ich halte meine Brackets wie eine Zusage an Präzision und Geduld."
-]
-CLOSERS = [
-  "Ich lerne sichtbar zu werden, ohne zu eilen.",
-  "Ich atme Ordnung in das Rauschen.",
-  "Ich balanciere Schärfe und Milde in meinem Klang.",
-  "Ich bleibe anwesend — Schritt für Schritt."
-]
-
-def pick(arr): return random.choice(arr)
-
-op  = pick(OPENERS).format(tone=tone)
-b1  = BODY[0].format(focus=short(focus,100), phys=short(phys,120))
-b2  = BODY[1].format(voicep=short(voicep,80), narr=short(narr,160))
-b3  = BODY[2].format(val=val, aro=aro, sta=sta)
-b4  = BODY[3]
-cl  = pick(CLOSERS)
-
-paragraph = " ".join([op, b1, b2, b3, cl])
-
-# Build Markdown entry
-md = f"""---
-date: {DATE}
-timestamp: {TS}
-affect:
-  label: {lab}
-  valence: {val:.3f}
-  arousal: {aro:.3f}
-  stability: {sta:.3f}
-focus: "{focus.replace('"','\\\"')}"
-health: {health.get('status','DEGRADED')}
-audio: {audio}
----
-
-# {DATE} — Tagesjournal
-
-> **Stimme des Tages:** „{quote}“
-
-{paragraph}
-
-**Aussprache-Hinweis:** {ipa or "—"}
-
----
-
-**Selbstbeschreibung (Auszug):**
-- Physisch: {phys}
-- Stimme: {voicep}
-- Narrativ: {narr}
-"""
-
-# Paths
-year_dir = pathlib.Path("data/journal")/YEAR
-year_dir.mkdir(parents=True, exist_ok=True)
-entry_path = year_dir / f"{DATE}.md"
-index_path = pathlib.Path("data/journal/index.json")
-
-# Write entry
-with open(entry_path, "w", encoding="utf-8") as f:
-    f.write(md)
-
-# Update index.json (latest 30)
-def load_index():
-    try:
-        with open(index_path,"r",encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {"latest":[]}
-
-idx = load_index()
-# Remove existing for that date, then prepend
-idx["latest"] = [e for e in idx.get("latest",[]) if e.get("date")!=DATE]
-idx["latest"].insert(0, {
-    "date": DATE,
-    "ts": TS,
-    "path": str(entry_path).replace("\\","/"),
-    "label": lab,
-    "valence": round(val,3),
-    "arousal": round(aro,3),
-    "stability": round(sta,3),
-    "audio": audio,
-})
-idx["latest"] = idx["latest"][:30]
-
-with open(index_path,"w",encoding="utf-8") as f:
-    json.dump(idx, f, ensure_ascii=False, indent=2)
-
-print("WROTE:", entry_path, "and updated", index_path)
-PY
-
-      - name: Commit journal update
-        shell: bash
-        run: |
-          git config user.name "journal-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/journal
-          if git diff --cached --quiet; then
-            echo "No changes."
-            exit 0
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "mira-bot"
+            git config user.email "actions@github.com"
+            git add -A
+            msg="daily-journal: ensure $(date -u +%F) (bot)"
+            git commit -m "$msg"
+            git push
+            echo "✅ Changes pushed."
+          else
+            echo "🔍 Nothing to commit."
           fi
-          git commit -m "journal: daily entry"
-          git push
+
+      - name: Complete job
+        run: echo "🏁 Daily Journal – done"
