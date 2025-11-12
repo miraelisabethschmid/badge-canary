@@ -18,16 +18,11 @@ jobs:
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
 
-            // 1) Liste aller Workflows holen
             const list = await github.request('GET /repos/{owner}/{repo}/actions/workflows', { owner, repo });
 
-            let enabled = [];
-            let already = [];
-            let dispatched = [];
-            let skipped = [];
+            let enabled = [], already = [], dispatched = [], skipped = [];
 
             for (const wf of list.data.workflows) {
-              // 2) ggf. aktivieren (falls disabled)
               if (wf.state && wf.state.startsWith('disabled')) {
                 try {
                   await github.request('PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/enable', {
@@ -41,14 +36,12 @@ jobs:
                 already.push(wf.name);
               }
 
-              // 3) anstoßen (nur wenn workflow_dispatch möglich)
               try {
                 await github.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
                   owner, repo, workflow_id: wf.id, ref: process.env.GITHUB_REF_NAME || 'main'
                 });
                 dispatched.push(wf.name);
               } catch (e) {
-                // Kein workflow_dispatch oder anderer Grund → überspringen
                 skipped.push(`${wf.name} (dispatch skipped: ${e.message})`);
               }
             }
