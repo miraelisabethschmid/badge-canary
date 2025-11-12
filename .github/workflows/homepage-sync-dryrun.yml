@@ -1,0 +1,65 @@
+name: Homepage Sync • Dry-Run
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/20 * * * *" # alle 20 Minuten
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dryrun-homepage-sync
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sammle Self-Image-Status
+        id: probe
+        run: |
+          set -e
+          FILE="docs/data/self/latest_image.svg"
+
+          if [ ! -f "$FILE" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "size=0"       >> $GITHUB_OUTPUT
+            echo "placeholder=unknown" >> $GITHUB_OUTPUT
+            echo "❌ Kein Bild gefunden: $FILE" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          SIZE=$(wc -c < "$FILE" | tr -d ' ')
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "size=$SIZE"  >> $GITHUB_OUTPUT
+
+          if grep -qi "Platzhalterbild" "$FILE"; then
+            echo "placeholder=true"  >> $GITHUB_OUTPUT
+            echo "⚠️ Platzhalter-SVG erkannt (Größe: ${SIZE} B)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "placeholder=false" >> $GITHUB_OUTPUT
+            echo "✅ Echtes Self-Image erkannt (Größe: ${SIZE} B)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Entscheide, was die Homepage bekommen würde (ohne zu schreiben)
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "—" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Dry-Run Ergebnis**" >> $GITHUB_STEP_SUMMARY
+          echo "- Pfad: \`docs/data/self/latest_image.svg\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Vorhanden: ${{ steps.probe.outputs.exists }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Größe (Bytes): ${{ steps.probe.outputs.size }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Platzhalter: ${{ steps.probe.outputs.placeholder }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.probe.outputs.exists }}" = "true" ] && \
+             [ "${{ steps.probe.outputs.placeholder }}" = "false" ] && \
+             [ "${{ steps.probe.outputs.size }}" -gt 500 ];
+          then
+            echo "- 🚀 Bewertung: **Publizierbar** (würde synchronisiert werden)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- 💤 Bewertung: **Nicht publizierbar** (würde NICHT synchronisiert werden)" >> $GITHUB_STEP_SUMMARY
+          fi
