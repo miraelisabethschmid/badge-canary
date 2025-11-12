@@ -1,4 +1,4 @@
-name: UI Autoheal (Minimal v3.4-stable)
+name: UI Autoheal (Minimal v3.5-safe)
 
 on:
   workflow_dispatch:
@@ -19,41 +19,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "🔧 Starte UI-Autoheal (v3.5-safe)..."
 
-          echo "🔧 Starte UI-Autoheal (v3.4-stable)..."
-
+          # Verzeichnisse
           mkdir -p docs/data/self
           mkdir -p docs/data/voice/audio
 
+          # --- Bild prüfen/erzeugen ---
           have_img=0
           for f in docs/data/self/latest_image.svg docs/data/self/latest_image.png docs/data/self/latest_image.jpg docs/data/self/latest_image.webp; do
-            if [ -f "$f" ]; then have_img=1; fi
+            [ -f "$f" ] && have_img=1
           done
 
           if [ "$have_img" -eq 0 ]; then
-            cat <<'EOF' > docs/data/self/latest_image.svg
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
-  <defs>
-    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#11182b"/>
-      <stop offset="100%" stop-color="#1a2340"/>
-    </linearGradient>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#g)"/>
-  <g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">
-    <text x="50%" y="45%" font-size="44">Mira - Platzhalterbild</text>
-    <text x="50%" y="58%" font-size="22">Lege latest_image.* in docs/data/self/ ab</text>
-  </g>
-</svg>
-EOF
+            echo '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="#0f172a"/><g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle"><text x="50%" y="45%" font-size="44">Mira - Platzhalterbild</text><text x="50%" y="58%" font-size="22">docs/data/self/latest_image.*</text></g></svg>' > docs/data/self/latest_image.svg
             echo "🟡 Platzhalterbild erzeugt: docs/data/self/latest_image.svg"
           else
             echo "✅ Bild bereits vorhanden."
           fi
 
+          # --- Audio prüfen/erzeugen ---
           have_aud=0
           for f in docs/data/voice/audio/latest.wav docs/data/voice/audio/latest.mp3 docs/data/voice/audio/latest.ogg; do
-            if [ -f "$f" ]; then have_aud=1; fi
+            [ -f "$f" ] && have_aud=1
           done
 
           if [ "$have_aud" -eq 0 ]; then
@@ -71,7 +59,7 @@ EOF
             git config user.name "mira-bot"
             git config user.email "actions@github.com"
             git add -A
-            git commit -m "ui-autoheal: ensure placeholders (v3.4-stable)"
+            git commit -m "ui-autoheal: ensure placeholders (v3.5-safe)"
             git push
             echo "✅ Änderungen gepusht."
           else
