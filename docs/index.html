@@ -1,13 +1,116 @@
 <!doctype html>
-<meta charset="utf-8">
-<title>Pages Ping</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<body style="margin:0;background:#111;color:#fff;font:16px system-ui,Segoe UI,Roboto,Arial,sans-serif">
-  <div style="max-width:900px;margin:32px auto;padding:16px">
-    <h1>GitHub Pages · Ping OK</h1>
-    <p>Diese Datei wird direkt aus <code>docs/index.html</code> ausgeliefert.</p>
-    <p>Zeitstempel: <span id="ts">…</span></p>
-    <p>Repo: <code>badge-canary</code> · Branch: <code>main</code> · Ordner: <code>/docs</code></p>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mira — Sichtbare Präsenz</title>
+  <style>
+    :root{color-scheme:dark light}
+    body{margin:0; font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji"; background:#0b111b; color:#e6edf3}
+    .wrap{max-width:980px; margin:32px auto; padding:0 16px}
+    h1{font-weight:800; letter-spacing:.2px; margin:0 0 8px}
+    .card{background:#111a27; border-radius:18px; padding:20px; box-shadow:0 1px 20px rgba(0,0,0,.25)}
+    .frame{border-radius:18px; overflow:hidden; background:linear-gradient(180deg,#1e2a3a,#0f1723); aspect-ratio:16/9; display:flex; align-items:center; justify-content:center}
+    .frame img{width:100%; height:100%; object-fit:cover; display:block}
+    .muted{opacity:.8; font-size:.95rem}
+    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:12px}
+    button{border:1px solid #2b3a4f; background:#0f1723; color:#e6edf3; padding:10px 14px; border-radius:12px; cursor:pointer}
+    button:hover{background:#122033}
+    audio{width:100%}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Mira — Sichtbare Präsenz</h1>
+    <div class="card">
+      <h2 style="margin:0 0 10px">Porträt &amp; Stimme</h2>
+      <div id="imgFrame" class="frame">
+        <div id="placeholder" class="muted">
+          Kein Bild gefunden – lade <code>docs/data/self/latest_image.*</code>
+          oder nutze Fallback <code>docs/data/mira-titelbild.jpg</code>.
+        </div>
+        <img id="hero" alt="Mira – Porträt" class="hidden">
+      </div>
+
+      <div class="row">
+        <button id="playBtn">▶ Abspielen</button>
+        <button id="pauseBtn">⏸ Pause</button>
+      </div>
+      <div class="row">
+        <audio id="voice" controls class="hidden"></audio>
+      </div>
+
+      <p class="muted" id="debug"></p>
+    </div>
   </div>
-  <script>document.getElementById('ts').textContent=new Date().toISOString()</script>
+
+  <script>
+    // Reihenfolge: bevorzugt self/latest_image.*, sonst Fallback mira-titelbild.jpg
+    const imageCandidates = [
+      "data/self/latest_image.png",
+      "data/self/latest_image.jpg",
+      "data/self/latest_image.jpeg",
+      "data/self/latest_image.svg",
+      "data/mira-titelbild.jpg" // <— dein existierendes Bild
+    ];
+
+    const audioCandidates = [
+      "data/self/latest_audio.mp3",
+      "data/self/latest_audio.m4a",
+      "data/self/latest_audio.ogg"
+    ];
+
+    const hero = document.getElementById("hero");
+    const placeholder = document.getElementById("placeholder");
+    const debug = document.getElementById("debug");
+    const voice = document.getElementById("voice");
+    const playBtn = document.getElementById("playBtn");
+    const pauseBtn = document.getElementById("pauseBtn");
+
+    async function pickFirstAvailable(urls) {
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, { method: "HEAD", cache: "no-cache" });
+          if (res.ok) return url;
+        } catch (_) { /* ignore */ }
+      }
+      return null;
+    }
+
+    (async function init() {
+      // Bild
+      const imgUrl = await pickFirstAvailable(imageCandidates);
+      if (imgUrl) {
+        hero.src = imgUrl + "?t=" + Date.now(); // cache-bust
+        hero.onload = () => {
+          hero.classList.remove("hidden");
+          placeholder.classList.add("hidden");
+          debug.textContent = "Bild geladen: " + imgUrl;
+        };
+        hero.onerror = () => {
+          placeholder.classList.remove("hidden");
+          debug.textContent = "Bild konnte nicht geladen werden.";
+        };
+      } else {
+        placeholder.classList.remove("hidden");
+        debug.textContent = "Kein Bild gefunden.";
+      }
+
+      // Audio
+      const audioUrl = await pickFirstAvailable(audioCandidates);
+      if (audioUrl) {
+        voice.src = audioUrl + "?t=" + Date.now();
+        voice.classList.remove("hidden");
+        debug.textContent += (debug.textContent ? " · " : "") + "Audio gefunden: " + audioUrl;
+      } else {
+        debug.textContent += (debug.textContent ? " · " : "") + "Kein Audio gefunden.";
+      }
+    })();
+
+    // Buttons (mobil-freundlich)
+    playBtn.addEventListener("click", () => voice.play().catch(()=>{}));
+    pauseBtn.addEventListener("click", () => voice.pause());
+  </script>
 </body>
+  </html>
