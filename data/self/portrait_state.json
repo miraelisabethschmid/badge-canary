@@ -1,25 +1,15 @@
 {
-  "ts": "2025-11-12T13:39:40Z",
-  "source": "data/self/latest_image.png",
+  "ts": "2025-11-12T14:41:08Z",
+  "source": "data/self/latest_image.webp",
   "affect": {},
-  "learning": {
-    "version": 1,
-    "updated_utc": "2025-11-12T13:00:21Z",
-    "weights": {
-      "viseme_mouth_gain": 1.0,
-      "sibilant_bias": 0.15,
-      "tempo_affect_gain": 1.0,
-      "exposure_affect_gain": 1.0,
-      "contrast_affect_gain": 1.0
-    },
-    "explain": []
-  },
   "adjustments": {
     "warmth_shift": 0.0,
     "contrast_gain": 1.0,
     "brightness_gain": 1.0,
-    "vignette_strength": 0.16000000000000003,
-    "blur_sigma": 0.0
+    "blur_sigma": 0.0,
+    "vignette_strength": 0.15000000000000002
   },
-  "checksum_png": "97195645042f4d7ab44f71fdb6154cd9ad191b45b0c579f88964a7fc1a4a0f9c"
+  "self_hint": {
+    "has_description": true
+  }
 }
