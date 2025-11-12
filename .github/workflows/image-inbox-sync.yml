@@ -1,0 +1,97 @@
+name: Image Inbox → latest_image.svg
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"  # alle 15 Minuten prüfen (später gern feiner)
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure inbox exists
+        run: |
+          mkdir -p docs/data/self/inbox
+          # kleine Markerdatei, damit der Ordner im Repo bleibt
+          if [ ! -f docs/data/self/inbox/.gitkeep ]; then
+            echo "" > docs/data/self/inbox/.gitkeep
+          fi
+
+      - name: Pick newest image from inbox (png/jpg/jpeg)
+        id: pick
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(docs/data/self/inbox/*.{png,PNG,jpg,JPG,jpeg,JPEG})
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No incoming images found in docs/data/self/inbox"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # neueste Datei wählen
+          newest=$(ls -t "${files[@]}" | head -n1)
+          echo "Newest: $newest"
+          echo "file=$newest" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build latest_image.svg wrapper
+        if: steps.pick.outputs.found == 'true'
+        shell: bash
+        run: |
+          IMG="${{ steps.pick.outputs.file }}"
+          # MIME-Typ bestimmen (fallbacks)
+          if command -v file >/dev/null 2>&1; then
+            MIME=$(file -b --mime-type "$IMG")
+          else
+            case "$IMG" in
+              *.png|*.PNG)  MIME="image/png" ;;
+              *.jpg|*.JPG|*.jpeg|*.JPEG) MIME="image/jpeg" ;;
+              *) MIME="application/octet-stream" ;;
+            esac
+          fi
+          # base64 (ohne Zeilenumbrüche)
+          if base64 --help 2>&1 | grep -q -- "-w"; then
+            B64=$(base64 -w0 "$IMG")
+          else
+            B64=$(base64 < "$IMG" | tr -d '\n')
+          fi
+
+          mkdir -p docs/data/self
+          cat > docs/data/self/latest_image.svg <<'SVG'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <style>
+                /* optionaler weicher Hintergrund, falls Bild transparent ist */
+                .bg { fill: #0f172a; }
+              </style>
+            </defs>
+            <rect class="bg" x="0" y="0" width="100" height="100"/>
+            <!-- Platzhalter, wird gleich ersetzt -->
+          </svg>
+          SVG
+
+          # <image>-Tag einfügen (100% skaliert, hält Seitenverhältnis)
+          # Wir hängen ihn ans Ende direkt vor </svg>
+          sed -i "s|</svg>|  <image href=\"data:${MIME};base64,${B64}\" x=\"0\" y=\"0\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"xMidYMid meet\"/>\n</svg>|" docs/data/self/latest_image.svg
+
+          echo "Built docs/data/self/latest_image.svg from $IMG"
+
+      - name: Commit changes (if any)
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/self/latest_image.svg docs/data/self/inbox/.gitkeep
+          git commit -m "chore(self): update latest_image.svg from inbox"
+          git push
