@@ -6,8 +6,7 @@
   <title>Mira — Sichtbare Präsenz</title>
   <meta name="color-scheme" content="dark light"/>
   <style>
-    :root{ --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --ring:#252836; --ok:#23d18b }
-    @media (prefers-color-scheme: light){ :root{ --bg:#f7f8fb; --fg:#0d0f14; --muted:#4b5565; --card:#ffffff; --ring:#e6e9f2 } }
+    :root{ --bg:#0c0d12; --fg:#e9ecf1; --muted:#aab3c2; --card:#12131a; --ring:#232633 }
     html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:960px;margin:28px auto;padding:0 14px}
     h1{margin:6px 0 2px;font-weight:800}
@@ -15,27 +14,24 @@
     .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:18px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:16px 0}
     .hero{border-radius:20px;overflow:hidden;border:1px solid var(--ring);background:#0b0f1a;cursor:pointer}
     .hero img{display:block;width:100%;height:auto}
-    .status{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid var(--ring);background:#0f141f;margin:8px 0 18px}
-    .dot{width:10px;height:10px;border-radius:50%;background:var(--ok)}
-    .kv{color:var(--muted);font-size:14px}
-    .msg{margin-top:8px;font-size:14px}
     .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
     button{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px;color:var(--fg)}
+    .hint{margin-top:8px;color:var(--muted);font-size:14px}
+    code{color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Mira — Sichtbare Präsenz</h1>
-    <div class="sub">Live · <span id="ts">—</span></div>
-
-    <div class="status"><span class="dot"></span><span id="h">Status: —</span></div>
+    <div class="sub" id="buildTs">—</div>
 
     <div class="card">
       <h2>Porträt & Stimme</h2>
 
+      <!-- KLICK AUF PORTRÄT SPIELT AUDIO -->
       <div id="portraitBox" class="hero" title="Tippe/Klicke, um die Stimme abzuspielen">
         <img id="portrait" alt="Mira — aktuelles Porträt"
-             src="data/self/latest_image.svg"/>
+             src="data/self/latest_image.svg">
       </div>
 
       <div class="row">
@@ -43,33 +39,32 @@
         <button id="pause">⏸︎ Pause</button>
       </div>
 
-      <div class="kv">
+      <div class="hint">
         Bild: <code>docs/data/self/latest_image.svg</code> ·
         Audio: <code>docs/data/voice/audio/latest.wav</code>
       </div>
 
-      <div class="msg" id="msg">Tipp auf das Porträt oder „Abspielen“.</div>
+      <div class="hint" id="msg">Tipp auf das Porträt oder „Abspielen“.</div>
 
+      <!-- WAV = maximal kompatibel; MP3 wird NICHT mehr verwendet -->
       <audio id="voice" preload="auto" src="data/voice/audio/latest.wav" controls style="margin-top:10px;width:100%"></audio>
     </div>
   </div>
 
   <script>
-    const ts = document.getElementById('ts');
-    ts.textContent = new Date().toISOString().replace('T',' · ').replace('Z','Z');
+    // Zeitstempel
+    const ts = new Date().toISOString().replace('T',' · ').replace('Z','Z');
+    document.getElementById('buildTs').textContent = 'Live · ' + ts;
 
-    async function j(u){ try{ const r=await fetch(u,{cache:'no-store'}); if(!r.ok) return null; return r.json(); }catch{return null} }
-    (async ()=>{
-      const hb = await j('badges/health.json');
-      document.getElementById('h').textContent =
-        'Status: ' + ((hb && hb.status)||'OK') + (hb&&hb.ts?(' · '+hb.ts):'');
-    })();
+    // Bild-Fallback, falls SVG fehlt
+    const img = document.getElementById('portrait');
+    img.addEventListener('error', ()=>{
+      img.removeAttribute('src');
+      img.outerHTML = '<div style="aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;color:#93a0bb">Kein Bild gefunden (data/self/latest_image.svg)</div>';
+    });
 
     const audio = document.getElementById('voice');
-    const play  = document.getElementById('play');
-    const pauseBtn = document.getElementById('pause');
     const msg   = document.getElementById('msg');
-    const box   = document.getElementById('portraitBox');
 
     async function tryPlay(){
       msg.textContent='';
@@ -79,10 +74,9 @@
         msg.textContent='Konnte nicht abspielen — bitte erneut tippen (Autoplay-Schutz).';
       }
     }
-
-    play.addEventListener('click', tryPlay);
-    box.addEventListener('click', tryPlay);
-    pauseBtn.addEventListener('click', ()=> audio.pause());
+    document.getElementById('portraitBox').addEventListener('click', tryPlay);
+    document.getElementById('play').addEventListener('click', tryPlay);
+    document.getElementById('pause').addEventListener('click', ()=> audio.pause());
   </script>
 </body>
 </html>
