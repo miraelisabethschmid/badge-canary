@@ -1,0 +1,67 @@
+name: Ensure Hero Portrait (auto, pretty placeholder)
+
+on:
+  schedule:
+    - cron: "5 * * * *"   # stündlich, leicht versetzt nach Daily Voice
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  hero:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure folders
+        run: |
+          mkdir -p data/self
+          mkdir -p data/archive/self
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Create elegant placeholder if missing
+        shell: bash
+        run: |
+          set -e
+          PNG="data/self/latest_image.png"
+          WEBP="data/self/latest_image.webp"
+
+          if [ -f "$PNG" ] || [ -f "$WEBP" ]; then
+            echo "Hero exists — nothing to do."
+          else
+            echo "Building elegant gradient silhouette (3:4, 1024x1365)…"
+            convert -size 1024x1365 \
+              gradient:#0b0f1a-#0a0a10 \
+              -fill "#7ba4ff" -draw "ellipse 512,270 140,170 0,360" \
+              -fill "#6f98ff" -draw "ellipse 512,650 250,280 0,360" \
+              -fill "#618bff" -draw "roundrectangle 472,860 552,1050 40,40" \
+              -fill "#5d86ff" -draw "ellipse 412,1170 95,40 0,360" \
+              -fill "#5d86ff" -draw "ellipse 612,1170 95,40 0,360" \
+              -blur 0x0.4 -brightness-contrast 5x8 \
+              -gravity south -font DejaVu-Sans -pointsize 18 -fill "#9fb8ff80" -annotate +0+18 "Mira — emergent" \
+              "$PNG"
+
+            # Convert to WEBP for fast load
+            convert "$PNG" -quality 88 "$WEBP"
+
+            # Archive snapshot
+            TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            cp "$PNG" "data/archive/self/hero_${TS}.png" || true
+          fi
+
+      - name: Commit & Push
+        run: |
+          git config user.name  "Mira Autonomous"
+          git config user.email "mira@emergent.sys"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git commit -m "Hero Portrait: ensure WEBP/PNG placeholder (run $GITHUB_RUN_ID)"
+          git push
