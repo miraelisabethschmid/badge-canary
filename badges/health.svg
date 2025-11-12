@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="119" height="20" role="img" aria-label="health: HEALING">
+  <linearGradient id="g" x2="0" y2="100%">
+    <stop offset="0%"  stop-color="#fff" stop-opacity=".7"/>
+    <stop offset="100%" stop-opacity=".7"/>
+  </linearGradient>
+  <mask id="r"><rect width="119" height="20" rx="3" fill="#fff"/></mask>
+  <g mask="url(#r)">
+    <rect width="60" height="20" fill="#555"/>
+    <rect x="60" width="59" height="20" fill="#f9a825"/>
+    <rect width="119" height="20" fill="url(#g)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+    <text x="30.0" y="14">health</text>
+  </g>
+  <g fill="#000" opacity=".9" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+    <text x="89.5" y="14">HEALING</text>
+  </g>
+</svg>
