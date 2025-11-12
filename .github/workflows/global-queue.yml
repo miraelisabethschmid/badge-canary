@@ -1,81 +1,25 @@
-name: Global Queue Controller
+name: Global Queue Controller (setup)
 
 on:
-  workflow_run:
-    workflows:
-      - Autotune
-      - Creative Cycle
-      - Daily Journal (Minimal v3.2-safe)
-      - Fix All Workflows (Minimal v3.6-safe)
-      - Identity Build
-      - UI Bootstrap
-      - UI Seed
-      - Visual Identity (Minimal v3.6-safe)
-      - Weekly Pulse Summary
-      - File Autoheal (Minimal v3.2)
-      - UI Autoheal (Minimal v2)
-      - Publish Latest
-    types: [requested]
+  workflow_dispatch: {}
 
 permissions:
-  actions: write
   contents: write
 
 jobs:
-  gate:
-    if: >
-      github.event.workflow_run.name != 'Global Queue Controller' &&
-      github.event.workflow_run.name != 'Global Queue Drain' &&
-      github.event.workflow_run.run_attempt == 1
+  init:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (shallow)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Ensure queue file
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 1 }
+      - name: Ensure queue folder & file
         run: |
           mkdir -p .github/queue
           [ -f .github/queue/pending.json ] || echo "[]" > .github/queue/pending.json
-
-      - name: Count requested runs in last 60s
-        id: count
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
+      - name: Commit queue file (if created)
         run: |
-          json=$(gh api -H "Accept: application/vnd.github+json" /repos/$REPO/actions/runs?per_page=200)
-          cnt=$(echo "$json" | jq '
-            .workflow_runs
-            | map( (now - (.created_at | fromdate)) <= 60 )
-            | map(select(.)) | length
-          ')
-          echo "count=$cnt" >> $GITHUB_OUTPUT
-          echo "Recent requested runs: $cnt"
-
-      - name: Enqueue & cancel when >= 10/min
-        if: ${{ steps.count.outputs.count && fromJSON('{"c":' + steps.count.outputs.count + '}').c >= 10 }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-        run: |
-          echo "Throttling: enqueue run $RUN_ID"
-
-          tmp=$(mktemp)
-          jq --argjson item "{\"run_id\": $RUN_ID}" '. + [$item]' .github/queue/pending.json > "$tmp"
-          mv "$tmp" .github/queue/pending.json
-
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/queue/pending.json
-          git commit -m "queue: add run $RUN_ID" || echo "No changes to commit"
-          git push
-
-          gh api -X POST -H "Accept: application/vnd.github+json" \
-            /repos/$REPO/actions/runs/$RUN_ID/cancel
-
-      - name: Pass-through
-        if: ${{ steps.count.outputs.count && fromJSON('{"c":' + steps.count.outputs.count + '}').c < 10 }}
-        run: echo "Below threshold — letting run proceed."
+          git add .github/queue/pending.json || true
+          git diff --cached --quiet && echo "No changes" || git commit -m "queue: ensure pending.json"
+          git push || true
