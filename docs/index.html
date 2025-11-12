@@ -50,7 +50,7 @@
 
     <div class="card">
       <h2>Sichtbare Präsenz</h2>
-      <p>Tippe/Klicke auf das Porträt, um die <strong>Stimme des Tages</strong> abzuspielen (Fallback: Stille).</p>
+      <p>Tippe/Klicke auf das Porträt, um die <strong>Stimme des Tages</strong> abzuspielen.</p>
 
       <div class="hero" id="hero">
         <!-- Bild (WEBP → PNG → Fallback-SVG) -->
@@ -61,11 +61,8 @@
 
         <!-- Fallback-SVG -->
         <svg id="fallback-svg" viewBox="0 0 800 1080" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mira — sichtbare Präsenz (Fallback)">
-          <defs>
-            <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#0b0f1a"/><stop offset="100%" stop-color="#0a0a10"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0b0f1a"/><stop offset="100%" stop-color="#0a0a10"/></linearGradient></defs>
           <rect width="100%" height="100%" fill="url(#g)"/>
           <g transform="translate(0,30)" opacity=".96">
             <ellipse cx="400" cy="210" rx="120" ry="140" fill="#7ba4ff"/>
@@ -97,6 +94,7 @@
   </div>
 
   <script>
+    // ————— Utils
     document.getElementById('build-ts').textContent =
       new Date().toISOString().replace('T',' · ').replace('Z','Z');
 
@@ -104,12 +102,16 @@
       try{ const r = await fetch(url,{cache:"no-store"}); if(!r.ok) return null; return await r.json(); }
       catch{ return null; }
     }
-    async function head(url){
-      try{ const r = await fetch(url,{method:'HEAD',cache:'no-store'}); return r.ok; }
-      catch{ return false; }
+    async function headMeta(url){
+      try{
+        const r = await fetch(url,{method:'HEAD',cache:'no-store'});
+        if(!r.ok) return null;
+        return { etag: r.headers.get('ETag'), lm: r.headers.get('Last-Modified') };
+      }catch{ return null; }
     }
+    function bust(url){ const sep = url.includes('?') ? '&' : '?'; return `${url}${sep}ts=${Date.now()}`; }
 
-    // HEALTH
+    // ————— HEALTH
     (async ()=>{
       const h = await getJSON('badges/health.json');
       const dot = document.getElementById('health-dot');
@@ -119,7 +121,7 @@
       txt.textContent = `Status: ${s} · ${h && h.ts ? h.ts : "n/a"}`;
     })();
 
-    // SELF TEXT
+    // ————— SELF TEXT
     (async ()=>{
       const s = await getJSON('data/self/self-describe.json');
       const el = document.getElementById('self');
@@ -130,7 +132,7 @@
                       <b>Narrativ:</b> ${s.affect?.narrative||"—"}</p>`;
     })();
 
-    // PORTRAIT (WEBP → PNG → Fallback)
+    // ————— PORTRÄT (WEBP → PNG → Fallback) + sanftes Nachladen
     (async ()=>{
       const ptc = document.getElementById('portrait-ptc');
       const svg = document.getElementById('fallback-svg');
@@ -139,37 +141,100 @@
       const srcWebp = document.getElementById('srcWebp');
       const srcPng  = document.getElementById('srcPng');
       const label   = document.getElementById('img-src');
-      let used = 'SVG';
-      if(await head(webp)){
-        srcWebp.srcset = webp; srcPng.src = png; ptc.style.display='block'; svg.style.display='none'; used='WEBP';
-      }else if(await head(png)){
-        srcPng.src = png; ptc.style.display='block'; svg.style.display='none'; used='PNG';
+
+      let active = null; // 'webp' | 'png' | null
+      let sig = { etag:null, lm:null };
+
+      async function tryShow(){
+        const metaWebp = await headMeta(webp);
+        if(metaWebp){
+          srcWebp.srcset = bust(webp);
+          srcPng.src = bust(png);
+          ptc.style.display='block'; svg.style.display='none'; label.textContent='WEBP'; active='webp';
+          sig = metaWebp;
+          return;
+        }
+        const metaPng = await headMeta(png);
+        if(metaPng){
+          srcPng.src = bust(png);
+          ptc.style.display='block'; svg.style.display='none'; label.textContent='PNG'; active='png';
+          sig = metaPng;
+          return;
+        }
+        // Fallback
+        ptc.style.display='none'; svg.style.display='block'; label.textContent='SVG';
+        active = null; sig = {etag:null,lm:null};
       }
-      label.textContent = used;
+
+      async function softRefresh(){
+        const target = active==='webp' ? webp : active==='png' ? png : null;
+        if(!target){ await tryShow(); return; }
+        const m = await headMeta(target);
+        if(!m) return; // nichts bekannt
+        if(m.etag && sig.etag && m.etag!==sig.etag || m.lm && sig.lm && m.lm!==sig.lm){
+          // geändert → neu setzen mit Cache-Buster
+          if(active==='webp'){ srcWebp.srcset = bust(webp); srcPng.src = bust(png); }
+          if(active==='png'){  srcPng.src  = bust(png); }
+          sig = m;
+        }
+      }
+
+      await tryShow();
+      setInterval(softRefresh, 30000); // alle 30s sanft prüfen
     })();
 
-    // AUDIO (robust)
+    // ————— AUDIO (robust) + sanftes Nachladen, Zustand bewahren
     (async ()=>{
       const audio = document.getElementById('voice');
       const meta  = document.getElementById('audio-meta');
       const msg   = document.getElementById('audio-msg');
-      const src = 'data/voice/audio/latest.mp3';
-      const has = await head(src);
-      audio.src = has ? src : '';
-      meta.textContent = `Quelle: data/voice/voice_of_day.json → ${has ? src : '(keine Datei gefunden)'}`;
+      const hero  = document.getElementById('hero');
+      const srcMp3= 'data/voice/audio/latest.mp3';
+
+      let aSig = { etag:null, lm:null };
+
+      async function setSrcIfExists(){
+        const m = await headMeta(srcMp3);
+        if(!m){ audio.removeAttribute('src'); meta.textContent = 'Quelle: (kein Audio gefunden)'; return; }
+        audio.src = bust(srcMp3);
+        meta.textContent = `Quelle: data/voice/voice_of_day.json → ${srcMp3}`;
+        aSig = m;
+      }
+
+      async function refreshAudioIfChanged(){
+        const m = await headMeta(srcMp3);
+        if(!m || (!aSig.etag && !aSig.lm)) return; // kein Vergleich möglich
+        const changed = (m.etag && aSig.etag && m.etag!==aSig.etag) || (m.lm && aSig.lm && m.lm!==aSig.lm);
+        if(changed){
+          const wasPlaying = !audio.paused && !audio.ended;
+          const t = audio.currentTime;
+          audio.src = bust(srcMp3);
+          try{
+            await audio.load();
+            if(wasPlaying){
+              audio.currentTime = Math.min(t, Math.max(0, audio.duration - 0.2));
+              await audio.play().catch(()=>{});
+            }
+          }catch(_){}
+          aSig = m;
+        }
+      }
 
       const play = async ()=>{
         msg.textContent = '';
-        if(!audio.src){ msg.textContent = 'Kein Audio gefunden (Fallback: Stille erwartet).'; return; }
+        if(!audio.src){ await setSrcIfExists(); }
         try{ await audio.play(); }
-        catch(e){ msg.textContent = 'Konnte nicht abspielen (Browser-Geste erforderlich?): Tippe erneut aufs Porträt oder den ▶︎-Button.'; }
+        catch(e){ msg.textContent = 'Konnte nicht abspielen (Geste nötig?) — bitte erneut tippen.'; }
       };
       const pause = ()=> audio.pause();
 
-      document.getElementById('hero').addEventListener('click', play);
+      hero.addEventListener('click', play);
       document.getElementById('play').addEventListener('click', play);
       document.getElementById('pause').addEventListener('click', pause);
+
+      await setSrcIfExists();
+      setInterval(refreshAudioIfChanged, 30000); // alle 30s sanft prüfen
     })();
   </script>
 </body>
-</html>
+  </html>
