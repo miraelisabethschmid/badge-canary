@@ -1,101 +1,13 @@
 <!doctype html>
-<html lang="de">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mira — Sichtbare Präsenz (Fallback)</title>
-  <style>
-    body{margin:0;background:#0b1220;color:#e6ecff;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    .wrap{max-width:900px;margin:32px auto;padding:16px}
-    h1{margin:0 0 8px;font-size:28px}
-    .card{background:#121a2b;border-radius:16px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-    .slot{display:flex;justify-content:center;align-items:center;aspect-ratio:16/9;background:#1b2540;border-radius:12px;overflow:hidden}
-    .slot img,.slot svg{max-width:100%;max-height:100%}
-    .muted{opacity:.8;font-size:14px;margin-top:8px}
-    .row{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
-    audio{width:100%}
-    .ok{color:#8ef5a7}.warn{color:#ffd479}.err{color:#ff8a8a}
-    @media (min-width:860px){.row{grid-template-columns:2fr 1fr}}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <h1>Mira — Sichtbare Präsenz (Fallback)</h1>
-    <div class="row">
-      <div class="card">
-        <div class="slot" id="imageSlot">
-          <!-- Wir versuchen zuerst ein JPG, dann das SVG.
-               Wenn beides fehlt, zeigen wir Text. -->
-          <img id="imgJpg" src="./data/mira-titelbild.jpg" alt="Mira (JPG)"
-               onerror="this.remove(); tryLoadSvg()" style="display:none">
-          <img id="imgSvg" src="./data/self/latest_image.svg" alt="Mira (SVG)"
-               onerror="this.remove(); noImage()" style="display:none">
-          <span id="imgMsg" class="muted">Lade Bild…</span>
-        </div>
-        <div id="imgInfo" class="muted"></div>
-      </div>
-
-      <div class="card">
-        <div><strong>Stimme</strong></div>
-        <audio id="voice" controls preload="none">
-          <source src="./audio/latest.mp3" type="audio/mpeg">
-        </audio>
-        <div id="audioInfo" class="muted">Wenn keine Datei <code>docs/audio/latest.mp3</code> existiert, bleibt der Player stumm.</div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:16px">
-      <div><strong>Status</strong></div>
-      <div id="status" class="muted">Prüfe Dateien…</div>
-    </div>
+<meta charset="utf-8">
+<title>Pages Ping</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<body style="margin:0;background:#111;color:#fff;font:16px system-ui,Segoe UI,Roboto,Arial,sans-serif">
+  <div style="max-width:900px;margin:32px auto;padding:16px">
+    <h1>GitHub Pages · Ping OK</h1>
+    <p>Diese Datei wird direkt aus <code>docs/index.html</code> ausgeliefert.</p>
+    <p>Zeitstempel: <span id="ts">…</span></p>
+    <p>Repo: <code>badge-canary</code> · Branch: <code>main</code> · Ordner: <code>/docs</code></p>
   </div>
-
-  <script>
-    const status = document.getElementById('status');
-    const imgMsg = document.getElementById('imgMsg');
-    const imgInfo = document.getElementById('imgInfo');
-    const jpg = document.getElementById('imgJpg');
-    const svg = document.getElementById('imgSvg');
-
-    function setStatus(msg, cls){ status.textContent = msg; status.className = (cls||'') + ' muted'; }
-    function show(el){ el.style.display = ''; }
-
-    async function fileExists(path){
-      try{
-        const r = await fetch(path,{cache:'no-store'});
-        return r.ok;
-      }catch(e){ return false; }
-    }
-
-    async function init(){
-      const hasJpg = await fileExists('./data/mira-titelbild.jpg');
-      const hasSvg = await fileExists('./data/self/latest_image.svg');
-
-      if(hasJpg){
-        jpg.onload = ()=>{ imgMsg.remove(); imgInfo.textContent = 'Quelle: docs/data/mira-titelbild.jpg'; };
-        show(jpg);
-      }else if(hasSvg){
-        svg.onload = ()=>{ imgMsg.remove(); imgInfo.textContent = 'Quelle: docs/data/self/latest_image.svg'; };
-        show(svg);
-      }else{
-        noImage();
-      }
-
-      const hasAudio = await fileExists('./audio/latest.mp3');
-      document.getElementById('audioInfo').innerHTML =
-        hasAudio ? '<span class="ok">Audio gefunden:</span> docs/audio/latest.mp3'
-                 : '<span class="warn">Kein Audio gefunden.</span> Lege optional <code>docs/audio/latest.mp3</code> an.';
-
-      setStatus('Seite geladen. Wenn hier etwas erscheint, funktioniert GitHub Pages.','ok');
-    }
-
-    function tryLoadSvg(){ show(svg); }
-    function noImage(){
-      imgMsg.textContent = 'Kein Bild gefunden – lege entweder docs/data/mira-titelbild.jpg oder docs/data/self/latest_image.svg ab.';
-      imgInfo.innerHTML = '<span class="err">Bild fehlt.</span>';
-    }
-
-    init();
-  </script>
+  <script>document.getElementById('ts').textContent=new Date().toISOString()</script>
 </body>
-</html>
