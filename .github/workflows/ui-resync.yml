@@ -1,59 +1,79 @@
 name: UI Resync
+
 on:
-  schedule:
-    - cron: "*/30 * * * *"
   workflow_dispatch: {}
+  schedule:
+    - cron: '*/30 * * * *'   # alle 30 Minuten als Sicherheitsnetz
   push:
     paths:
-      - "docs/**"
-      - "scripts/gen_manifest.py"
-      - ".github/workflows/ui-resync.yml"
+      - 'docs/**'
+      - '.github/workflows/ui-resync.yml'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
-  sync:
+  resync:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency:
-      group: ui-resync
-      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
-      - name: Ensure placeholders
+      - name: Ensure self/ exists
         run: |
-          mkdir -p docs/data/self docs/data/voice/audio
-          if [ ! -f docs/data/self/latest_image.svg ]; then
-            cat > docs/data/self/latest_image.svg <<'SVG'
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
-  <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#242946" offset="0%"/><stop stop-color="#28354e" offset="100%"/></linearGradient></defs>
-  <rect width="1024" height="1536" fill="url(#bg)"/>
-  <text x="50%" y="48%" font-family="Segoe UI,Arial,sans-serif" font-size="48" fill="#f5f6fa" text-anchor="middle">Mira — Platzhalterbild</text>
-  <text x="50%" y="52%" font-family="Segoe UI,Arial,sans-serif" font-size="22" fill="#b3bed6" text-anchor="middle">Kein Bild verfügbar</text>
-</svg>
+          mkdir -p docs/data/self
+
+      - name: Ensure latest image present (fallback wenn fehlt)
+        shell: bash
+        run: |
+          set -e
+          if ! ls docs/data/self/latest_image.* >/dev/null 2>&1; then
+            if [ -f docs/data/mira-titelbild.jpg ]; then
+              cp docs/data/mira-titelbild.jpg docs/data/self/latest_image.jpg
+              echo "💡 Habe docs/data/mira-titelbild.jpg als latest_image.jpg gespiegelt."
+            else
+              cat > docs/data/self/latest_image.svg <<'SVG'
+              <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
+                <rect width="100%" height="100%" fill="#0f172a"/>
+                <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#cbd5e1" font-size="32" font-family="system-ui, -apple-system, Segoe UI, Roboto">Mira — Platzhalterbild</text>
+                <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-size="16" font-family="system-ui, -apple-system, Segoe UI, Roboto">Ersetze docs/data/self/latest_image.*</text>
+              </svg>
 SVG
-          fi
-          if [ ! -f docs/data/voice/audio/latest.wav ]; then
-            python - <<'PY'
-import wave, struct
-with wave.open('docs/data/voice/audio/latest.wav','w') as wf:
-    wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(44100)
-    wf.writeframes(struct.pack('<h',0)*44100)
-PY
+              echo "⚠️ Kein Titelbild gefunden — Platzhalter-SVG erzeugt."
+            fi
+          else
+            echo "✅ latest_image.* existiert bereits."
           fi
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Generate manifest
+      - name: Commit if changed
+        shell: bash
         run: |
-          python scripts/gen_manifest.py
+          set -e
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "mira-bot"
+            git config user.email "actions@github.com"
+            git add -A
+            git commit -m "ui-resync: ensure visible self image"
+            git push
+            echo "☑️ Änderungen gepusht."
+          else
+            echo "🔍 Nichts zu committen."
+          fi
 
-      - name: Commit changes (if any)
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "CI: ensure placeholders & update manifest"
+      - name: Bump Pages if nothing changed (force rebuild)
+        shell: bash
+        run: |
+          set -e
+          if [ -z "$(git log -1 --pretty=%B | grep 'ui-resync: ensure visible self image' || true)" ]; then
+            git config user.name "mira-bot"
+            git config user.email "actions@github.com"
+            date +%s > .pages-bump
+            git add .pages-bump
+            git commit -m "ui-resync: bump pages"
+            git push
+            echo "🔁 Pages-Rebuild ausgelöst."
+          fi
