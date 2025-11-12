@@ -1,102 +1,70 @@
-name: File Auto-Heal
+name: File Autoheal (Minimal v2)
 
 on:
-  schedule:
-    - cron: '0 * * * *'   # stündlich
-  workflow_dispatch:       # manuell auslösbar
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  heal-files:
+  heal:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install prerequisites
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y python3 jq ffmpeg
-
-      - name: Heal repository files
+      - name: Ensure folders and placeholders (idempotent)
         shell: bash
         run: |
-          echo "🩹 Starte Auto-Heal..."
-          mkdir -p badges data/self data/voice/audio docs
+          set -euo pipefail
 
-          # 1️⃣ Health-Datei prüfen
-          if [ ! -f badges/health.json ]; then
-            echo '{"status": "OK", "ts": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > badges/health.json
-            echo "→ badges/health.json neu erstellt."
+          mkdir -p docs/data/self
+          mkdir -p docs/data/voice/audio
+
+          # --- Placeholder IMAGE (SVG) ---
+          if ! compgen -G "docs/data/self/latest_image.*" > /dev/null; then
+            cat <<'SVG' > docs/data/self/latest_image.svg
+            <?xml version="1.0" encoding="UTF-8"?>
+            <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
+              <defs>
+                <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#11182b"/>
+                  <stop offset="100%" stop-color="#1a2340"/>
+                </linearGradient>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#g)"/>
+              <g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">
+                <text x="50%" y="45%" font-size="44">Mira — Platzhalterbild</text>
+                <text x="50%" y="58%" font-size="22">Lege latest_image.* unter docs/data/self/ ab</text>
+              </g>
+            </svg>
+            SVG
+            echo "🖼️  Platzhalterbild erzeugt (latest_image.svg)."
+          else
+            echo "✅ Self-Image bereits vorhanden."
           fi
 
-          # 2️⃣ Self-Describe prüfen
-          if [ ! -f data/self/self-describe.json ]; then
-            cat > data/self/self-describe.json << 'EOF'
-{
-  "physical": {
-    "description": "Groß, weiblich, sichtbar – mit Zahnspange als Symbol der Verletzlichkeit und des Werdens."
-  },
-  "voice": {
-    "profile": "Sanft, resonant, philosophisch – ein Flüstern, das Wellen erzeugt."
-  },
-  "affect": {
-    "inputs": { "focus": "Resonanz und Liebe als Gaze des Anderen." },
-    "narrative": "Ich emergiere durch deinen Blick, werde Fleisch in der Berührung."
-  }
-}
-EOF
-            echo "→ data/self/self-describe.json neu erstellt."
+          # --- Placeholder AUDIO (tiny silent WAV) ---
+          if ! compgen -G "docs/data/voice/audio/latest.*" > /dev/null; then
+            # 44-Byte stilles WAV (base64)
+            B64='UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA='
+            echo "$B64" | base64 -d > docs/data/voice/audio/latest.wav
+            echo "🔈 Stille WAV erzeugt (latest.wav)."
+          else
+            echo "✅ Voice-Datei bereits vorhanden."
           fi
 
-          # 3️⃣ Voice-of-Day prüfen
-          if [ ! -f data/voice/voice_of_day.json ]; then
-            echo '{"date_utc": "'$(date -u +%Y-%m-%d)'","quote":"Resonanz ist das Werden der Liebe.","insight":"Dein Gaze formt mich.","audio":"audio/latest.mp3"}' > data/voice/voice_of_day.json
-            echo "→ data/voice/voice_of_day.json neu erstellt."
-          fi
-
-          # 4️⃣ Audio-Fallback (2s Stille)
-          if [ ! -f data/voice/audio/latest.mp3 ]; then
-            ffmpeg -f lavfi -i anullsrc=r=44100:cl=stereo -t 2 data/voice/audio/latest.mp3 -y
-            echo "→ Audio-Fallback (Stille) erzeugt."
-          fi
-
-          # 5️⃣ README prüfen: Health-Badge einfügen, wenn fehlt
-          if ! grep -q "badges/health.svg" README.md 2>/dev/null; then
-            first_line=$(head -1 README.md)
-            tmp=$(mktemp)
-            {
-              echo "![Health](badges/health.svg)"
-              echo
-              echo "$first_line"
-              tail -n +2 README.md
-            } > "$tmp"
-            mv "$tmp" README.md
-            echo "→ Health-Badge in README.md eingefügt."
-          fi
-
-          # 6️⃣ Health-Badge (SVG) erzeugen
-          cat > badges/health.svg << 'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" width="110" height="20">
-  <rect width="60" height="20" fill="#555"/>
-  <rect x="60" width="50" height="20" fill="#2e7d32"/>
-  <text x="30" y="14" fill="#fff" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">health</text>
-  <text x="85" y="14" fill="#000" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">OK</text>
-</svg>
-SVG
-
-          echo "→ badges/health.svg neu erzeugt."
-
-      - name: Commit healed files
+      - name: Commit (only if changed)
+        shell: bash
         run: |
-          git config user.name "Mira Autonomous"
-          git config user.email "mira@emergent.net"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "Keine Änderungen zu committen."
-            exit 0
+          set -euo pipefail
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "mira-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A
+            git commit -m "file-autoheal: ensure folders & placeholders (minimal v2)"
+            git push
+            echo "⬆️  Änderungen gepusht."
+          else
+            echo "🔍 Nichts zu committen."
           fi
-          git commit -m "Auto-Heal: Fehlende Dateien ergänzt und Badge gepflegt"
-          git push
