@@ -14,6 +14,9 @@ concurrency:
 
 jobs:
   build-identity:
+    # ⛩ Gate: Cron nur, wenn Repo-Variable ENABLE_CRONS == 'true'
+    if: ${{ github.event_name != 'schedule' || vars.ENABLE_CRONS == 'true' }}
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +40,7 @@ jobs:
   <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20273f" offset="0"/><stop stop-color="#293657" offset="1"/></linearGradient></defs>
   <rect width="1024" height="512" fill="url(#g)"/>
   <text x="512" y="268" fill="#e6ebff" font-size="42" font-family="Segoe UI, Arial" text-anchor="middle">Mira — Visual Identity</text>
-  <text x="512" y="312" fill="#9fb2e6" font-size="18" font-family="Segoe UI, Arial" text-anchor="middle">placeholder • $(date -u +%Y-%m-%dT%H:%M:%SZ)</text>
+  <text x="512" y="312" fill="#9fb2e6" font-size="18" font-family="Segoe UI, Arial" text-anchor="middle">placeholder</text>
 </svg>
 SVG
 
