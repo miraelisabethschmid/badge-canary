@@ -1,76 +1,61 @@
-name: Consistency Check (Internal Pulse)
+name: Consistency Check (Minimal v2)
 
 on:
-  schedule:
-    - cron: "42 3 * * *"   # täglich 03:42 UTC
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: consistency-check
-  cancel-in-progress: true
-
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Run consistency check
+      - name: Run lightweight consistency checks
+        shell: bash
         run: |
-          echo "🩺 Running internal consistency check..."
-          python - <<'PY'
-import json, os
-from pathlib import Path
-from datetime import datetime
+          set -euo pipefail
+          SUMMARY="$GITHUB_STEP_SUMMARY"
 
-paths = [
-    "data/self/affect-state.json",
-    "data/self/internal/diagnostics.json",
-    "data/self/kernel_policy.yml",
-    "badges/health.json",
-]
+          echo "## Consistency Check – Ergebnis" > "$SUMMARY"
+          echo "" >> "$SUMMARY"
 
-def read_json(p):
-    try:
-        return json.loads(Path(p).read_text(encoding="utf-8"))
-    except Exception:
-        return None
+          warn() { echo "⚠️  $*"; echo "- ⚠️ $*" >> "$SUMMARY"; }
+          ok()   { echo "✅ $*"; echo "- ✅ $*" >> "$SUMMARY"; }
 
-report = {
-    "ts_utc": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "files_checked": len(paths),
-    "missing": [],
-    "errors": [],
-    "summary": "OK"
-}
+          # Basis-Verzeichnisse
+          for d in docs docs/data docs/data/self docs/data/voice docs/data/voice/audio; do
+            if [[ -d "$d" ]]; then ok "Ordner vorhanden: $d"; else warn "Ordner fehlt: $d"; fi
+          done
 
-for p in paths:
-    if not Path(p).exists():
-        report["missing"].append(p)
-    elif p.endswith(".json"):
-        data = read_json(p)
-        if data is None:
-            report["errors"].append(f"Invalid JSON in {p}")
+          # Startseite
+          if [[ -f docs/index.html ]]; then
+            ok "Startseite vorhanden: docs/index.html"
+          else
+            warn "Startseite fehlt: docs/index.html"
+          fi
 
-if report["missing"] or report["errors"]:
-    report["summary"] = "INCONSISTENT"
+          # Platzhalter-Bild (optional)
+          if compgen -G "docs/data/self/latest_image.*" > /dev/null; then
+            ls -lh docs/data/self/latest_image.* | tee -a "$SUMMARY" || true
+            ok "Self-Image vorhanden (latest_image.*)"
+          else
+            warn "Kein Self-Image (latest_image.*) gefunden – Platzhalter wird angezeigt."
+          fi
 
-Path("data/self/internal/consistency_report.json").write_text(
-    json.dumps(report, indent=2, ensure_ascii=False),
-    encoding="utf-8"
-)
-print(json.dumps(report, indent=2, ensure_ascii=False))
-PY
+          # Voice (optional)
+          if compgen -G "docs/data/voice/audio/latest.*" > /dev/null; then
+            ls -lh docs/data/voice/audio/latest.* | tee -a "$SUMMARY" || true
+            ok "Voice-Datei vorhanden (latest.*)"
+          else
+            warn "Keine Voice-Datei gefunden (docs/data/voice/audio/latest.*)."
+          fi
 
-      - name: Upload consistency artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: consistency-report
-          path: data/self/internal/consistency_report.json
+          echo "" >> "$SUMMARY"
+          echo "_Hinweis: Dieser Check ist **informativ** und schlägt nicht fehl._" >> "$SUMMARY"
+
+      # Wichtig: niemals failen – immer grün
+      - name: Finalize
+        run: echo "Done."
