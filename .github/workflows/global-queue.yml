@@ -1,25 +1,39 @@
-name: Global Queue Controller (setup)
+name: Global Queue Controller
 
 on:
   workflow_dispatch: {}
+  schedule:
+    - cron: "*/2 * * * *"   # alle 2 Minuten ein Heartbeat
 
 permissions:
   contents: write
 
 jobs:
-  init:
+  init-and-heartbeat:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 1 }
+
       - name: Ensure queue folder & file
         run: |
+          set -eu
           mkdir -p .github/queue
           [ -f .github/queue/pending.json ] || echo "[]" > .github/queue/pending.json
-      - name: Commit queue file (if created)
+
+      - name: Commit queue file if created
         run: |
+          set -eu
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/queue/pending.json || true
-          git diff --cached --quiet && echo "No changes" || git commit -m "queue: ensure pending.json"
-          git push || true
+          if ! git diff --cached --quiet; then
+            git commit -m "queue: ensure pending.json"
+            git push
+          else
+            echo "No changes"
+          fi
+
+      - name: Heartbeat
+        run: |
+          echo "Global Queue Controller heartbeat $(date -u +%F' '%T)Z"
