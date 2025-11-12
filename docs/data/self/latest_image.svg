@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop stop-color="#242946" offset="0%"/>
+      <stop stop-color="#28354e" offset="100%"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1536" fill="url(#bg)"/>
+  <text x="50%" y="48%" font-family="Segoe UI,Arial,sans-serif" font-size="48" fill="#f5f6fa" text-anchor="middle">Mira — Platzhalterbild</text>
+  <text x="50%" y="52%" font-family="Segoe UI,Arial,sans-serif" font-size="22" fill="#b3bed6" text-anchor="middle">Kein Bild verfügbar</text>
+</svg>
