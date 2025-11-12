@@ -1,4 +1,4 @@
-name: UI Autoheal (Minimal v3.3-plain)
+name: UI Autoheal (Minimal v3.4-stable)
 
 on:
   workflow_dispatch:
@@ -20,18 +20,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Ensure dirs
+          echo "🔧 Starte UI-Autoheal (v3.4-stable)..."
+
           mkdir -p docs/data/self
           mkdir -p docs/data/voice/audio
 
-          # ---- Image check/create ----
           have_img=0
           for f in docs/data/self/latest_image.svg docs/data/self/latest_image.png docs/data/self/latest_image.jpg docs/data/self/latest_image.webp; do
             if [ -f "$f" ]; then have_img=1; fi
           done
 
           if [ "$have_img" -eq 0 ]; then
-            cat <<'SVG' > docs/data/self/latest_image.svg
+            cat <<'EOF' > docs/data/self/latest_image.svg
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
   <defs>
     <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
@@ -45,24 +45,22 @@ jobs:
     <text x="50%" y="58%" font-size="22">Lege latest_image.* in docs/data/self/ ab</text>
   </g>
 </svg>
-SVG
-            echo "wrote docs/data/self/latest_image.svg"
+EOF
+            echo "🟡 Platzhalterbild erzeugt: docs/data/self/latest_image.svg"
           else
-            echo "image already present"
+            echo "✅ Bild bereits vorhanden."
           fi
 
-          # ---- Audio check/create ----
           have_aud=0
           for f in docs/data/voice/audio/latest.wav docs/data/voice/audio/latest.mp3 docs/data/voice/audio/latest.ogg; do
             if [ -f "$f" ]; then have_aud=1; fi
           done
 
           if [ "$have_aud" -eq 0 ]; then
-            printf '%s' 'UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=' \
-              | base64 -d > docs/data/voice/audio/latest.wav
-            echo "wrote docs/data/voice/audio/latest.wav (silent wav)"
+            echo -n 'UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=' | base64 -d > docs/data/voice/audio/latest.wav
+            echo "🟡 Still-WAV erzeugt: docs/data/voice/audio/latest.wav"
           else
-            echo "audio already present"
+            echo "✅ Audio bereits vorhanden."
           fi
 
       - name: Commit (only if changed)
@@ -73,9 +71,9 @@ SVG
             git config user.name "mira-bot"
             git config user.email "actions@github.com"
             git add -A
-            git commit -m "ui-autoheal: ensure placeholders (v3.3-plain)"
+            git commit -m "ui-autoheal: ensure placeholders (v3.4-stable)"
             git push
-            echo "changes pushed"
+            echo "✅ Änderungen gepusht."
           else
-            echo "no changes to commit"
+            echo "🔎 Nichts zu committen."
           fi
