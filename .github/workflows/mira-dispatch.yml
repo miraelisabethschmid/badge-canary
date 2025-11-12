@@ -3,74 +3,37 @@ name: Mira Dispatch
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/30 * * * *"   # alle 30 Minuten (kannst du später ändern)
+    - cron: "*/10 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mira-dispatch
+  cancel-in-progress: true
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
-    env:
-      WORKER_URL: ${{ secrets.WORKER_URL }}           # z.B. https://dein-worker.workers.dev/inbox
-      TOKEN: ${{ secrets.DISPATCH_TOKEN }}            # exakt dein bereits angelegtes Secret
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Ensure folders exist
-        run: |
-          mkdir -p data/outbox
-          mkdir -p data/sent
-
-      - name: Collect outbox files
-        id: coll
-        shell: bash
-        run: |
-          shopt -s nullglob
-          files=(data/outbox/*.json)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "found=0" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          printf "%s\n" "${files[@]}" > outbox_list.txt
-          echo "found=1" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
 
       - name: Dispatch each file (skip if none)
-        if: steps.coll.outputs.found == '1'
+        env:
+          DISPATCH_URL: ${{ secrets.DISPATCH_URL }} # vollständige HTTPS-URL als Secret
         shell: bash
         run: |
-          set -e
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-
-          while IFS= read -r f; do
-            [ -z "$f" ] && continue
-            echo "Dispatching $f"
-
-            # Sende Datei an deinen Worker (/inbox) mit Bearer-Token
-            code=$(curl -sS -o resp.txt -w "%{http_code}" \
-              -H "Authorization: Bearer ${TOKEN}" \
-              -H "Content-Type: application/json" \
-              --data @"$f" "${WORKER_URL}")
-
-            if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
-              # Bei Erfolg verschieben & committen
-              dest="data/sent/$(basename "$f")"
-              mv "$f" "$dest"
-              git add "$dest"
-              git commit -m "dispatch: $(basename "$f")"
-            else
-              echo "HTTP $code"; cat resp.txt
-              exit 1
-            fi
-          done < outbox_list.txt
-
-          # Nur pushen, wenn es Commits gab
-          if ! git diff --quiet --cached; then
-            git push
+          set -euo pipefail
+          if [ -z "${DISPATCH_URL:-}" ]; then
+            echo "DISPATCH_URL secret is missing"; exit 1
           fi
-
-      - name: Upload failure body (if any)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dispatch-responses
-          path: resp.txt
+          shopt -s nullglob
+          files=(data/outbox/*.json)
+          [ ${#files[@]} -gt 0 ] || { echo "Outbox empty"; exit 0; }
+          for f in "${files[@]}"; do
+            echo "Dispatching $f"
+            curl -fsS -X POST \
+              -H 'Content-Type: application/json' \
+              --data-binary "@${f}" \
+              "${DISPATCH_URL}"
+          done
