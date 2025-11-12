@@ -1,18 +1,13 @@
 name: Deploy Pages (Dashboard)
+
 on:
-  push:
-    branches: [ main, master ]
-    paths:
-      - 'index.html'
-      - 'docs/**'
-      - 'badges/**'
-      - 'data/**'
-      - 'audio/**'
-      - 'scripts/**'
-      - '.github/workflows/deploy-pages.yml'
-  schedule:
-    - cron: '0 5 * * *'
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - index.html
+      - assets/** 
+      - docs/**
 
 permissions:
   contents: read
@@ -20,7 +15,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-deploy
   cancel-in-progress: true
 
 jobs:
@@ -28,16 +23,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Upload docs folder
+
+      # ➜ Falls du ein Build-Tool nutzt (z.B. vite/next), ersetze diesen Block.
+      - name: Build static site
+        run: |
+          set -e
+          rm -rf _site
+          mkdir -p _site
+          cp -r index.html assets docs _site 2>/dev/null || true
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs
+          path: _site
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
