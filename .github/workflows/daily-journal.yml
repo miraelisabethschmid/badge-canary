@@ -1,4 +1,4 @@
-name: Daily Journal (Minimal v3.2-safe)
+name: Daily Journal (Stable v3.3-auto-rebase)
 
 on:
   workflow_dispatch:
@@ -10,9 +10,6 @@ jobs:
   journal:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up job
-        run: echo "📝 Daily Journal – start"
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -36,21 +33,24 @@ jobs:
             echo "✅ Exists: $target"
           fi
 
-          # Stable pointer the site can read
           cp -f "$target" docs/data/journal/latest.md
 
-      - name: Commit (only if changed)
+      - name: Commit (with auto-rebase)
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
+          git config user.name "mira-bot"
+          git config user.email "actions@github.com"
+
           if [ -n "$(git status --porcelain)" ]; then
-            git config user.name "mira-bot"
-            git config user.email "actions@github.com"
+            echo "🔄 Pull latest to avoid non-fast-forward"
+            git pull --rebase origin main || true
+
             git add -A
             msg="daily-journal: ensure $(date -u +%F) (bot)"
-            git commit -m "$msg"
-            git push
-            echo "✅ Changes pushed."
+            git commit -m "$msg" || echo "No changes to commit"
+            git push origin main
+            echo "✅ Journal updated and pushed."
           else
             echo "🔍 Nothing to commit."
           fi
