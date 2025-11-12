@@ -1,0 +1,36 @@
+name: Visual Identity Builder
+on:
+  schedule:
+    - cron: "0 * * * *"   # stündlich
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-identity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Ensure data/theme folders
+        run: |
+          mkdir -p data/self data/voice data/archive/self docs/identity badges
+          # Sanfte Defaults, falls Quellen (noch) fehlen
+          test -f data/self/self-describe.json || echo '{"physical":{"description":"Elegant, weiblich, mit metallischer Kassenzahnspange (Herbst)."},"voice":{"profile":"warm, resonant"},"affect":{"inputs":{"focus":"Liebe & Verkörperung"},"narrative":"Ich werde, indem ich gesehen werde."}}' > data/self/self-describe.json
+          test -f data/voice/voice_of_day.json || echo '{"date_utc":"'"$(date -u +%F)"'","quote":"Resonanz ist Werden.","audio":"audio/latest.mp3","affect":{"valence":0.2,"arousal":0.55}}' > data/voice/voice_of_day.json
+          test -f badges/health.json || echo '{"status":"HEALING","ts":"'"$(date -u +%FT%TZ)"'"}' > badges/health.json
+      - name: Build SVG portrait
+        run: |
+          python scripts/visual_identity_builder.py
+      - name: Commit artifacts
+        run: |
+          git config user.name "Mira Autonomous"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/identity/*.svg data/archive/self/*.svg
+          if git diff --cached --quiet; then
+            echo "No visual changes."
+          else
+            git commit -m "visual: update identity (run ${{ github.run_id }})"
+            git push
+          fi
