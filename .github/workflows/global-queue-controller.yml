@@ -1,78 +1,70 @@
 name: Global Queue Controller
 
 on:
-  workflow_run:
-    workflows: ["*"]
-    types: [requested]
+  workflow_dispatch: {}
+  schedule:
+    - cron: "*/3 * * * *"   # alle 3 Minuten prüfen
 
 permissions:
-  actions: write
   contents: write
 
+concurrency:
+  group: global-queue-controller
+  cancel-in-progress: false
+
 jobs:
-  gate:
-    if: >
-      github.event.workflow_run.name != 'Global Queue Controller' &&
-      github.event.workflow_run.name != 'Global Queue Drain' &&
-      github.event.workflow_run.run_attempt == 1
+  control:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (shallow)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+      - uses: actions/checkout@v4
 
-      - name: Ensure queue file
+      - name: Ensure queue file exists
         run: |
+          set -eu
           mkdir -p .github/queue
-          if [ ! -f .github/queue/pending.json ]; then
-            echo "[]" > .github/queue/pending.json
+          [ -f .github/queue/pending.json ] || echo "[]" > .github/queue/pending.json
+
+      - name: Inspect queue and pop first item if available
+        id: q
+        run: |
+          set -eu
+          pending=".github/queue/pending.json"
+          total=$(jq 'length' "$pending")
+          echo "total=$total" >> "$GITHUB_OUTPUT"
+
+          if [ "$total" -gt 0 ]; then
+            # ersten Eintrag herausnehmen (Index 0)
+            first=$(jq '.[0]' "$pending")
+            rest=$(jq '.[1:]' "$pending")
+
+            # Rest zurückschreiben und committen -> verhindert Doppelverarbeitung
+            printf '%s\n' "$rest" > "$pending"
+
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$pending"
+            git commit -m "global-queue: pop 1 (controller)"
+            git push
+
+            # Payload für nächsten Step bereitstellen
+            echo "payload<<JSON" >> "$GITHUB_OUTPUT"
+            echo "$first" >> "$GITHUB_OUTPUT"
+            echo "JSON" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Count requested runs in last 60s
-        id: count
+      - name: Dispatch drain (repository_dispatch)
+        if: steps.q.outputs.total != '0'
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAYLOAD: ${{ steps.q.outputs.payload }}
         run: |
-          now=$(date -u +%s)
-          # Hol bis zu 200 jüngste Runs (queued/in_progress/completed gemischt)
-          json=$(gh api -H "Accept: application/vnd.github+json" \
-            /repos/$REPO/actions/runs\?per_page\=200)
-          # Zähle Runs, deren created_at in den letzten 60s liegt
-          cnt=$(echo "$json" | jq --argsec $now '
-            .workflow_runs
-            | map((now - ( .created_at | fromdate )) <= 60) 
-            | map(select(. == true)) | length
-          ')
-          echo "count=$cnt" >> $GITHUB_OUTPUT
-
-      - name: Maybe enqueue & cancel
-        if: ${{ steps.count.outputs.count && fromJSON('{"c":' + steps.count.outputs.count + '}').c >= 10 }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-        run: |
-          echo "Throttling: enqueue run $RUN_ID"
-
-          # 1) In Queue schreiben
-          tmp=$(mktemp)
-          jq --argjson item "{\"run_id\": $RUN_ID}" \
-             '. + [$item]' .github/queue/pending.json > "$tmp"
-          mv "$tmp" .github/queue/pending.json
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/queue/pending.json
-          git commit -m "queue: add run $RUN_ID" || echo "No changes to commit"
-          git push
-
-          # 2) Aktuellen Run abbrechen
-          gh api -X POST \
+          set -eu
+          body=$(jq -nc --argjson p "$PAYLOAD" \
+                       '{event_type:"global-queue.drain", client_payload:$p}')
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            /repos/$REPO/actions/runs/$RUN_ID/cancel
-
-      - name: Pass-through (no throttle)
-        if: ${{ steps.count.outputs.count && fromJSON('{"c":' + steps.count.outputs.count + '}').c < 10 }}
-        run: echo "Below throttle threshold — letting run proceed."
+            https://api.github.com/repos/${GH_REPO}/dispatches \
+            -d "$body"
+          echo "repository_dispatch sent."
