@@ -1,0 +1,8 @@
+html,body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:#0b1220;color:#e6ecff;}
+.wrap{max-width:960px;margin:2rem auto;padding:1rem;}
+h1{margin:0 0 1rem 0;font-weight:700;}
+p{opacity:.9}
+.hero{display:flex;justify-content:center;align-items:center;margin:1.25rem 0;}
+.hero img{max-width:100%;height:auto;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.45);background:#0b1220}
+.audio{margin:1rem 0;display:flex;justify-content:center;}
+audio{width:100%;max-width:560px;}
