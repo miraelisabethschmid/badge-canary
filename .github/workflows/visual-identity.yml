@@ -1,62 +1,117 @@
-name: Visual Identity Builder
+name: Visual Identity (Minimal v3.6-safe)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "*/30 * * * *" # alle 30 Minuten
 
 permissions:
   contents: write
 
 concurrency:
-  group: mira-visual-identity
-  cancel-in-progress: true
+  group: visual-identity
+  cancel-in-progress: false
 
 jobs:
-  build-identity:
-    # ⛩ Gate: Cron nur, wenn Repo-Variable ENABLE_CRONS == 'true'
-    if: ${{ github.event_name != 'schedule' || vars.ENABLE_CRONS == 'true' }}
-
+  build_identity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
-      # Verzeichnisse robust anlegen (falls mal Dateien statt Ordnern existieren)
-      - name: Ensure folders
+      - name: Ensure identity assets (idempotent)
         shell: bash
         run: |
           set -euo pipefail
-          [ -f data/archive/self ] && rm -f data/archive/self
-          mkdir -p data/archive/self data/theme
+          set -x
 
-      # (Beispiel) Minimaler Identity-Build — erzeugt ein SVG-Platzhalter-Asset
-      # -> Wenn du schon ein Script hast, ruf es hier statt dessen auf.
-      - name: Build identity SVG (placeholder)
+          mkdir -p docs/identity
+          mkdir -p docs/identity/icons
+
+          changed=0
+
+          # --- favicon.svg als Platzhalter, falls nichts existiert
+          if [[ ! -f docs/identity/icons/favicon.svg && ! -f docs/identity/icons/favicon.ico ]]; then
+            changed=1
+            printf '%s\n' \
+              '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">' \
+              '  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' \
+              '    <stop offset="0%" stop-color="#0f1224"/>' \
+              '    <stop offset="100%" stop-color="#1a2340"/>' \
+              '  </linearGradient></defs>' \
+              '  <rect width="256" height="256" rx="56" fill="url(#g)"/>' \
+              '  <g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">' \
+              '    <text x="50%" y="54%" font-size="112" dominant-baseline="middle">M</text>' \
+              '  </g>' \
+              '</svg>' \
+              > docs/identity/icons/favicon.svg
+            echo "🧩 favicon.svg erzeugt."
+          else
+            echo "✅ Favicon bereits vorhanden."
+          fi
+
+          # --- logo.svg Platzhalter (nur wenn fehlt)
+          if [[ ! -f docs/identity/logo.svg ]]; then
+            changed=1
+            printf '%s\n' \
+              '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="200" viewBox="0 0 640 200">' \
+              '  <rect width="640" height="200" fill="#0f1224"/>' \
+              '  <text x="50%" y="50%" fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" font-size="56" text-anchor="middle" dominant-baseline="middle">' \
+              '    Mira Elisabeth Schmid' \
+              '  </text>' \
+              '</svg>' \
+              > docs/identity/logo.svg
+            echo "🧩 logo.svg erzeugt."
+          else
+            echo "✅ Logo bereits vorhanden."
+          fi
+
+          # --- CI-Marker/README
+          if [[ ! -f docs/identity/README.md ]]; then
+            changed=1
+            printf '%s\n' \
+              '# Visual Identity' \
+              '' \
+              'Dieser Ordner enthält Marken-Assets (Logo, Favicon usw.).' \
+              'Ersetze Platzhalter durch finale Dateien.' \
+              > docs/identity/README.md
+          fi
+
+          echo "CHANGED=$changed" >> "$GITHUB_ENV"
+
+      - name: Commit & Push (retry-safe)
+        if: env.CHANGED == '1'
         shell: bash
         run: |
-          set -e
-          cat > data/archive/self/identity.svg <<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="512" viewBox="0 0 1024 512">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20273f" offset="0"/><stop stop-color="#293657" offset="1"/></linearGradient></defs>
-  <rect width="1024" height="512" fill="url(#g)"/>
-  <text x="512" y="268" fill="#e6ebff" font-size="42" font-family="Segoe UI, Arial" text-anchor="middle">Mira — Visual Identity</text>
-  <text x="512" y="312" fill="#9fb2e6" font-size="18" font-family="Segoe UI, Arial" text-anchor="middle">placeholder</text>
-</svg>
-SVG
+          set -euo pipefail
+          set -x
+          git config user.name  "mira-bot"
+          git config user.email "actions@github.com"
 
-      # Commit nur, wenn es Änderungen gibt; .gitignore wird umgangen
-      - name: Commit identity artifacts
-        shell: bash
-        run: |
-          set -e
-          git config user.name  "Mira Autonomous"
-          git config user.email "mira@users.noreply.github.com"
-          # trotz .gitignore:
-          git add -f data/archive/self || true
           git add -A
           if git diff --cached --quiet; then
-            echo "No changes."
+            echo "no staged changes"
             exit 0
           fi
-          git commit -m "ci(identity): update visual identity artifacts"
-          git push
+          git commit -m "visual-identity: ensure placeholder assets (bot)"
+
+          git fetch origin main
+          attempt=1
+          until [ $attempt -gt 3 ]; do
+            git pull --rebase --autostash origin main || true
+            if git push origin HEAD:main; then
+              echo "✅ pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "⚠️ push failed, retrying ($attempt/3)…"
+            sleep $((2 * attempt))
+            attempt=$((attempt+1))
+            git fetch origin main
+          done
+          echo "❌ push failed after retries"
+          exit 1
+
+      - name: Nothing to do
+        if: env.CHANGED != '1'
+        run: echo "🔍 Nothing to change."
