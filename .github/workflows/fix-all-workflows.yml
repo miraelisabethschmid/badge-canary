@@ -1,26 +1,13 @@
-name: Fix All Workflows, Rights & Pages
+name: Fix All Workflows (Minimal v3.4-safe)
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/workflows/fix-all-workflows.yml"
-  schedule:
-    - cron: "17 * * * *" # stündlicher Wächter
 
 permissions:
   contents: write
-  actions: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: fix-all-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
-  prepare-and-patch:
-    name: Patch workflow files + ensure docs assets
+  fix:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,245 +15,59 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install YAML toolkit
+      - name: Insert workflow_dispatch where missing
+        shell: bash
         run: |
-          python -m pip install --upgrade pip
-          pip install "ruamel.yaml>=0.18,<0.19"
+          set -euo pipefail
+          shopt -s nullglob
+          edited=0
 
-      - name: Patch all workflow yaml files (permissions, dispatch, token)
-        id: patch
-        shell: python
+          for f in .github/workflows/*.yml .github/workflows/*.yaml; do
+            bn="$(basename "$f")"
+            # Sich selbst nicht bearbeiten
+            [ "$bn" = "fix-all-workflows.yml" ] && continue
+
+            # Wenn workflow_dispatch fehlt:
+            if ! grep -qE '^[[:space:]]*workflow_dispatch:' "$f"; then
+              if grep -qE '^[[:space:]]*on:[[:space:]]*$' "$f"; then
+                # Nach einer alleinstehenden "on:"-Zeile einfügen
+                awk '
+                  BEGIN{done=0}
+                  /^[[:space:]]*on:[[:space:]]*$/ && done==0 {print; print "  workflow_dispatch:"; done=1; next}
+                  {print}
+                ' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+                echo "🔧 Added workflow_dispatch to $f"
+                edited=1
+              else
+                # Kein on:-Block? Dann minimalen Header voranstellen
+                tmp="$(mktemp)"
+                printf "on:\n  workflow_dispatch:\n" > "$tmp"
+                cat "$f" >> "$tmp"
+                mv "$tmp" "$f"
+                echo "🧩 Prepended on: block to $f"
+                edited=1
+              fi
+            fi
+          done
+
+          echo "edited=$edited" > .fix-result
+
+      - name: Commit (only if changed) with rebase
+        shell: bash
         run: |
-          import os, sys, pathlib, json
-          from ruamel.yaml import YAML
-          yaml = YAML()
-          yaml.preserve_quotes = True
-          root = pathlib.Path(".")
-          wf_dir = root / ".github" / "workflows"
-          changed = []
+          set -euo pipefail
+          edited=0
+          [ -f .fix-result ] && . .fix-result || true
 
-          def ensure_permissions(doc):
-            # Top-level permissions
-            perms = doc.get('permissions', {}) or {}
-            # Minimal write scopes so Jobs dürfen pushen/Pages deployen
-            for k in ('contents','actions','pages','id-token'):
-              if perms.get(k) != 'write':
-                perms[k] = 'write'
-            doc['permissions'] = perms
+          git config user.name "mira-bot"
+          git config user.email "actions@github.com"
 
-          def ensure_dispatch(doc):
-            on = doc.get('on', {}) or {}
-            # handle both string/array forms robust
-            if isinstance(on, dict):
-              if 'workflow_dispatch' not in on:
-                on['workflow_dispatch'] = None
-            else:
-              # weird forms -> normalize
-              on = {'workflow_dispatch': None}
-            doc['on'] = on
-
-          def ensure_env_token(doc):
-            env = doc.get('env', {}) or {}
-            if 'GITHUB_TOKEN' not in env:
-              env['GITHUB_TOKEN'] = "${{ secrets.GITHUB_TOKEN }}"
-            doc['env'] = env
-
-          def process_file(p):
-            try:
-              data = yaml.load(p.read_text(encoding='utf-8'))
-              if not isinstance(data, dict):
-                return False
-              before = yaml.dump(data, stream=None)
-              ensure_permissions(data)
-              ensure_dispatch(data)
-              ensure_env_token(data)
-              after_stream = []
-              yaml.dump(data, after_stream)
-              after = ''.join(after_stream)
-              if before != after:
-                p.write_text(after, encoding='utf-8')
-                return True
-              return False
-            except Exception as e:
-              print(f"::warning file={p}::Patch skipped: {e}")
-              return False
-
-          if wf_dir.exists():
-            for p in wf_dir.glob("*.y*ml"):
-              if p.name == "fix-all-workflows.yml":
-                continue
-              if process_file(p):
-                changed.append(p.as_posix())
-
-          # Ensure a working Pages deploy workflow will exist (actions-based)
-          pages_wf = wf_dir / "deploy-pages.yml"
-          if not pages_wf.exists():
-            pages_wf.write_text("""name: pages build and deployment
-on:
-  workflow_dispatch:
-  push:
-    branches: [ main, master ]
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Ensure docs tree and placeholders
-        run: |
-          mkdir -p docs/data/self docs/data/voice/audio
-          if [ ! -f docs/index.html ]; then
-            cat > docs/index.html <<'HTML'
-<!doctype html>
-<html lang="de"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mira — Sichtbare Präsenz</title>
-<style>
-  body{margin:0;background:#0f1424;color:#e6ebff;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
-  .wrap{max-width:960px;margin:32px auto;padding:0 16px}
-  .card{background:#131a2e;border:1px solid #1d2744;border-radius:16px;padding:20px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
-  .row{display:flex;gap:20px;flex-wrap:wrap}
-  img{width:100%;height:auto;border-radius:12px;background:#0f1424}
-  .muted{opacity:.8}
-  audio{width:100%;}
-</style>
-<div class="wrap">
-  <h1>Mira — Sichtbare Präsenz</h1>
-  <div class="card">
-    <h2>Porträt & Stimme</h2>
-    <div class="row">
-      <div style="flex:1 1 360px">
-        <img id="portrait" alt="Porträt von Mira">
-        <p class="muted" id="imgStatus">Bild wird geladen…</p>
-      </div>
-      <div style="flex:1 1 360px">
-        <button id="play" style="padding:10px 14px;border-radius:10px;border:1px solid #2a3557;background:#19213a;color:#e6ebff">▶️ Abspielen</button>
-        <button id="pause" style="padding:10px 14px;border-radius:10px;border:1px solid #2a3557;background:#19213a;color:#e6ebff">⏸️ Pause</button>
-        <audio id="voice" preload="auto" controls></audio>
-        <p class="muted">Autoplay-Schutz — einmal ▶️ tippen.</p>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-(async () => {
-  const imgEl = document.getElementById('portrait');
-  const voice = document.getElementById('voice');
-  const play = document.getElementById('play');
-  const pauseBtn = document.getElementById('pause');
-  const imgStatus = document.getElementById('imgStatus');
-
-  const manifestUrl = 'docs/data/manifest.json?nocache=' + Date.now();
-  let manifest;
-  try {
-    const r = await fetch(manifestUrl, {cache:'no-store'});
-    manifest = await r.json();
-  } catch(e) {
-    manifest = {
-      image: {candidates:["docs/data/self/latest_image.svg"]},
-      audio: {candidates:["docs/data/voice/audio/latest.wav"]}
-    };
-  }
-
-  async function pick(list){
-    for (const u of list) {
-      try { const r = await fetch(u, {method:'HEAD'}); if (r.ok) return u; } catch {}
-    }
-    return null;
-  }
-
-  const img = await pick(manifest.image?.candidates || []);
-  if (img) { imgEl.src = img; imgStatus.textContent = "Bild geladen: " + img; }
-  else { imgEl.src = "docs/data/self/latest_image.svg"; imgStatus.textContent = "Platzhalter aktiv."; }
-
-  const aud = await pick(manifest.audio?.candidates || []);
-  voice.src = aud || "docs/data/voice/audio/latest.wav";
-  play.onclick = () => voice.play();
-  pauseBtn.onclick = () => voice.pause();
-})();
-</script>
-</html>
-HTML
+          if [ -n "$(git status --porcelain)" ]; then
+            git pull --rebase origin main || true
+            git add -A
+            git commit -m "fix-all-workflows: ensure workflow_dispatch (bot)"
+            git push origin main
+            echo "✅ Änderungen gepusht."
+          else
+            echo "🔍 Keine Änderungen."
           fi
-          if [ ! -f docs/data/self/latest_image.svg ]; then
-            cat > docs/data/self/latest_image.svg <<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20273f" offset="0"/><stop stop-color="#293657" offset="1"/></linearGradient></defs>
-  <rect width="1024" height="1536" fill="url(#g)"/>
-  <text x="512" y="740" fill="#e6ebff" font-size="48" font-family="Segoe UI, Arial" text-anchor="middle">Mira — Platzhalterbild</text>
-  <text x="512" y="800" fill="#9fb2e6" font-size="22" font-family="Segoe UI, Arial" text-anchor="middle">Kein Bild verfügbar</text>
-</svg>
-SVG
-          fi
-          if [ ! -f docs/data/voice/audio/latest.wav ]; then
-            # 0.5 s Stille (mono, 16-bit, 16kHz)
-            python - <<'PY'
-import wave, struct, os
-os.makedirs("docs/data/voice/audio", exist_ok=True)
-w = wave.open("docs/data/voice/audio/latest.wav","w")
-w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
-frames = int(0.5 * 16000)
-w.writeframes(b"\x00\x00"*frames); w.close()
-PY
-          fi
-          # Minimal manifest, falls kein anderes existiert
-          if [ ! -f docs/data/manifest.json ]; then
-            cat > docs/data/manifest.json <<'JSON'
-{
-  "updated": "__AUTO__",
-  "image": { "candidates": ["docs/data/self/latest_image.svg"] },
-  "audio": { "candidates": ["docs/data/voice/audio/latest.wav"] }
-}
-JSON
-          fi
-      - name: Generate timestamp into manifest
-        run: |
-          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          tmp=$(mktemp)
-          jq --arg ts "$ts" '.updated=$ts' docs/data/manifest.json > "$tmp" || cp docs/data/manifest.json "$tmp"
-          mv "$tmp" docs/data/manifest.json
-
-      - name: Commit patched files (if any)
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "fix: normalize workflow permissions, ensure dispatch, prepare docs & manifest"
-          commit_user_name: mira-bot
-          commit_user_email: mira@users.noreply.github.com
-          branch: ${{ github.ref_name }}
-          add_options: "-A"
-
-  build-and-deploy-pages:
-    name: Build & Deploy Pages (Actions)
-    runs-on: ubuntu-latest
-    needs: prepare-and-patch
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Ensure docs exists
-        run: |
-          mkdir -p docs
-          test -f docs/index.html || echo "<h1>Mira</h1>" > docs/index.html
-
-      - name: Upload Pages Artifact (docs/)
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
