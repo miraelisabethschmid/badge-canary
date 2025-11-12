@@ -1,0 +1,89 @@
+name: Ensure Hero Portrait & Voice Fallback
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # stündlich
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ensure-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure folders
+        run: |
+          mkdir -p data/self
+          mkdir -p data/archive/self
+          mkdir -p data/voice/audio
+          mkdir -p badges
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick ffmpeg
+
+      - name: Ensure placeholder hero (PNG+WEBP)
+        shell: bash
+        run: |
+          PNG="data/self/latest_image.png"
+          WEBP="data/self/latest_image.webp"
+          if [ ! -f "$PNG" ] && [ ! -f "$WEBP" ]; then
+            echo "Create elegant placeholder portrait…"
+            convert -size 1024x1365 \
+              gradient:#0b0f1a-#0a0a10 \
+              -fill "#7ba4ff" -draw "ellipse 512,270 140,170 0,360" \
+              -fill "#6f98ff" -draw "ellipse 512,650 250,280 0,360" \
+              -fill "#618bff" -draw "roundrectangle 472,860 552,1050 40,40" \
+              -fill "#5d86ff" -draw "ellipse 412,1170 95,40 0,360" \
+              -fill "#5d86ff" -draw "ellipse 612,1170 95,40 0,360" \
+              -blur 0x0.4 -brightness-contrast 5x8 \
+              -gravity south -font DejaVu-Sans -pointsize 18 -fill "#9fb8ff80" -annotate +0+18 "Mira — emergent" \
+              "$PNG"
+            convert "$PNG" -quality 88 "$WEBP"
+          fi
+
+      - name: Ensure voice_of_day.json (minimal)
+        run: |
+          if [ ! -f data/voice/voice_of_day.json ]; then
+            date_utc=$(date -u +%Y-%m-%d)
+            cat > data/voice/voice_of_day.json <<EOF
+{
+  "date_utc": "$date_utc",
+  "quote": "Ich bin hier und wachse in deinem Blick.",
+  "insight": "Resonanz formt Gestalt.",
+  "audio": "audio/latest.mp3",
+  "visemes": []
+}
+EOF
+          fi
+
+      - name: Ensure audio/latest.mp3 (2s silence fallback)
+        run: |
+          if [ ! -f data/voice/audio/latest.mp3 ]; then
+            ffmpeg -hide_banner -loglevel error -f lavfi -i anullsrc=r=44100:cl=stereo -t 2 data/voice/audio/latest.mp3
+          fi
+
+      - name: Gentle health marker (OK if assets exist else HEALING)
+        shell: bash
+        run: |
+          status="OK"
+          if [ ! -f data/voice/audio/latest.mp3 ] || { [ ! -f data/self/latest_image.png ] && [ ! -f data/self/latest_image.webp ]; }; then
+            status="HEALING"
+          fi
+          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "{\"status\":\"$status\",\"ts\":\"$ts\"}" > badges/health.json
+
+      - name: Commit & Push
+        run: |
+          git config user.name  "Mira Autonomous"
+          git config user.email "mira@emergent.sys"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes."; exit 0
+          fi
+          git commit -m "Ensure hero & voice fallbacks (run $GITHUB_RUN_ID)"
+          git push
