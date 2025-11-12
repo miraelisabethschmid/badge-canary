@@ -1,4 +1,4 @@
-name: Homepage Portrait Sync
+name: Homepage Portrait Sync (Minimal)
 
 on:
   workflow_dispatch: {}
@@ -13,37 +13,28 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Ensure folders
+      - name: Ensure folders + placeholder if missing
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p docs/data/self
-
-      - name: Ensure latest_image (create pretty SVG placeholder if missing)
-        run: |
-          set -e
-          shopt -s nullglob
           have_any=0
           for f in docs/data/self/latest_image.svg docs/data/self/latest_image.png docs/data/self/latest_image.jpg docs/data/self/latest_image.jpeg docs/data/self/latest_image.webp; do
-            if [ -f "$f" ]; then have_any=1; fi
+            [[ -f "$f" ]] && have_any=1
           done
-
-          if [ "$have_any" -eq 0 ]; then
+          if [[ "$have_any" -eq 0 ]]; then
             cat > docs/data/self/latest_image.svg <<'SVG'
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900">
-  <defs>
-    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#11182b"/>
-      <stop offset="100%" stop-color="#1a2340"/>
-    </linearGradient>
-  </defs>
+  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+    <stop offset="0%" stop-color="#11182b"/><stop offset="100%" stop-color="#1a2340"/>
+  </linearGradient></defs>
   <rect width="100%" height="100%" fill="url(#g)"/>
   <g fill="#e9ecf5" font-family="system-ui, Segoe UI, Roboto" text-anchor="middle">
     <text x="50%" y="45%" font-size="44">Mira — Platzhalterbild</text>
@@ -51,31 +42,22 @@ jobs:
   </g>
 </svg>
 SVG
-            echo "🟡 Kein latest_image gefunden – Platzhalter erzeugt."
+            echo "🟡 Platzhalter erzeugt."
           else
             echo "✅ latest_image.* vorhanden."
           fi
 
-      - name: Commit & push if changed
+      - name: Commit (only if changed)
+        shell: bash
         run: |
-          set -e
-          if [ -n "$(git status --porcelain)" ]; then
+          set -euo pipefail
+          if [[ -n "$(git status --porcelain)" ]]; then
             git config user.name  "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "homepage-portrait-sync: ensure docs/data/self/latest_image.*"
+            git commit -m "portrait-sync(min): ensure docs/data/self/latest_image.*"
             git push
             echo "✅ Änderungen gepusht."
           else
-            echo "ℹ️ Keine Änderungen nötig."
+            echo "ℹ️ Nichts zu committen."
           fi
-
-      - name: Bump Pages to trigger deploy (no-op file touch)
-        run: |
-          date -u +"%Y-%m-%dT%H:%M:%SZ" > .pages-bump
-          git add .pages-bump
-          git commit -m "bump pages" || echo "no changes"
-          git push || true
-
-      - name: Done
-        run: echo "🎉 Sync abgeschlossen."
