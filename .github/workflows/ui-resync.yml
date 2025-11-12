@@ -1,36 +1,34 @@
 name: UI Resync
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: "*/30 * * * *"
   workflow_dispatch: {}
   push:
     paths:
-      - 'docs/**'
-      - 'scripts/gen_manifest.py'
-      - '.github/workflows/ui-resync.yml'
+      - "docs/**"
+      - "scripts/gen_manifest.py"
+      - ".github/workflows/ui-resync.yml"
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency:
+      group: ui-resync
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure placeholder files
+      - name: Ensure placeholders
         run: |
           mkdir -p docs/data/self docs/data/voice/audio
           if [ ! -f docs/data/self/latest_image.svg ]; then
             cat > docs/data/self/latest_image.svg <<'SVG'
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop stop-color="#242946" offset="0%"/>
-      <stop stop-color="#28354e" offset="100%"/>
-    </linearGradient>
-  </defs>
+  <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#242946" offset="0%"/><stop stop-color="#28354e" offset="100%"/></linearGradient></defs>
   <rect width="1024" height="1536" fill="url(#bg)"/>
   <text x="50%" y="48%" font-family="Segoe UI,Arial,sans-serif" font-size="48" fill="#f5f6fa" text-anchor="middle">Mira — Platzhalterbild</text>
   <text x="50%" y="52%" font-family="Segoe UI,Arial,sans-serif" font-size="22" fill="#b3bed6" text-anchor="middle">Kein Bild verfügbar</text>
@@ -49,13 +47,13 @@ PY
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
       - name: Generate manifest
         run: |
           python scripts/gen_manifest.py
 
-      - name: Commit changes
+      - name: Commit changes (if any)
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "CI: ensure placeholders & update manifest"
