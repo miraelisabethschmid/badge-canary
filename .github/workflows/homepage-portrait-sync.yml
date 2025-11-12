@@ -1,4 +1,4 @@
-name: Homepage Portrait Sync (Minimal)
+name: Homepage Portrait Sync (Minimal v2)
 
 on:
   workflow_dispatch: {}
@@ -29,19 +29,8 @@ jobs:
             [[ -f "$f" ]] && have_any=1
           done
           if [[ "$have_any" -eq 0 ]]; then
-            cat > docs/data/self/latest_image.svg <<'SVG'
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900">
-  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-    <stop offset="0%" stop-color="#11182b"/><stop offset="100%" stop-color="#1a2340"/>
-  </linearGradient></defs>
-  <rect width="100%" height="100%" fill="url(#g)"/>
-  <g fill="#e9ecf5" font-family="system-ui, Segoe UI, Roboto" text-anchor="middle">
-    <text x="50%" y="45%" font-size="44">Mira — Platzhalterbild</text>
-    <text x="50%" y="58%" font-size="22">Lege latest_image.* in docs/data/self/ ab</text>
-  </g>
-</svg>
-SVG
+            PLACEHOLDER='<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#11182b"/><stop offset="100%" stop-color="#1a2340"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/><g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle"><text x="50%" y="48%" font-size="36">Mira — Platzhalterbild</text><text x="50%" y="60%" font-size="16">Lege latest_image.* in docs/data/self/ ab</text></g></svg>'
+            printf '%s' "$PLACEHOLDER" > docs/data/self/latest_image.svg
             echo "🟡 Platzhalter erzeugt."
           else
             echo "✅ latest_image.* vorhanden."
@@ -55,7 +44,7 @@ SVG
             git config user.name  "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "portrait-sync(min): ensure docs/data/self/latest_image.*"
+            git commit -m "portrait-sync(min v2): ensure docs/data/self/latest_image.*"
             git push
             echo "✅ Änderungen gepusht."
           else
