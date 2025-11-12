@@ -1,15 +1,15 @@
 name: Self-Image (Hourly)
 
 on:
-  schedule:
-    - cron: "3 * * * *"   # stündlich (UTC), leicht versetzt
   workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *" # stündlich
 
 permissions:
   contents: write
 
 concurrency:
-  group: self-image
+  group: mira-self-image
   cancel-in-progress: true
 
 jobs:
@@ -18,35 +18,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # Verzeichnis robust anlegen (falls mal eine Datei "data/archive/self" im Weg liegt)
+      - name: Ensure archive folder
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f data/archive/self ]; then rm -f data/archive/self; fi
+          mkdir -p data/archive/self
 
-      - name: Generate autonomous self-image
+      # (Optional) Marker aktualisieren, damit Commits nur bei echten Änderungen passieren
+      - name: Touch timestamp marker
         shell: bash
         run: |
           set -e
-          mkdir -p data/archive/self data/render_prompts data/self badges data/ledger
-          python scripts/generate_self_image.py
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > data/archive/self/.last_run.txt
 
-      - name: Touch latest_image.json (for cache-busting)
+      # Commit nur, wenn es Änderungen gibt; .gitignore wird umgangen
+      - name: Commit artifacts (only if changed)
         shell: bash
         run: |
           set -e
-          TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          mkdir -p data/self
-          jq -n --arg ts "$TS" --arg path "data/archive/self/latest.png" '{ts:$ts, path:$path}' > data/self/latest_image.json
-
-      - name: Commit artifacts
-        shell: bash
-        run: |
-          git config user.name "self-image-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/archive/self data/render_prompts data/self/latest_image.json badges/health.json data/ledger/events.jsonl
+          git config user.name  "self-image-bot"
+          git config user.email "mira@users.noreply.github.com"
+          # trotz .gitignore:
+          git add -f data/archive/self || true
+          git add -A
           if git diff --cached --quiet; then
             echo "No changes."
             exit 0
           fi
-          git commit -m "self-image: hourly update"
+          git commit -m "ci(self-image): update archive"
           git push
