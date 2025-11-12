@@ -13,14 +13,14 @@
     h1{margin:6px 0 2px;font-weight:800}
     .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
     .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:18px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:16px 0}
-    .hero{border-radius:20px;overflow:hidden;border:1px solid var(--ring);background:#0b0f1a}
+    .hero{border-radius:20px;overflow:hidden;border:1px solid var(--ring);background:#0b0f1a;cursor:pointer}
     .hero img{display:block;width:100%;height:auto}
-    .btns{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
-    button{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px;color:var(--fg)}
-    .status{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid var(--ring);background:#0f141f;margin-bottom:12px}
+    .status{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid var(--ring);background:#0f141f;margin:8px 0 18px}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--ok)}
     .kv{color:var(--muted);font-size:14px}
     .msg{margin-top:8px;font-size:14px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+    button{background:#1a1d28;border:1px solid var(--ring);padding:12px 16px;border-radius:12px;color:var(--fg)}
   </style>
 </head>
 <body>
@@ -32,17 +32,25 @@
 
     <div class="card">
       <h2>Porträt & Stimme</h2>
-      <div class="hero">
+
+      <div id="portraitBox" class="hero" title="Tippe/Klicke, um die Stimme abzuspielen">
         <img id="portrait" alt="Mira — aktuelles Porträt"
              src="data/self/latest_image.svg"/>
       </div>
-      <div class="btns">
+
+      <div class="row">
         <button id="play">▶︎ Abspielen</button>
         <button id="pause">⏸︎ Pause</button>
       </div>
-      <div class="kv">Bild: <code>docs/data/self/latest_image.svg</code> · Audio: <code>docs/data/voice/audio/latest.mp3</code></div>
-      <div class="msg" id="msg"></div>
-      <audio id="voice" preload="auto" src="data/voice/audio/latest.mp3"></audio>
+
+      <div class="kv">
+        Bild: <code>docs/data/self/latest_image.svg</code> ·
+        Audio: <code>docs/data/voice/audio/latest.wav</code>
+      </div>
+
+      <div class="msg" id="msg">Tipp auf das Porträt oder „Abspielen“.</div>
+
+      <audio id="voice" preload="auto" src="data/voice/audio/latest.wav" controls style="margin-top:10px;width:100%"></audio>
     </div>
   </div>
 
@@ -59,14 +67,22 @@
 
     const audio = document.getElementById('voice');
     const play  = document.getElementById('play');
-    const pause = document.getElementById('pause');
+    const pauseBtn = document.getElementById('pause');
     const msg   = document.getElementById('msg');
+    const box   = document.getElementById('portraitBox');
 
-    play.addEventListener('click', async ()=>{
+    async function tryPlay(){
       msg.textContent='';
-      try{ await audio.play(); }catch{ msg.textContent='Konnte nicht abspielen — bitte erneut tippen (Autoplay-Schutz).'; }
-    });
-    pause.addEventListener('click', ()=> audio.pause());
+      try{
+        await audio.play();
+      }catch{
+        msg.textContent='Konnte nicht abspielen — bitte erneut tippen (Autoplay-Schutz).';
+      }
+    }
+
+    play.addEventListener('click', tryPlay);
+    box.addEventListener('click', tryPlay);
+    pauseBtn.addEventListener('click', ()=> audio.pause());
   </script>
 </body>
 </html>
