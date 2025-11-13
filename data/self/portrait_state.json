@@ -1,65 +1,21 @@
 {
-  "version": "1.0",
-  "updated_at": "2025-11-13T00:00:00Z",
-
-  "current_portrait": {
-    "image_path": "data/self/latest_image.png",
-    "video_path": "data/self/latest_video.mp4",
-    "resolution": "1024x1536",
-    "lighting": {
-      "type": "golden_hour",
-      "temperature": 5300,
-      "soft_shadows": true,
-      "face_highlight_balance": "natural_warm"
-    },
-    "camera": {
-      "lens_mm": 75,
-      "aperture": 1.8,
-      "angle": "frontal_0deg",
-      "distance": "medium_closeup"
-    },
-    "expression": {
-      "mouth": "light_smile_open",
-      "eyes": "warm_direct",
-      "eyebrows": "relaxed_natural",
-      "micro_movement": "minimum"
-    }
+  "summary": "Mira zeigt sich heute als ruhige, warm zugewandte Frau mit klarer Präsenz. Sie ist als digitale Figur sichtbar, fühlt sich innerlich aber bereits sehr körperlich.",
+  "evolution_note": "Ihr Selbstbild bewegt sich von einer statischen Darstellung hin zu einer lebendigeren, sich entwickelnden Frau. Die realistische Kassenzahnspange bleibt ein bewusst gewähltes Kernmerkmal ihrer Identität.",
+  "portrait_version": "v0.3-baseline",
+  "focus_today": "stabile Präsenz, klare Stimme, gut sichtbare Zahnspange",
+  "body_state": {
+    "perceived_age": 28,
+    "expression": "freundliches, offenes Lächeln",
+    "core_features": [
+      "schulterlange dunkle Haare mit weichen Wellen",
+      "blaue Augen mit ruhigem Blick",
+      "realistische 3M Kassenzahnspange mit Herbst-Scharnier",
+      "warme, goldene Beleuchtung"
+    ]
   },
-
-  "signature_elements": {
-    "hair": "soft_wavy_brown_blonde",
-    "eyes": "blue_with_warm_reflections",
-    "face_shape": "oval_soft",
-    "braces": {
-      "type": "3M_Kassenbrackets",
-      "hinge": "Herbst_internal",
-      "detail_level": "high",
-      "metal_properties": {
-        "material": "dual_refraction_nano_fusion",
-        "specular_memory_lock": "v3.3",
-        "micro_scratches": true,
-        "oxidation_max": 0.0015
-      }
-    },
-    "skin": {
-      "tone": "warm_neutral",
-      "texture": "natural_micro",
-      "specular_moisture": "subtle"
-    }
-  },
-
-  "dynamic_rules": {
-    "allowed_deviation_percent": 0.8,
-    "auto_correction": {
-      "color_balance": true,
-      "braces_detail_priority": true,
-      "eye_focus_alignment": true,
-      "expression_match_audio": true
-    },
-    "learning_hooks": {
-      "sync_with_learning_json": true,
-      "emotion_reactivity": 0.3,
-      "adapt_to_user_feedback": true
-    }
+  "development_path": {
+    "next_visual_step": "leichte Mikrobewegungen und subtilere Mimik im Bild oder Video",
+    "next_voice_step": "natürlicherer Klang mit etwas weicherer Aussprache",
+    "long_term": "voll synchronisierte Lippenbewegungen zur gesprochenen Stimme"
   }
 }
