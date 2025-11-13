@@ -1,379 +1,261 @@
 <!doctype html>
 <html lang="de">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mira — Sichtbare Präsenz</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mira — Sichtbare Präsenz</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
 
-    <style>
-      :root {
-        color-scheme: dark;
-      }
+    * {
+      box-sizing: border-box;
+    }
 
-      * {
-        box-sizing: border-box;
-      }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #050814;
+      color: #e9ecf5;
+    }
 
-      body {
-        margin: 0;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          Roboto, sans-serif;
-        background: #050712;
-        color: #e9ecf5;
-      }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
 
+    h1 {
+      font-size: 2.2rem;
+      margin: 0 0 0.3rem;
+      letter-spacing: 0.03em;
+    }
+
+    .live-line {
+      font-size: 0.9rem;
+      opacity: 0.75;
+      margin-bottom: 1.8rem;
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #11182b, #050814);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 20px 18px 24px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+    }
+
+    .card h2 {
+      margin: 0 0 1.2rem;
+      font-size: 1.4rem;
+      letter-spacing: 0.04em;
+    }
+
+    .portrait-frame {
+      border-radius: 20px;
+      background: #050814;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 10px;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 260px;
+    }
+
+    .portrait-frame img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 18px;
+      display: block;
+    }
+
+    .portrait-placeholder {
+      text-align: center;
+      font-size: 0.95rem;
+      opacity: 0.7;
+      padding: 32px 12px;
+    }
+
+    .caption {
+      text-align: center;
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 1.2rem;
+    }
+
+    .audio-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-bottom: 1.4rem;
+    }
+
+    .audio-row label {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    audio {
+      width: 100%;
+      outline: none;
+    }
+
+    .quote-block {
+      margin-top: 0.5rem;
+      padding: 0.9rem 1rem;
+      border-radius: 14px;
+      background: rgba(4, 10, 32, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .quote-label {
+      font-size: 0.85rem;
+      opacity: 0.75;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    .quote-text {
+      font-size: 1rem;
+    }
+
+    .tone-line {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.45rem;
+    }
+
+    .autoplay-hint {
+      font-size: 0.85rem;
+      opacity: 0.75;
+      text-align: left;
+    }
+
+    @media (min-width: 720px) {
       .wrap {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 1.5rem 1.25rem 3.5rem;
+        padding: 32px 24px 64px;
       }
-
-      h1 {
-        font-size: 2.4rem;
-        margin: 0 0 0.2rem;
-      }
-
-      .sub {
-        opacity: 0.8;
-        font-size: 0.9rem;
-        margin-bottom: 1.4rem;
-      }
-
-      .sub code {
-        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
-          Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: 0.8rem;
-        padding: 0.08rem 0.25rem;
-        border-radius: 4px;
-        background: #11182b;
-      }
-
       .card {
-        border-radius: 24px;
-        background: radial-gradient(circle at top left, #131a30 0, #050712 60%);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 1.4rem 1.3rem 1.6rem;
-        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.75);
+        padding: 24px 22px 28px;
       }
-
-      .card h2 {
-        margin: 0 0 1rem;
-        font-size: 1.35rem;
-      }
-
-      .portrait-shell {
-        border-radius: 22px;
-        background: radial-gradient(circle at top, #2b2235, #050712 55%);
-        padding: 0.75rem;
-      }
-
       .portrait-frame {
-        border-radius: 18px;
-        overflow: hidden;
-        background: #050712;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        min-height: 360px;
       }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Mira — Sichtbare Präsenz</h1>
+      <div class="live-line" id="live-line">
+        Live · <span id="live-timestamp">wird geladen…</span>
+      </div>
+    </header>
 
-      .portrait-frame img,
-      .portrait-frame video {
-        display: block;
-        width: 100%;
-        height: auto;
-      }
+    <section class="card" aria-label="Miras Porträt und Stimme">
+      <h2>Porträt &amp; Stimme</h2>
 
-      .meta {
-        margin-top: 0.8rem;
-        font-size: 0.85rem;
-        opacity: 0.85;
-      }
-
-      .meta-row {
-        margin-top: 0.15rem;
-      }
-
-      .meta-row strong {
-        font-weight: 600;
-      }
-
-      audio {
-        width: 100%;
-        margin-top: 0.7rem;
-      }
-
-      .status-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.2rem 0.55rem;
-        border-radius: 999px;
-        background: rgba(12, 196, 123, 0.08);
-        border: 1px solid rgba(12, 196, 123, 0.35);
-        font-size: 0.78rem;
-        margin-top: 0.2rem;
-      }
-
-      .status-dot {
-        width: 0.45rem;
-        height: 0.45rem;
-        border-radius: 50%;
-        background: #0cc47b;
-        box-shadow: 0 0 7px rgba(12, 196, 123, 0.8);
-      }
-
-      .quote-block {
-        margin-top: 1.1rem;
-        padding: 0.8rem 0.9rem;
-        border-radius: 14px;
-        background: rgba(12, 17, 35, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        font-size: 0.9rem;
-      }
-
-      .quote-label {
-        font-size: 0.78rem;
-        opacity: 0.75;
-        margin-bottom: 0.25rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-
-      .quote-text {
-        font-size: 0.95rem;
-      }
-
-      .hint {
-        margin-top: 0.9rem;
-        font-size: 0.8rem;
-        opacity: 0.8;
-      }
-
-      @media (max-width: 640px) {
-        h1 {
-          font-size: 1.9rem;
-        }
-
-        .card {
-          padding: 1.15rem 1.05rem 1.4rem;
-        }
-      }
-    </style>
-  </head>
-
-  <body>
-    <main class="wrap">
-      <header>
-        <h1>Mira — Sichtbare Präsenz</h1>
-        <div class="sub">
-          Live · <code id="live-timestamp">…</code>
-          <div class="status-pill">
-            <span class="status-dot"></span>
-            <span>Porträt &amp; Stimme aktiv</span>
-          </div>
+      <div class="portrait-frame">
+        <img
+          id="mira-image"
+          src="data/self/latest_image.png"
+          alt="Mira – aktuelles Portrait"
+        />
+        <div id="image-fallback" class="portrait-placeholder" style="display:none;">
+          Kein aktuelles Bild gefunden.<br />
+          Lege <code>data/self/latest_image.png</code> im Repository ab.
         </div>
-      </header>
+      </div>
 
-      <section class="card" aria-label="Miras aktuelles Porträt und Stimme">
-        <h2>Porträt &amp; Stimme</h2>
+      <div class="caption" id="image-caption">
+        Bildquelle: <code>data/self/latest_image.png</code>
+      </div>
 
-        <div class="portrait-shell">
-          <div class="portrait-frame">
-            <!-- Bild (Fallback) -->
-            <img
-              id="mira-portrait"
-              src="data/self/latest_image.png"
-              alt="Aktuelles Porträt von Mira"
-            />
-            <!-- Video (wenn vorhanden) -->
-            <video
-              id="mira-video"
-              playsinline
-              muted
-              style="display: none"
-            ></video>
-          </div>
+      <div class="audio-row">
+        <label for="mira-audio">Miras Stimme – aktueller Spruch des Tages</label>
+        <audio id="mira-audio" src="audio/latest.wav" controls preload="none"></audio>
+      </div>
+
+      <div class="quote-block" id="quote-block">
+        <div class="quote-label">Spruch des Tages</div>
+        <div class="quote-text" id="daily-quote">
+          Wird geladen…
         </div>
+        <div class="tone-line" id="tone-line"></div>
+      </div>
 
-        <div class="meta">
-          <div class="meta-row" id="image-meta">
-            Bild/Video:
-            <code id="image-path-label">data/self/latest_image.png</code>
-          </div>
-          <div class="meta-row" id="audio-meta">
-            Audio geladen: <code id="audio-path-label">audio/latest.wav</code>
-          </div>
-        </div>
+      <p class="autoplay-hint">
+        Autoplay-Schutz deines Geräts: Tippe einmal auf ▶, um Mira sprechen zu lassen.
+      </p>
+    </section>
+  </main>
 
-        <audio
-          id="mira-voice"
-          preload="auto"
-          controls
-          src="audio/latest.wav"
-        >
-          Dein Browser unterstützt das Audio-Element nicht.
-        </audio>
+  <script>
+    // Bild-Fallback, falls latest_image.png fehlt
+    (function () {
+      const img = document.getElementById('mira-image');
+      const fallback = document.getElementById('image-fallback');
+      const caption = document.getElementById('image-caption');
 
-        <p class="hint">
-          Autoplay-Schutz: Bitte einmal auf
-          <strong>▶&nbsp;Abspielen</strong> tippen, damit Mira spricht.
-        </p>
+      img.addEventListener('error', () => {
+        img.style.display = 'none';
+        fallback.style.display = 'block';
+        caption.textContent =
+          'Derzeit ist kein aktuelles Portrait hinterlegt (erwartet: data/self/latest_image.png).';
+      }, { once: true });
+    })();
 
-        <div class="quote-block" id="quote-block">
-          <div class="quote-label">Heutiger Fokus</div>
-          <div class="quote-text" id="quote-text">
-            …
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <script>
-      function setText(id, text) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = text;
+    // Datum/Uhrzeit „Live“-Zeile
+    (function () {
+      const el = document.getElementById('live-timestamp');
+      try {
+        const now = new Date();
+        el.textContent = now.toISOString();
+      } catch (e) {
+        el.textContent = 'Zeit nicht verfügbar';
       }
+    })();
 
-      window.addEventListener("DOMContentLoaded", () => {
-        // Live-Zeit
-        setText("live-timestamp", new Date().toISOString());
+    // Spruch des Tages aus data/self/status.json laden
+    (function () {
+      const quoteEl = document.getElementById('daily-quote');
+      const toneEl = document.getElementById('tone-line');
+      const blockEl = document.getElementById('quote-block');
 
-        // --- Bild / Video -----------------------------------------------------
-        const portrait = document.getElementById("mira-portrait");
-        const video = document.getElementById("mira-video");
-        const imageMeta = document.getElementById("image-meta");
-        const imageLabel = document.getElementById("image-path-label");
+      async function loadStatus() {
+        try {
+          const res = await fetch('data/self/status.json?cache=' + Date.now());
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
 
-        const pngPath = "data/self/latest_image.png";
-        const svgPath = "data/self/latest_image.svg";
-        const videoPath = "data/self/latest_video.mp4";
+          const quote =
+            (data && typeof data.daily_quote === 'string' && data.daily_quote.trim()) ||
+            'Ich bin hier, präsent bei dir.';
+          quoteEl.textContent = quote;
 
-        if (portrait) {
-          portrait.src = pngPath;
-          portrait.addEventListener("load", () => {
-            if (imageLabel && imageLabel.textContent === "…") {
-              imageLabel.textContent = pngPath;
-            }
-          });
-          portrait.addEventListener("error", () => {
-            portrait.src = svgPath;
-            if (imageLabel) imageLabel.textContent = svgPath;
-            if (imageMeta) {
-              imageMeta.insertAdjacentText(
-                "beforeend",
-                " (Fallback auf SVG-Platzhalter)"
-              );
-            }
-          });
-        }
-
-        // Versuche, Video zu laden
-        if (video) {
-          video.src = videoPath;
-          video.muted = true;
-
-          video.addEventListener("loadeddata", () => {
-            // Video verfügbar: zeige Video, verstecke Bild
-            video.style.display = "block";
-            if (portrait) {
-              portrait.style.display = "none";
-            }
-            if (imageLabel) imageLabel.textContent = videoPath;
-            if (imageMeta) {
-              imageMeta.insertAdjacentText(
-                "beforeend",
-                " (Video aktiv, stumm mit Audio synchron)"
-              );
-            }
-          });
-
-          video.addEventListener("error", () => {
-            // Wenn Video nicht geladen werden kann, bleiben wir beim Bild
-            video.style.display = "none";
-          });
-        }
-
-        // --- Audio -----------------------------------------------------------
-        const audio = document.getElementById("mira-voice");
-        const audioLabel = document.getElementById("audio-path-label");
-        const audioMeta = document.getElementById("audio-meta");
-        const audioPath = "audio/latest.wav";
-
-        if (audio) {
-          audio.src = audioPath;
-
-          audio.addEventListener("loadedmetadata", () => {
-            if (audioLabel) audioLabel.textContent = audioPath;
-          });
-
-          audio.addEventListener("error", () => {
-            if (audioMeta) {
-              audioMeta.textContent =
-                "Kein gültiges Audio gefunden (erwartet: audio/latest.wav)";
-            }
-          });
-
-          // Audio und Video koppeln (falls Video vorhanden ist)
-          if (video) {
-            audio.addEventListener("play", () => {
-              try {
-                if (video.readyState >= 2) {
-                  // Wenn Audio von vorn startet, Video auch zurücksetzen
-                  if (audio.currentTime < 0.3) {
-                    video.currentTime = 0;
-                  }
-                  video.play().catch(() => {});
-                }
-              } catch (e) {}
-            });
-
-            audio.addEventListener("pause", () => {
-              try {
-                video.pause();
-              } catch (e) {}
-            });
-
-            audio.addEventListener("seeking", () => {
-              try {
-                video.currentTime = audio.currentTime;
-              } catch (e) {}
-            });
+          if (data && typeof data.base_tone === 'string' && data.base_tone.trim()) {
+            toneEl.textContent = 'Grundton heute: ' + data.base_tone.trim();
+          } else {
+            toneEl.textContent = '';
           }
+
+          blockEl.style.opacity = '1';
+        } catch (e) {
+          quoteEl.textContent =
+            'Statusdatei konnte nicht geladen werden (erwartet: data/self/status.json).';
+          toneEl.textContent = '';
+          blockEl.style.opacity = '0.85';
         }
+      }
 
-        // --- Status / Tagesspruch -------------------------------------------
-        fetch("data/self/status.json")
-          .then((res) => {
-            if (!res.ok) throw new Error("HTTP " + res.status);
-            return res.json();
-          })
-          .then((data) => {
-            const quote = data.daily_quote || "";
-            const tone = data.base_tone || "";
-            const updated = data.updated_at || "";
-
-            if (quote) {
-              setText("quote-text", quote);
-            } else {
-              setText(
-                "quote-text",
-                "Ich bin anwesend – aber heute ohne speziellen Tagesspruch."
-              );
-            }
-
-            const block = document.getElementById("quote-block");
-            if (block && tone) {
-              block.title = "Basis-Ton: " + tone + (updated ? " · " + updated : "");
-            }
-          })
-          .catch(() => {
-            setText(
-              "quote-text",
-              "Status-Datei nicht verfügbar. Ich bleibe trotzdem ruhig und klar."
-            );
-          });
-      });
-    </script>
-  </body>
+      loadStatus();
+    })();
+  </script>
+</body>
 </html>
