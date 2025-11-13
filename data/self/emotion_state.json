@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "updated_at": "2025-11-13T00:00:00Z",
+
+  "current_emotion": {
+    "label": "calm",
+    "intensity": 0.28,
+    "warmth": 0.67,
+    "energy": 0.35,
+    "focus": 0.52
+  },
+
+  "micro_expression": {
+    "mouth_tension": 0.12,
+    "eye_softness": 0.74,
+    "brow_relaxation": 0.68,
+    "blink_rate_factor": 1.03
+  },
+
+  "real_time_adjustment": {
+    "speech_sync_bias": 0.88,
+    "emotion_to_expression_blend": 0.42,
+    "stability_factor": 0.92,
+    "allow_variation": true
+  },
+
+  "context_triggers": {
+    "quote_impact": 0.25,
+    "self_image_alignment": 0.75,
+    "learning_feedback": 0.52
+  }
+}
