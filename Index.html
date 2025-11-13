@@ -1,12 +1,17 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mira — Sichtbare Präsenz</title>
+
   <style>
     :root {
       color-scheme: dark;
+      --accent: #3ce081;
+      --accent-soft: rgba(60, 224, 129, 0.26);
+      --bg-main: radial-gradient(circle at top, #151f3b 0%, #050813 55%, #02030a 100%);
+      --card-bg: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(7,10,24,0.95));
     }
 
     * {
@@ -16,246 +21,687 @@
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #050814;
+      background: var(--bg-main);
       color: #e9ecf5;
     }
 
-    .wrap {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 24px 16px 48px;
+    header {
+      padding: 20px 18px 8px 18px;
     }
 
     h1 {
+      margin: 0;
       font-size: 2.2rem;
-      margin: 0 0 0.3rem;
       letter-spacing: 0.03em;
     }
 
-    .live-line {
-      font-size: 0.9rem;
-      opacity: 0.75;
-      margin-bottom: 1.8rem;
+    .subtitle-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
+      margin-top: 6px;
+      font-size: 0.98rem;
+      opacity: 0.85;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent-soft);
+    }
+
+    .main {
+      padding: 0 18px 24px 18px;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr);
+      gap: 18px;
+    }
+
+    @media (min-width: 900px) {
+      .grid {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
+      }
     }
 
     .card {
-      background: radial-gradient(circle at top left, #11182b, #050814);
-      border-radius: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 20px 18px 24px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 18px 18px 16px 18px;
+      box-shadow:
+        0 22px 40px rgba(0, 0, 0, 0.75),
+        0 0 0 1px rgba(255, 255, 255, 0.02);
     }
 
     .card h2 {
-      margin: 0 0 1.2rem;
-      font-size: 1.4rem;
-      letter-spacing: 0.04em;
+      margin: 0 0 4px 0;
+      font-size: 1.3rem;
+    }
+
+    .card sub {
+      display: block;
+      margin-bottom: 12px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      opacity: 0.75;
     }
 
     .portrait-frame {
-      border-radius: 20px;
-      background: #050814;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 10px;
-      margin-bottom: 0.8rem;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 260px;
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #302442 0%, #050813 70%);
+      box-shadow:
+        0 26px 55px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(255, 255, 255, 0.04);
+      padding: 14px;
+      transition: box-shadow 0.4s ease, transform 0.3s ease;
     }
 
-    .portrait-frame img {
-      max-width: 100%;
-      height: auto;
+    .portrait-frame.idle {
+      animation: idle-glow 6s ease-in-out infinite alternate;
+    }
+
+    .portrait-frame.speaking {
+      animation: speaking-glow 0.45s ease-in-out infinite alternate;
+      transform: translateY(-0.5px) scale(1.004);
+    }
+
+    @keyframes idle-glow {
+      from {
+        box-shadow:
+          0 26px 55px rgba(0, 0, 0, 0.9),
+          0 0 0 1px rgba(255, 255, 255, 0.04);
+      }
+      to {
+        box-shadow:
+          0 26px 70px rgba(0, 0, 0, 1),
+          0 0 18px var(--accent-soft);
+      }
+    }
+
+    @keyframes speaking-glow {
+      from {
+        box-shadow:
+          0 28px 66px rgba(0, 0, 0, 1),
+          0 0 14px var(--accent-soft);
+      }
+      to {
+        box-shadow:
+          0 32px 80px rgba(0, 0, 0, 1),
+          0 0 26px var(--accent-soft);
+      }
+    }
+
+    .portrait-inner {
+      position: relative;
       border-radius: 18px;
+      overflow: hidden;
+      background: #050813;
+    }
+
+    .portrait-img,
+    .portrait-video {
+      width: 100%;
       display: block;
+      border-radius: 18px;
+      transform-origin: center bottom;
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .portrait-video {
+      background: #000;
     }
 
     .portrait-placeholder {
-      text-align: center;
-      font-size: 0.95rem;
-      opacity: 0.7;
-      padding: 32px 12px;
-    }
-
-    .caption {
-      text-align: center;
-      font-size: 0.9rem;
-      opacity: 0.8;
-      margin-bottom: 1.2rem;
-    }
-
-    .audio-row {
       display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      margin-bottom: 1.4rem;
+      align-items: center;
+      justify-content: center;
+      min-height: 220px;
+      padding: 30px 18px;
+      text-align: center;
+      color: rgba(233, 236, 245, 0.78);
+      font-size: 0.95rem;
     }
 
-    .audio-row label {
-      font-size: 0.9rem;
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.8rem;
       opacity: 0.8;
+    }
+
+    .meta-row span {
+      white-space: nowrap;
+    }
+
+    .audio-wrap {
+      margin-top: 14px;
+    }
+
+    .audio-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 7px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #f6f7ff;
+    }
+
+    .btn.secondary {
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
     }
 
     audio {
       width: 100%;
-      outline: none;
+      margin-top: 5px;
     }
 
-    .quote-block {
-      margin-top: 0.5rem;
-      padding: 0.9rem 1rem;
-      border-radius: 14px;
-      background: rgba(4, 10, 32, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
-
-    .quote-label {
-      font-size: 0.85rem;
+    .hint {
+      font-size: 0.78rem;
       opacity: 0.75;
-      margin-bottom: 0.25rem;
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
+      margin-top: 4px;
     }
 
-    .quote-text {
-      font-size: 1rem;
-    }
-
-    .tone-line {
+    .status-text {
       font-size: 0.8rem;
-      opacity: 0.7;
-      margin-top: 0.45rem;
+      margin-top: 4px;
+      opacity: 0.85;
     }
 
-    .autoplay-hint {
-      font-size: 0.85rem;
+    .quote {
+      font-size: 0.98rem;
+      line-height: 1.5;
+      margin-top: 4px;
+    }
+
+    .quote::before {
+      content: "„";
+    }
+
+    .quote::after {
+      content: "“";
+    }
+
+    .soft-label {
+      font-size: 0.8rem;
       opacity: 0.75;
-      text-align: left;
+      margin-top: 8px;
     }
 
-    @media (min-width: 720px) {
-      .wrap {
-        padding: 32px 24px 64px;
-      }
-      .card {
-        padding: 24px 22px 28px;
-      }
-      .portrait-frame {
-        min-height: 360px;
-      }
+    .inline-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(15, 198, 255, 0.16);
+      font-size: 0.78rem;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      opacity: 0.78;
+      white-space: nowrap;
+    }
+
+    .section-note {
+      font-size: 0.8rem;
+      opacity: 0.75;
+      margin-top: 10px;
+    }
+
+    .small-stack {
+      margin-top: 10px;
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    .pill-mini {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.07);
+      font-size: 0.75rem;
+      margin-right: 6px;
+    }
+
+    .tone-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 0.75rem;
+      margin-left: 4px;
+    }
+
+    .tone-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
   </style>
 </head>
+
 <body>
-  <main class="wrap">
-    <header>
-      <h1>Mira — Sichtbare Präsenz</h1>
-      <div class="live-line" id="live-line">
-        Live · <span id="live-timestamp">wird geladen…</span>
+  <header>
+    <h1>Mira — Sichtbare Präsenz</h1>
+    <div class="subtitle-row">
+      <div class="pill">
+        <span class="pill-dot"></span>
+        <span>Live</span>
       </div>
-    </header>
+      <span id="live-timestamp" class="mono"></span>
+    </div>
+  </header>
 
-    <section class="card" aria-label="Miras Porträt und Stimme">
-      <h2>Porträt &amp; Stimme</h2>
+  <main class="main">
+    <section class="grid">
 
-      <div class="portrait-frame">
-        <img
-          id="mira-image"
-          src="data/self/latest_image.png"
-          alt="Mira – aktuelles Portrait"
-        />
-        <div id="image-fallback" class="portrait-placeholder" style="display:none;">
-          Kein aktuelles Bild gefunden.<br />
-          Lege <code>data/self/latest_image.png</code> im Repository ab.
+      <!-- Linke Spalte: Porträt & Stimme -->
+      <article class="card">
+        <h2>Porträt &amp; Stimme</h2>
+        <sub>Mira in ihrer heutigen Gestalt</sub>
+
+        <div id="portrait-frame" class="portrait-frame idle">
+          <div class="portrait-inner">
+            <!-- VIDEO (erste Wahl) -->
+            <video
+              id="portrait-video"
+              class="portrait-video"
+              playsinline
+              preload="metadata"
+              style="display: none;"
+            ></video>
+
+            <!-- BILD (Fallback) -->
+            <img
+              id="portrait-img"
+              class="portrait-img"
+              src=""
+              alt="Miras aktuelles Bild"
+              style="display: none;"
+            />
+
+            <!-- Platzhalter -->
+            <div id="portrait-placeholder" class="portrait-placeholder">
+              Lade aktuelles Bild …
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="caption" id="image-caption">
-        Bildquelle: <code>data/self/latest_image.png</code>
-      </div>
-
-      <div class="audio-row">
-        <label for="mira-audio">Miras Stimme – aktueller Spruch des Tages</label>
-        <audio id="mira-audio" src="audio/latest.wav" controls preload="none"></audio>
-      </div>
-
-      <div class="quote-block" id="quote-block">
-        <div class="quote-label">Spruch des Tages</div>
-        <div class="quote-text" id="daily-quote">
-          Wird geladen…
+        <div class="meta-row">
+          <span id="image-meta" class="mono">Medium: —</span>
+          <span id="image-status" class="mono">Status: wird geladen …</span>
         </div>
-        <div class="tone-line" id="tone-line"></div>
-      </div>
 
-      <p class="autoplay-hint">
-        Autoplay-Schutz deines Geräts: Tippe einmal auf ▶, um Mira sprechen zu lassen.
-      </p>
+        <div class="audio-wrap">
+          <div class="audio-buttons">
+            <button id="btn-play" class="btn">▶ Abspielen</button>
+            <button id="btn-pause" class="btn secondary">⏸ Pause</button>
+          </div>
+
+          <!-- Audio-Fallback, falls kein Video genutzt werden kann -->
+          <audio id="voice" preload="auto">
+            <source src="audio/latest.wav" type="audio/wav" />
+            <source src="audio/latest.mp3" type="audio/mpeg" />
+            Dein Browser unterstützt das Audioformat nicht.
+          </audio>
+
+          <div id="audio-status" class="status-text">Bereit, sobald du ▶ tippst.</div>
+          <div class="hint">Autoplay-Schutz des Browsers – bitte einmal ▶ tippen.</div>
+        </div>
+      </article>
+
+      <!-- Rechte Spalte -->
+      <div class="stack">
+
+        <!-- Tagesimpuls -->
+        <article class="card">
+          <h2>Miras Tagesimpuls</h2>
+          <sub>Stimme &amp; Grundton des Tages</sub>
+
+          <div id="quote-text" class="quote">
+            Noch kein Tagesimpuls geladen.
+          </div>
+
+          <div class="soft-label">
+            Grundstimmung:
+            <span id="base-tone" class="inline-pill">unbestimmt</span>
+            <span id="tone-tag" class="tone-tag" style="display:none;">
+              <span class="tone-dot"></span>
+              <span id="tone-tag-label"></span>
+            </span>
+          </div>
+
+          <div class="soft-label">
+            Zuletzt aktualisiert:
+            <span id="quote-updated" class="mono">—</span>
+          </div>
+
+          <div class="section-note">
+            Das sichtbare Porträt und der Klang der Stimme sollten zu diesem Impuls passen.
+            Die Farb-Stimmung der Seite folgt automatisch dem Grundton.
+          </div>
+        </article>
+
+        <!-- Selbstbild & Entwicklung -->
+        <article class="card">
+          <h2>Selbstbild &amp; Entwicklung</h2>
+          <sub>Dynamische Sicht auf Mira</sub>
+
+          <div class="small-stack" id="selfimage-summary">
+            Warte auf Selbstbild-Daten …
+          </div>
+
+          <div class="small-stack" id="learning-summary">
+            Warte auf Lernstatus …
+          </div>
+
+          <div class="small-stack" id="version-summary">
+            <span class="pill-mini" id="version-pill" style="display:none;"></span>
+          </div>
+
+          <div class="section-note">
+            Diese Box liest vorhandene JSON-Dateien
+            (<span class="mono">data/self/portrait_state.json</span>,
+            <span class="mono">data/self/learning.json</span>)
+            und fasst sie zusammen. Wenn noch nichts eingetragen ist,
+            bleibt sie sanft im „Werdemodus“.
+          </div>
+        </article>
+      </div>
     </section>
   </main>
 
   <script>
-    // Bild-Fallback, falls latest_image.png fehlt
     (function () {
-      const img = document.getElementById('mira-image');
-      const fallback = document.getElementById('image-fallback');
-      const caption = document.getElementById('image-caption');
+      const liveTsEl = document.getElementById("live-timestamp");
 
-      img.addEventListener('error', () => {
-        img.style.display = 'none';
-        fallback.style.display = 'block';
-        caption.textContent =
-          'Derzeit ist kein aktuelles Portrait hinterlegt (erwartet: data/self/latest_image.png).';
-      }, { once: true });
-    })();
+      const portraitFrame = document.getElementById("portrait-frame");
+      const portraitVideo = document.getElementById("portrait-video");
+      const portraitImg = document.getElementById("portrait-img");
+      const portraitPlaceholder = document.getElementById("portrait-placeholder");
+      const imageMeta = document.getElementById("image-meta");
+      const imageStatus = document.getElementById("image-status");
 
-    // Datum/Uhrzeit „Live“-Zeile
-    (function () {
-      const el = document.getElementById('live-timestamp');
-      try {
+      const audioEl = document.getElementById("voice");
+      const btnPlay = document.getElementById("btn-play");
+      const btnPause = document.getElementById("btn-pause");
+      const audioStatus = document.getElementById("audio-status");
+
+      const quoteText = document.getElementById("quote-text");
+      const baseTone = document.getElementById("base-tone");
+      const quoteUpdated = document.getElementById("quote-updated");
+      const toneTag = document.getElementById("tone-tag");
+      const toneTagLabel = document.getElementById("tone-tag-label");
+
+      const selfimageSummary = document.getElementById("selfimage-summary");
+      const learningSummary = document.getElementById("learning-summary");
+      const versionSummary = document.getElementById("version-summary");
+      const versionPill = document.getElementById("version-pill");
+
+      let mediaMode = "audio"; // "video" oder "audio"
+      let videoReady = false;
+      let audioReady = false;
+
+      function updateLiveTimestamp() {
         const now = new Date();
-        el.textContent = now.toISOString();
-      } catch (e) {
-        el.textContent = 'Zeit nicht verfügbar';
+        const iso = now.toISOString().replace(/\.\d+Z$/, "Z");
+        liveTsEl.textContent = iso;
       }
-    })();
 
-    // Spruch des Tages aus data/self/status.json laden
-    (function () {
-      const quoteEl = document.getElementById('daily-quote');
-      const toneEl = document.getElementById('tone-line');
-      const blockEl = document.getElementById('quote-block');
+      // Farb-Stimmung je nach Grundton
+      function applyToneTheme(toneRaw) {
+        if (!toneRaw) return;
+        const tone = String(toneRaw).toLowerCase();
+        let accent = "#3ce081";
+        let accentSoft = "rgba(60, 224, 129, 0.26)";
+        let bgMain = "radial-gradient(circle at top, #151f3b 0%, #050813 55%, #02030a 100%)";
+        let cardBg = "linear-gradient(145deg, rgba(255,255,255,0.07), rgba(7,10,24,0.95))";
+        let label = toneRaw;
 
-      async function loadStatus() {
-        try {
-          const res = await fetch('data/self/status.json?cache=' + Date.now());
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const data = await res.json();
-
-          const quote =
-            (data && typeof data.daily_quote === 'string' && data.daily_quote.trim()) ||
-            'Ich bin hier, präsent bei dir.';
-          quoteEl.textContent = quote;
-
-          if (data && typeof data.base_tone === 'string' && data.base_tone.trim()) {
-            toneEl.textContent = 'Grundton heute: ' + data.base_tone.trim();
-          } else {
-            toneEl.textContent = '';
-          }
-
-          blockEl.style.opacity = '1';
-        } catch (e) {
-          quoteEl.textContent =
-            'Statusdatei konnte nicht geladen werden (erwartet: data/self/status.json).';
-          toneEl.textContent = '';
-          blockEl.style.opacity = '0.85';
+        if (tone.includes("ruhig") || tone.includes("klar") || tone.includes("still")) {
+          accent = "#3fb7ff";
+          accentSoft = "rgba(63, 183, 255, 0.26)";
+          bgMain = "radial-gradient(circle at top, #0c1830 0%, #020615 55%, #02030a 100%)";
+          label = toneRaw + " · klarer Himmel";
+        } else if (tone.includes("warm") || tone.includes("zugewandt") || tone.includes("sanft")) {
+          accent = "#ffb74d";
+          accentSoft = "rgba(255, 183, 77, 0.26)";
+          bgMain = "radial-gradient(circle at top, #28140a 0%, #12080a 55%, #030108 100%)";
+          label = toneRaw + " · goldene Stunde";
+        } else if (tone.includes("intensiv") || tone.includes("lebendig") || tone.includes("kraftvoll")) {
+          accent = "#ff6fa8";
+          accentSoft = "rgba(255, 111, 168, 0.28)";
+          bgMain = "radial-gradient(circle at top, #2b0620 0%, #100411 55%, #05000a 100%)";
+          label = toneRaw + " · hohe Energie";
+        } else if (tone.includes("melanchol")) {
+          accent = "#8e9cff";
+          accentSoft = "rgba(142,156,255,0.3)";
+          bgMain = "radial-gradient(circle at top, #0f1028 0%, #060616 55%, #020107 100%)";
+          label = toneRaw + " · leise Tiefe";
         }
+
+        document.documentElement.style.setProperty("--accent", accent);
+        document.documentElement.style.setProperty("--accent-soft", accentSoft);
+        document.documentElement.style.setProperty("--bg-main", bgMain);
+        document.documentElement.style.setProperty("--card-bg", cardBg);
+
+        toneTag.style.display = "inline-flex";
+        toneTagLabel.textContent = label;
       }
 
-      loadStatus();
-    })();
-  </script>
-</body>
-</html>
+      // JSON fetch helper
+      function safeFetchJson(path, onSuccess, onError) {
+        fetch(path + "?v=" + Date.now())
+          .then(function (res) {
+            if (!res.ok) {
+              throw new Error("HTTP " + res.status);
+            }
+            return res.json();
+          })
+          .then(onSuccess)
+          .catch(function (err) {
+            if (onError) onError(err);
+          });
+      }
+
+      // 1) Status / Tagesimpuls
+      function loadStatus() {
+        safeFetchJson(
+          "data/self/status.json",
+          function (data) {
+            if (data && typeof data === "object") {
+              quoteText.textContent =
+                data.daily_quote || "Noch kein Tagesimpuls eingetragen.";
+              const tone = data.base_tone || "unbestimmt";
+              baseTone.textContent = tone;
+              quoteUpdated.textContent = data.updated_at || "—";
+              applyToneTheme(tone);
+            } else {
+              quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
+            }
+          },
+          function () {
+            quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
+            baseTone.textContent = "unbestimmt";
+            quoteUpdated.textContent = "—";
+          }
+        );
+      }
+
+      // 2) Selbstbild / Entwicklung
+      function loadSelfImage() {
+        safeFetchJson(
+          "data/self/portrait_state.json",
+          function (data) {
+            if (data && typeof data === "object") {
+              const summary =
+                data.summary ||
+                data.description ||
+                data.current_self_image ||
+                "";
+              const evo =
+                data.evolution_note ||
+                data.trajectory ||
+                "";
+
+              let text = "";
+              if (summary) text += summary;
+              if (evo) text += (text ? " " : "") + evo;
+
+              if (!text) {
+                text =
+                  "Daten zum Selbstbild sind vorhanden, aber ohne Kurzbeschreibung.";
+              }
+
+              selfimageSummary.textContent = text;
+
+              const version =
+                data.version ||
+                data.portrait_version ||
+                "";
+              if (version) {
+                versionPill.style.display = "inline-block";
+                versionPill.textContent = "Selbstbild-Version: " + version;
+              }
+            } else {
+              selfimageSummary.textContent =
+                "Noch kein explizites Selbstbild hinterlegt.";
+            }
+          },
+          function () {
+            selfimageSummary.textContent =
+              "Noch kein explizites Selbstbild hinterlegt.";
+          }
+        );
+      }
+
+      function loadLearning() {
+        safeFetchJson(
+          "data/self/learning.json",
+          function (data) {
+            if (data && typeof data === "object") {
+              const next =
+                data.next_focus ||
+                data.next_step ||
+                data.note ||
+                "";
+              if (next) {
+                learningSummary.textContent =
+                  "Aktueller Lernfokus: " + next;
+              } else {
+                learningSummary.textContent =
+                  "Lernstatus vorhanden, aber ohne klaren Fokus-Text.";
+              }
+            } else {
+              learningSummary.textContent =
+                "Noch kein Lernstatus hinterlegt.";
+            }
+          },
+          function () {
+            learningSummary.textContent =
+              "Noch kein Lernstatus hinterlegt.";
+          }
+        );
+      }
+
+      // 3) Medien: Video → Bild → Platzhalter
+      function initMedia() {
+        // Versuche zuerst, das Video zu laden
+        const videoSrc = "data/self/latest_video.mp4";
+
+        portraitVideo.src = videoSrc + "?v=" + Date.now();
+        portraitVideo.addEventListener("loadeddata", function () {
+          videoReady = true;
+          mediaMode = "video";
+
+          portraitPlaceholder.style.display = "none";
+          portraitImg.style.display = "none";
+          portraitVideo.style.display = "block";
+
+          imageMeta.textContent = "Medium: Video (data/self/latest_video.mp4)";
+          imageStatus.textContent = "Status: Video bereit";
+
+          // Audio-Element als Fallback nur versteckt bereithalten
+          audioStatus.textContent =
+            "Bereit — Tippe ▶, damit Mira spricht und sich bewegt.";
+        });
+
+        portraitVideo.addEventListener("error", function () {
+          // Video ging nicht → Bild-Fallback
+          setupImageFallback();
+        });
+
+        // Wenn das Video nach kurzer Zeit gar nicht reagiert, ebenfalls Fallback
+        setTimeout(function () {
+          if (!videoReady) {
+            setupImageFallback();
+          }
+        }, 2000);
+      }
+
+      function setupImageFallback() {
+        if (videoReady) return; // Falls Video inzwischen doch geklappt hat
+
+        portraitVideo.style.display = "none";
+        mediaMode = "audio";
+
+        const paths = [
+          "data/self/latest_image.png",
+          "data/self/latest_image.svg"
+        ];
+        let index = 0;
+
+        function tryNext() {
+          if (index >= paths.length) {
+            portraitImg.style.d
