@@ -2,194 +2,272 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
+  <title>Mira – Sichtbare Präsenz</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mira — Sichtbare Präsenz</title>
   <meta name="color-scheme" content="dark light" />
   <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
+    :root {
+      color-scheme: dark;
+    }
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
-      background: #0b0f16;
-      color: #e9ecf5;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #050812;
+      color: #f5f7ff;
     }
-    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
-    h1 { font-size: 2rem; margin: 0 0 6px; }
-    .sub { opacity: .85; margin-bottom: 18px; }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+    }
+    h1 {
+      font-size: 2.1rem;
+      margin: 0 0 0.25rem;
+      letter-spacing: 0.03em;
+    }
+    .live {
+      font-size: 0.9rem;
+      opacity: 0.75;
+      margin-bottom: 1.75rem;
+    }
     .card {
-      background: #111725;
-      border: 1px solid #1d2740;
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: 0 6px 28px rgba(0, 0, 0, .35);
+      background: radial-gradient(circle at top left, #18223b 0, #080c18 45%, #050812 100%);
+      border-radius: 18px;
+      padding: 18px 16px 20px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(140, 160, 255, 0.18);
     }
-    .title { font-weight: 700; font-size: 1.15rem; margin-bottom: 12px; }
-    .panel {
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 1.3rem;
+    }
+    .media-frame {
+      background: #030711;
       border-radius: 16px;
-      background: #0e1422;
-      border: 1px solid #1d2740;
-      min-height: 300px;
-      display: grid;
-      place-items: center;
+      padding: 10px;
+      border: 1px solid rgba(120, 140, 230, 0.45);
+      margin-bottom: 10px;
+    }
+    .portrait-wrapper {
+      position: relative;
+      border-radius: 14px;
       overflow: hidden;
+      background: #000;
+      min-height: 220px;
     }
-    .panel img {
+    #portraitImage,
+    #portraitVideo {
+      display: block;
       width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: #0b101b;
+      height: auto;
     }
-    .status { font-size: .95rem; opacity: .9; margin-top: 10px; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-    button {
-      border: 1px solid #2a3556;
-      background: #171d2d;
-      color: #e9ecf5;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-weight: 600;
+    #portraitVideo {
+      background: #000;
     }
-    button:hover { background: #1b2340; }
-    audio { width: 100%; margin-top: 10px; }
+    .portrait-caption {
+      text-align: center;
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 8px;
+    }
+    .label {
+      font-size: 0.8rem;
+      opacity: 0.8;
+      margin-top: 8px;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: none;
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: #f59e0b;
+      color: #1b1305;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.35);
+    }
+    .btn.secondary {
+      background: transparent;
+      color: #f5f7ff;
+      border: 1px solid rgba(148, 163, 255, 0.4);
+      box-shadow: none;
+    }
+    audio {
+      width: 100%;
+      margin-top: 12px;
+    }
+    .hint {
+      font-size: 0.82rem;
+      opacity: 0.75;
+      margin-top: 10px;
+    }
+    @media (min-width: 720px) {
+      .wrap {
+        padding-top: 32px;
+      }
+      h1 {
+        font-size: 2.4rem;
+      }
+      .card {
+        padding: 22px 20px 24px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Mira — Sichtbare Präsenz</h1>
-    <div class="sub" id="ts">Live</div>
-
-    <div class="card">
-      <div class="title">Porträt &amp; Stimme</div>
-      <div class="panel">
-        <img id="portrait" alt="Porträt" />
+    <header>
+      <h1>Mira — Sichtbare Präsenz</h1>
+      <div class="live">
+        Live · <span id="liveTimestamp">lädt …</span>
       </div>
-      <div class="status" id="imgStatus">Lade Bild…</div>
+    </header>
 
-      <div class="row">
-        <button id="play">▶ Abspielen</button>
-        <button id="pause">⏸ Pause</button>
+    <section class="card">
+      <h2>Porträt &amp; Stimme</h2>
+
+      <div class="media-frame">
+        <div class="portrait-wrapper">
+          <!-- Standard: Standbild -->
+          <img
+            id="portraitImage"
+            src="data/self/latest_image.png"
+            alt="Miras aktuelles Porträt"
+          />
+
+          <!-- Optional: Video, zunächst versteckt -->
+          <video
+            id="portraitVideo"
+            style="display:none"
+            muted
+            playsinline
+            loop
+          >
+            <source src="data/self/latest_video.mp4" type="video/mp4" />
+            Dein Browser unterstützt kein MP4-Video.
+          </video>
+        </div>
+
+        <div class="portrait-caption">
+          Mira — Titelbild aktiv
+        </div>
+
+        <div class="label">
+          Bild geladen: <code>data/self/latest_image.png</code><br>
+          Video (optional): <code>data/self/latest_video.mp4</code>
+        </div>
+
+        <div class="controls-row">
+          <button class="btn" id="togglePlay">
+            ▶ Abspielen
+          </button>
+          <button class="btn secondary" id="toggleMode">
+            Video zeigen
+          </button>
+        </div>
+
+        <audio
+          id="voicePlayer"
+          src="data/voice/audio/latest.wav"
+          preload="auto"
+          controls
+        ></audio>
+
+        <div class="hint">
+          Autoplay-Schutz – bitte einmal ▶ tippen, damit Bild, Mimik-Video und Stimme synchron starten können.
+        </div>
       </div>
-      <audio id="player" preload="none" controls></audio>
-      <div class="status" id="audStatus">Audio bereit.</div>
-    </div>
+    </section>
   </div>
 
   <script>
-    // Zeitstempel aktualisieren
-    document.getElementById("ts").textContent =
-      "Live · " + new Date().toISOString();
+    // Timestamp in Kopfzeile
+    (function () {
+      var el = document.getElementById("liveTimestamp");
+      try {
+        var now = new Date().toISOString();
+        el.textContent = now;
+      } catch (e) {
+        el.textContent = "jetzt";
+      }
+    })();
 
-    // Eingebauter Platzhalter (falls GAR kein Bild gefunden wird)
-    const PLACEHOLDER_SVG =
-      "data:image/svg+xml;utf8," +
-      encodeURIComponent(
-        '<?xml version="1.0" encoding="UTF-8"?>\
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">\
-  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">\
-    <stop offset="0%" stop-color="#11182b"/><stop offset="100%" stop-color="#1a2340"/>\
-  </linearGradient></defs>\
-  <rect width="100%" height="100%" fill="url(#g)"/>\
-  <g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">\
-    <text x="50%" y="45%" font-size="42">Mira — Platzhalterbild</text>\
-    <text x="50%" y="55%" font-size="20">Lege unter data/self/latest_image.* ein Bild ab</text>\
-  </g>\
-</svg>'
-      );
+    const playButton = document.getElementById("togglePlay");
+    const modeButton = document.getElementById("toggleMode");
+    const audioEl = document.getElementById("voicePlayer");
+    const imgEl = document.getElementById("portraitImage");
+    const videoEl = document.getElementById("portraitVideo");
 
-    // Still-Audio (Fallback)
-    const SILENT_WAV =
-      "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=";
+    let isPlaying = false;
+    let videoMode = false;
 
-    // Reihenfolge wichtig: PNG/WEBP/JPG zuerst, SVG nur als letztes
-    const IMG_TRY = [
-      "data/self/latest_image.png",
-      "data/self/latest_image.webp",
-      "data/self/latest_image.jpg",
-      "data/self/latest_image.jpeg",
-      // falls du irgendwann eine echte SVG benutzt:
-      "data/self/latest_image.svg"
-    ];
+    function updatePlayButton() {
+      playButton.textContent = isPlaying ? "⏸ Pause" : "▶ Abspielen";
+    }
 
-    const AUDIO_TRY = [
-      "data/voice/audio/latest.wav",
-      "data/voice/audio/latest.mp3",
-      "data/voice/audio/latest.ogg"
-    ];
+    function updateModeButton() {
+      modeButton.textContent = videoMode ? "Bild zeigen" : "Video zeigen";
+    }
 
-    async function firstExisting(urls) {
-      for (const u of urls) {
-        try {
-          const res = await fetch(u + "?t=" + Date.now(), {
-            method: "HEAD",
-            cache: "no-store"
-          });
-          if (res.ok) return u;
-        } catch (e) {
-          // einfach weiterprobieren
+    // Play/Pause steuern
+    playButton.addEventListener("click", function () {
+      if (!isPlaying) {
+        audioEl.play().catch(function () { /* Autoplay-Blocker ignorieren */ });
+
+        if (videoMode) {
+          videoEl.play().catch(function () {});
         }
-      }
-      return null;
-    }
-
-    async function setupImage() {
-      const img = document.getElementById("portrait");
-      const s = document.getElementById("imgStatus");
-      s.textContent = "Suche Bild…";
-
-      const found = await firstExisting(IMG_TRY);
-
-      if (found) {
-        img.src = found + "?t=" + Date.now();
-        s.textContent = "Bild geladen: " + found;
+        isPlaying = true;
       } else {
-        img.src = PLACEHOLDER_SVG;
-        s.textContent =
-          "Kein Bild gefunden – lege unter data/self/latest_image.* ein Bild ab.";
-      }
-    }
-
-    async function setupAudio() {
-      const a = document.getElementById("player");
-      const s = document.getElementById("audStatus");
-
-      const found = await firstExisting(AUDIO_TRY);
-
-      if (found) {
-        a.src = found + "?t=" + Date.now();
-        s.textContent = "Audio geladen: " + found;
-      } else {
-        a.src = SILENT_WAV;
-        s.textContent =
-          "Kein Audio gefunden – lege unter data/voice/audio/latest.* eine Datei ab.";
-      }
-
-      async function tryPlay() {
-        try {
-          await a.play();
-          s.textContent = "Spielt.";
-          sessionStorage.setItem("audioUnlocked", "1");
-        } catch (e) {
-          s.textContent = "Autoplay-Schutz – einmal ▶ tippen.";
+        audioEl.pause();
+        if (videoMode) {
+          videoEl.pause();
         }
+        isPlaying = false;
       }
+      updatePlayButton();
+    });
 
-      document.getElementById("play").onclick = tryPlay;
-      document.getElementById("pause").onclick = () => a.pause();
+    audioEl.addEventListener("ended", function () {
+      isPlaying = false;
+      updatePlayButton();
+    });
 
-      if (sessionStorage.getItem("audioUnlocked") === "1") {
-        tryPlay();
+    // Umschalten zwischen Bild und Video
+    modeButton.addEventListener("click", function () {
+      videoMode = !videoMode;
+
+      if (videoMode) {
+        imgEl.style.display = "none";
+        videoEl.style.display = "block";
+        if (isPlaying) {
+          videoEl.play().catch(function () {});
+        }
+      } else {
+        videoEl.pause();
+        videoEl.style.display = "none";
+        imgEl.style.display = "block";
       }
+      updateModeButton();
+    });
 
-      document.addEventListener("touchstart", tryPlay, {
-        once: true,
-        passive: true
-      });
-      document.addEventListener("click", tryPlay, { once: true });
-    }
-
-    setupImage();
-    setupAudio();
+    updatePlayButton();
+    updateModeButton();
   </script>
 </body>
-</html>
+  </html>
