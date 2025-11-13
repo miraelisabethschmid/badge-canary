@@ -86,7 +86,7 @@
     // Still-Audio (Fallback)
     const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=';
 
-    // GitHub Pages läuft direkt aus /docs, daher KEIN docs/-Prefix
+    // Bildpfade (GitHub Pages läuft direkt aus /docs, daher kein docs/-Prefix)
     const IMG_TRY = [
       'data/self/latest_image.svg',
       'data/self/latest_image.png',
@@ -95,18 +95,22 @@
       'data/self/latest_image.webp'
     ];
 
+    // Audiopfade: zuerst data/voice/audio/, dann Fallback /audio/
     const AUDIO_TRY = [
       'data/voice/audio/latest.wav',
       'data/voice/audio/latest.mp3',
-      'data/voice/audio/latest.ogg'
+      'data/voice/audio/latest.ogg',
+      'audio/latest.wav',
+      'audio/latest.mp3',
+      'audio/latest.ogg'
     ];
 
     async function firstExisting(urls){
       for (const u of urls){
         try {
-          const res = await fetch(u + '?t=' + Date.now(), { method:'HEAD', cache:'no-store' });
+          const res = await fetch(u + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
           if (res.ok) return u;
-        } catch(e){}
+        } catch (e) {}
       }
       return null;
     }
@@ -134,18 +138,25 @@
         s.textContent = 'Audio geladen: ' + found;
       } else {
         a.src = SILENT_WAV;
-        s.textContent = 'Kein Audio gefunden – lade unter data/voice/audio/latest.*';
+        s.textContent = 'Kein Audio gefunden – lade unter data/voice/audio/latest.* oder audio/latest.*';
       }
 
       async function tryPlay(){
-        try { await a.play(); s.textContent = 'Spielt.'; sessionStorage.setItem('audioUnlocked','1'); }
-        catch(e){ s.textContent = 'Autoplay-Schutz – einmal ▶ tippen.'; }
+        try {
+          await a.play();
+          s.textContent = 'Spielt.';
+          sessionStorage.setItem('audioUnlocked', '1');
+        } catch (e) {
+          s.textContent = 'Autoplay-Schutz – einmal ▶ tippen.';
+        }
       }
 
       document.getElementById('play').onclick = tryPlay;
       document.getElementById('pause').onclick = () => a.pause();
 
-      if (sessionStorage.getItem('audioUnlocked') === '1') { tryPlay(); }
+      if (sessionStorage.getItem('audioUnlocked') === '1') {
+        tryPlay();
+      }
 
       document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
       document.addEventListener('click', tryPlay, { once: true });
@@ -155,4 +166,4 @@
     setupAudio();
   </script>
 </body>
-        </html>
+</html>
