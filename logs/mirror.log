@@ -14,3 +14,7 @@ Last commit: 1ee1c41 Ingest: mirror latest PNG and update heartbeat (45 seconds 
 Commit count: 1
 Last commit: ee852be Create fix-all-workflows.yml (11 minutes ago)
 ---
+🪞 Mirror Base Check — Thu Nov 13 01:14:27 UTC 2025
+Commit count: 1
+Last commit: 9b34f3b Deliver: move outbox lines to data/replies.jsonl and clear outbox (19 minutes ago)
+---
