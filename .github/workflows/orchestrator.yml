@@ -36,7 +36,6 @@ jobs:
           NOW=$(date +%s)
           SEC=$((RES-NOW))
           [ $SEC -lt 0 ] && SEC=0
-
           echo "remaining=$REM" >> $GITHUB_OUTPUT
           echo "reset_in=$SEC"   >> $GITHUB_OUTPUT
 
@@ -58,25 +57,30 @@ jobs:
 
           # --- Helfer: dispatch wenn sinnvoll ---------------------------------
           trigger_if_needed () {
-            local WF_FILE="$1"
+            local WF_FILE="$1"   # z.B. .github/workflows/self-image-smoke.yml
             local LABEL="$2"
             local MIN_AGE_MIN=10   # Mindestalters-Kriterium
 
+            # nur Dateiname für die GitHub-API extrahieren
+            local WF_NAME
+            WF_NAME="$(basename "$WF_FILE")"
+
             echo "—" >> $GITHUB_STEP_SUMMARY
-            echo "🔎 Prüfe **$LABEL** ($WF_FILE)" >> $GITHUB_STEP_SUMMARY
+            echo "🔎 Prüfe **$LABEL** ($WF_NAME)" >> $GITHUB_STEP_SUMMARY
 
-            # Workflow-ID via API (brauchen wir zum Abfragen & Dispatch)
-            WF=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
-              "https://api.github.com/repos/$REPO/actions/workflows/$WF_FILE")
+            # Workflow-Info via API (Dateiname, nicht kompletter Pfad!)
+            WF=$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$REPO/actions/workflows/$WF_NAME")
 
-            WF_ID=$(echo "$WF" | jq -r '.id')
-            if [ "$WF_ID" = "null" ] || [ -z "$WF_ID" ]; then
-              echo "❌ Workflow $WF_FILE nicht gefunden." >> $GITHUB_STEP_SUMMARY
+            WF_ID=$(echo "$WF" | jq -r '.id // empty')
+
+            if [ -z "$WF_ID" ] || [ "$WF_ID" = "null" ]; then
+              echo "❌ Workflow $WF_NAME nicht gefunden." >> $GITHUB_STEP_SUMMARY
               return 0
             fi
 
             # Läuft gerade etwas?
-            INPROG=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+            INPROG=$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" \
               "https://api.github.com/repos/$REPO/actions/workflows/$WF_ID/runs?status=in_progress&per_page=1" \
               | jq '.total_count')
 
@@ -86,14 +90,16 @@ jobs:
             fi
 
             # Letzter Abschluss
-            LAST_JSON=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+            LAST_JSON=$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" \
               "https://api.github.com/repos/$REPO/actions/workflows/$WF_ID/runs?status=completed&per_page=1")
+
             LAST_AT=$(echo "$LAST_JSON" | jq -r '.workflow_runs[0].updated_at // empty')
 
             if [ -n "$LAST_AT" ]; then
               LAST_TS=$(date -d "$LAST_AT" +%s)
               NOW_TS=$(date +%s)
               AGE_MIN=$(( (NOW_TS - LAST_TS) / 60 ))
+
               if [ "$AGE_MIN" -lt "$MIN_AGE_MIN" ]; then
                 echo "🕒 Zu frisch (vor ${AGE_MIN}min) — Mindestalter ${MIN_AGE_MIN}min. Kein Dispatch." >> $GITHUB_STEP_SUMMARY
                 return 0
@@ -102,12 +108,12 @@ jobs:
               echo "ℹ️ Kein Completed-Run gefunden — erster Dispatch erlaubt." >> $GITHUB_STEP_SUMMARY
             fi
 
-            # Dispatch POST
+            # Dispatch POST (wieder nur Dateiname)
             RESP=$(curl -sS -o /dev/null -w "%{http_code}" \
               -X POST \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/$REPO/actions/workflows/$WF_FILE/dispatches" \
+              "https://api.github.com/repos/$REPO/actions/workflows/$WF_NAME/dispatches" \
               -d "{\"ref\":\"$REF\"}")
 
             if [ "$RESP" = "204" ]; then
@@ -118,9 +124,9 @@ jobs:
           }
 
           # --- Reihenfolge: erst Smoke, dann Hero, dann Homepage-Sync ----------
-          trigger_if_needed ".github/workflows/self-image-smoke.yml" "Self-Image Smoke Test"
-          trigger_if_needed ".github/workflows/hero-sync.yml"         "Hero Sync (latest self-image)"
-          trigger_if_needed ".github/workflows/homepage-sync-stable.yml" "Homepage Sync • Stable"
+          trigger_if_needed ".github/workflows/self-image-smoke.yml"      "Self-Image Smoke Test"
+          trigger_if_needed ".github/workflows/hero-sync.yml"              "Hero Sync (latest self-image)"
+          trigger_if_needed ".github/workflows/homepage-sync-stable.yml"   "Homepage Sync • Stable"
 
       - name: Fertig
         if: always()
