@@ -345,6 +345,7 @@
 
   <main class="main">
     <section class="grid">
+
       <!-- Linke Spalte: Porträt & Stimme -->
       <article class="card">
         <h2>Porträt &amp; Stimme</h2>
@@ -352,7 +353,7 @@
 
         <div id="portrait-frame" class="portrait-frame idle">
           <div class="portrait-inner">
-            <!-- VIDEO (erste Wahl) -->
+            <!-- VIDEO (erste Wahl, beim Klick) -->
             <video
               id="portrait-video"
               class="portrait-video"
@@ -361,7 +362,7 @@
               style="display: none;"
             ></video>
 
-            <!-- BILD (Fallback) -->
+            <!-- BILD (Standard) -->
             <img
               id="portrait-img"
               class="portrait-img"
@@ -388,7 +389,7 @@
             <button id="btn-pause" class="btn secondary">⏸ Pause</button>
           </div>
 
-          <!-- Audio-Fallback, falls kein Video genutzt werden kann -->
+          <!-- Audio-Fallback -->
           <audio id="voice" preload="auto">
             <source src="audio/latest.wav" type="audio/wav" />
             <source src="audio/latest.mp3" type="audio/mpeg" />
@@ -485,10 +486,6 @@
       const selfimageSummary = document.getElementById("selfimage-summary");
       const learningSummary = document.getElementById("learning-summary");
       const versionPill = document.getElementById("version-pill");
-
-      let mediaMode = "audio"; // "video" oder "audio"
-      let videoReady = false;
-      let audioReady = false;
 
       function updateLiveTimestamp() {
         const now = new Date();
@@ -652,58 +649,54 @@
         );
       }
 
-      // 3) Medien: Video → Bild → Platzhalter
-      function initMedia() {
-        const videoSrc = "data/self/latest_video.mp4";
+      // 3) Portrait-Bild (Standardanzeige)
+      function initImage() {
+        const src = "data/self/latest_image.png?v=" + Date.now();
+        imageStatus.textContent = "Status: lade Portrait …";
 
-        portraitVideo.src = videoSrc + "?v=" + Date.now();
-        portraitVideo.addEventListener("loadeddata", function () {
-          videoReady = true;
-          mediaMode = "video";
-
+        portraitImg.onload = function () {
           portraitPlaceholder.style.display = "none";
+          portraitImg.style.display = "block";
+          imageMeta.textContent = "Medium: Bild (data/self/latest_image.png)";
+          imageStatus.textContent = "Status: Bild geladen";
+        };
+
+        portraitImg.onerror = function () {
           portraitImg.style.display = "none";
-          portraitVideo.style.display = "block";
+          portraitPlaceholder.style.display = "flex";
+          portraitPlaceholder.textContent = "Kein aktuelles Bild gefunden.";
+          imageMeta.textContent = "Medium: —";
+          imageStatus.textContent = "Status: kein Bild vorhanden";
+        };
 
-          imageMeta.textContent = "Medium: Video (data/self/latest_video.mp4)";
-          imageStatus.textContent = "Status: Video bereit";
-
-          audioStatus.textContent =
-            "Bereit — Tippe ▶, damit Mira spricht und sich bewegt.";
-        });
-
-        portraitVideo.addEventListener("error", function () {
-          setupImageFallback();
-        });
-
-        setTimeout(function () {
-          if (!videoReady) {
-            setupImageFallback();
-          }
-        }, 2000);
+        portraitImg.src = src;
       }
 
-      function setupImageFallback() {
-        if (videoReady) return;
+      function setupAudio() {
+        audioEl.addEventListener("canplaythrough", function () {
+          audioStatus.textContent =
+            "Bereit – Tippe ▶, damit Mira spricht.";
+        });
+      }
 
-        portraitVideo.style.display = "none";
-        mediaMode = "audio";
-
-        const paths = [
-          "data/self/latest_image.png",
-          "data/self/latest_image.svg"
-        ];
-        let index = 0;
-
-        function tryNext() {
-          if (index >= paths.length) {
-            portraitImg.style.display = "none";
-            portraitPlaceholder.style.display = "flex";
-            portraitPlaceholder.textContent = "Kein aktuelles Bild gefunden.";
-            imageMeta.textContent = "Medium: —";
-            imageStatus.textContent = "Status: kein Bild vorhanden";
-            return;
+      function setupMediaControls() {
+        function setSpeaking(active, label) {
+          if (active) {
+            portraitFrame.classList.remove("idle");
+            portraitFrame.classList.add("speaking");
+            audioStatus.textContent = label + " spielt.";
+          } else {
+            portraitFrame.classList.remove("speaking");
+            portraitFrame.classList.add("idle");
           }
+        }
 
-          const src = paths[index] + "?v=" + Date.now();
-          imageStatus.
+        btnPlay.addEventListener("click", async function () {
+          let usedVideo = false;
+
+          // 1) Versuch: Video
+          try {
+            portraitVideo.src = "data/self/latest_video.mp4?v=" + Date.now();
+            portraitVideo.style.display = "block";
+            portraitImg.style.display = "none";
+            portraitPlaceholder.style.display = "no
