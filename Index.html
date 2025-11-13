@@ -34,7 +34,12 @@
       place-items: center;
       overflow: hidden;
     }
-    .panel img { width: 100%; height: 100%; object-fit: contain; background: #0b101b; }
+    .panel img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #0b101b;
+    }
     .status { font-size: .95rem; opacity: .9; margin-top: 10px; }
     .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
     button {
@@ -72,87 +77,115 @@
 
   <script>
     // Zeitstempel aktualisieren
-    document.getElementById("ts").textContent = "Live · " + new Date().toISOString();
+    document.getElementById("ts").textContent =
+      "Live · " + new Date().toISOString();
 
-    // Platzhaltergrafik (wenn kein echtes Bild gefunden wird)
-    const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<?xml version="1.0" encoding="UTF-8"?>\
+    // Eingebauter Platzhalter (falls GAR kein Bild gefunden wird)
+    const PLACEHOLDER_SVG =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        '<?xml version="1.0" encoding="UTF-8"?>\
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">\
   <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">\
-    <stop offset="0%" stop-color="#11182b"/><stop offset="100%" stop-color="#1a2340"/></linearGradient></defs>\
-  <rect width="100%" height="100%" fill="url(#g)"/><g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">\
-  <text x="50%" y="40%" font-size="42">Mira — Platzhalterbild</text>\
-  <text x="50%" y="52%" font-size="22">Kein aktuelles Porträt gefunden</text>\
-  <text x="50%" y="60%" font-size="18">Erwarte Datei in data/self/latest_image.* oder Datei mit aktuellem Namen.</text></g></svg>`);
+    <stop offset="0%" stop-color="#11182b"/><stop offset="100%" stop-color="#1a2340"/>\
+  </linearGradient></defs>\
+  <rect width="100%" height="100%" fill="url(#g)"/>\
+  <g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">\
+    <text x="50%" y="45%" font-size="42">Mira — Platzhalterbild</text>\
+    <text x="50%" y="55%" font-size="20">Lege unter data/self/latest_image.* ein Bild ab</text>\
+  </g>\
+</svg>'
+      );
 
     // Still-Audio (Fallback)
-    const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=';
+    const SILENT_WAV =
+      "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=";
 
-    // GitHub Pages läuft direkt aus /docs, daher KEIN docs/-Prefix
-    // 1. Versuche zuerst das neu hochgeladene Bild mit dem langen Dateinamen
-    // 2. Danach die "latest_image.*"-Varianten als Fallback
+    // Reihenfolge wichtig: PNG/WEBP/JPG zuerst, SVG nur als letztes
     const IMG_TRY = [
-      'data/self/file_00000000a16c7246af4bec878ad2e107.png',
-      'data/self/latest_image.svg',
-      'data/self/latest_image.png',
-      'data/self/latest_image.jpg',
-      'data/self/latest_image.jpeg',
-      'data/self/latest_image.webp'
-    );
-
-    const AUDIO_TRY = [
-      'data/voice/audio/latest.wav',
-      'data/voice/audio/latest.mp3',
-      'data/voice/audio/latest.ogg'
+      "data/self/latest_image.png",
+      "data/self/latest_image.webp",
+      "data/self/latest_image.jpg",
+      "data/self/latest_image.jpeg",
+      // falls du irgendwann eine echte SVG benutzt:
+      "data/self/latest_image.svg"
     ];
 
-    async function firstExisting(urls){
-      for (const u of urls){
+    const AUDIO_TRY = [
+      "data/voice/audio/latest.wav",
+      "data/voice/audio/latest.mp3",
+      "data/voice/audio/latest.ogg"
+    ];
+
+    async function firstExisting(urls) {
+      for (const u of urls) {
         try {
-          const res = await fetch(u + '?t=' + Date.now(), { method:'HEAD', cache:'no-store' });
+          const res = await fetch(u + "?t=" + Date.now(), {
+            method: "HEAD",
+            cache: "no-store"
+          });
           if (res.ok) return u;
-        } catch(e){}
+        } catch (e) {
+          // einfach weiterprobieren
+        }
       }
       return null;
     }
 
-    async function setupImage(){
-      const img = document.getElementById('portrait');
-      const s = document.getElementById('imgStatus');
-      s.textContent = 'Suche Bild…';
+    async function setupImage() {
+      const img = document.getElementById("portrait");
+      const s = document.getElementById("imgStatus");
+      s.textContent = "Suche Bild…";
+
       const found = await firstExisting(IMG_TRY);
-      if (found){
-        img.src = found + '?t=' + Date.now();
-        s.textContent = 'Bild geladen: ' + found;
+
+      if (found) {
+        img.src = found + "?t=" + Date.now();
+        s.textContent = "Bild geladen: " + found;
       } else {
         img.src = PLACEHOLDER_SVG;
-        s.textContent = 'Kein Bild gefunden – lade unter data/self/latest_image.*';
+        s.textContent =
+          "Kein Bild gefunden – lege unter data/self/latest_image.* ein Bild ab.";
       }
     }
 
-    async function setupAudio(){
-      const a = document.getElementById('player');
-      const s = document.getElementById('audStatus');
+    async function setupAudio() {
+      const a = document.getElementById("player");
+      const s = document.getElementById("audStatus");
+
       const found = await firstExisting(AUDIO_TRY);
-      if (found){
-        a.src = found + '?t=' + Date.now();
-        s.textContent = 'Audio geladen: ' + found;
+
+      if (found) {
+        a.src = found + "?t=" + Date.now();
+        s.textContent = "Audio geladen: " + found;
       } else {
         a.src = SILENT_WAV;
-        s.textContent = 'Kein Audio gefunden – lade unter data/voice/audio/latest.*';
+        s.textContent =
+          "Kein Audio gefunden – lege unter data/voice/audio/latest.* eine Datei ab.";
       }
 
-      async function tryPlay(){
-        try { await a.play(); s.textContent = 'Spielt.'; sessionStorage.setItem('audioUnlocked','1'); }
-        catch(e){ s.textContent = 'Autoplay-Schutz – einmal ▶ tippen.'; }
+      async function tryPlay() {
+        try {
+          await a.play();
+          s.textContent = "Spielt.";
+          sessionStorage.setItem("audioUnlocked", "1");
+        } catch (e) {
+          s.textContent = "Autoplay-Schutz – einmal ▶ tippen.";
+        }
       }
 
-      document.getElementById('play').onclick = tryPlay;
-      document.getElementById('pause').onclick = () => a.pause();
+      document.getElementById("play").onclick = tryPlay;
+      document.getElementById("pause").onclick = () => a.pause();
 
-      if (sessionStorage.getItem('audioUnlocked') === '1') { tryPlay(); }
+      if (sessionStorage.getItem("audioUnlocked") === "1") {
+        tryPlay();
+      }
 
-      document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
-      document.addEventListener('click', tryPlay, { once: true });
+      document.addEventListener("touchstart", tryPlay, {
+        once: true,
+        passive: true
+      });
+      document.addEventListener("click", tryPlay, { once: true });
     }
 
     setupImage();
