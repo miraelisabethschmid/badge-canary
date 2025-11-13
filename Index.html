@@ -345,7 +345,6 @@
 
   <main class="main">
     <section class="grid">
-
       <!-- Linke Spalte: Porträt & Stimme -->
       <article class="card">
         <h2>Porträt &amp; Stimme</h2>
@@ -403,7 +402,6 @@
 
       <!-- Rechte Spalte -->
       <div class="stack">
-
         <!-- Tagesimpuls -->
         <article class="card">
           <h2>Miras Tagesimpuls</h2>
@@ -446,7 +444,7 @@
             Warte auf Lernstatus …
           </div>
 
-          <div class="small-stack" id="version-summary">
+          <div class="small-stack">
             <span class="pill-mini" id="version-pill" style="display:none;"></span>
           </div>
 
@@ -486,7 +484,6 @@
 
       const selfimageSummary = document.getElementById("selfimage-summary");
       const learningSummary = document.getElementById("learning-summary");
-      const versionSummary = document.getElementById("version-summary");
       const versionPill = document.getElementById("version-pill");
 
       let mediaMode = "audio"; // "video" oder "audio"
@@ -657,7 +654,6 @@
 
       // 3) Medien: Video → Bild → Platzhalter
       function initMedia() {
-        // Versuche zuerst, das Video zu laden
         const videoSrc = "data/self/latest_video.mp4";
 
         portraitVideo.src = videoSrc + "?v=" + Date.now();
@@ -672,17 +668,14 @@
           imageMeta.textContent = "Medium: Video (data/self/latest_video.mp4)";
           imageStatus.textContent = "Status: Video bereit";
 
-          // Audio-Element als Fallback nur versteckt bereithalten
           audioStatus.textContent =
             "Bereit — Tippe ▶, damit Mira spricht und sich bewegt.";
         });
 
         portraitVideo.addEventListener("error", function () {
-          // Video ging nicht → Bild-Fallback
           setupImageFallback();
         });
 
-        // Wenn das Video nach kurzer Zeit gar nicht reagiert, ebenfalls Fallback
         setTimeout(function () {
           if (!videoReady) {
             setupImageFallback();
@@ -691,7 +684,7 @@
       }
 
       function setupImageFallback() {
-        if (videoReady) return; // Falls Video inzwischen doch geklappt hat
+        if (videoReady) return;
 
         portraitVideo.style.display = "none";
         mediaMode = "audio";
@@ -704,4 +697,13 @@
 
         function tryNext() {
           if (index >= paths.length) {
-            portraitImg.style.d
+            portraitImg.style.display = "none";
+            portraitPlaceholder.style.display = "flex";
+            portraitPlaceholder.textContent = "Kein aktuelles Bild gefunden.";
+            imageMeta.textContent = "Medium: —";
+            imageStatus.textContent = "Status: kein Bild vorhanden";
+            return;
+          }
+
+          const src = paths[index] + "?v=" + Date.now();
+          imageStatus.
