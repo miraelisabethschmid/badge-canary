@@ -180,18 +180,26 @@
 
         <div class="portrait-shell">
           <div class="portrait-frame">
-            <!-- Standard: aktuelles Standbild -->
+            <!-- Bild (Fallback) -->
             <img
               id="mira-portrait"
               src="data/self/latest_image.png"
               alt="Aktuelles Porträt von Mira"
             />
+            <!-- Video (wenn vorhanden) -->
+            <video
+              id="mira-video"
+              playsinline
+              muted
+              style="display: none"
+            ></video>
           </div>
         </div>
 
         <div class="meta">
           <div class="meta-row" id="image-meta">
-            Bild geladen: <code id="image-path-label">data/self/latest_image.png</code>
+            Bild/Video:
+            <code id="image-path-label">data/self/latest_image.png</code>
           </div>
           <div class="meta-row" id="audio-meta">
             Audio geladen: <code id="audio-path-label">audio/latest.wav</code>
@@ -222,33 +230,33 @@
     </main>
 
     <script>
-      // Kleiner Helfer für sicheres Setzen von Text
       function setText(id, text) {
         const el = document.getElementById(id);
         if (el) el.textContent = text;
       }
 
       window.addEventListener("DOMContentLoaded", () => {
-        // Live-Zeitstempel (ISO, wie bisher)
+        // Live-Zeit
         setText("live-timestamp", new Date().toISOString());
 
-        // --- Bild-Handling ----------------------------------------------------
+        // --- Bild / Video -----------------------------------------------------
         const portrait = document.getElementById("mira-portrait");
+        const video = document.getElementById("mira-video");
         const imageMeta = document.getElementById("image-meta");
         const imageLabel = document.getElementById("image-path-label");
 
         const pngPath = "data/self/latest_image.png";
         const svgPath = "data/self/latest_image.svg";
+        const videoPath = "data/self/latest_video.mp4";
 
         if (portrait) {
           portrait.src = pngPath;
-
           portrait.addEventListener("load", () => {
-            if (imageLabel) imageLabel.textContent = pngPath;
+            if (imageLabel && imageLabel.textContent === "…") {
+              imageLabel.textContent = pngPath;
+            }
           });
-
           portrait.addEventListener("error", () => {
-            // Fallback auf SVG, falls PNG fehlt
             portrait.src = svgPath;
             if (imageLabel) imageLabel.textContent = svgPath;
             if (imageMeta) {
@@ -260,12 +268,38 @@
           });
         }
 
-        // --- Audio-Handling ---------------------------------------------------
+        // Versuche, Video zu laden
+        if (video) {
+          video.src = videoPath;
+          video.muted = true;
+
+          video.addEventListener("loadeddata", () => {
+            // Video verfügbar: zeige Video, verstecke Bild
+            video.style.display = "block";
+            if (portrait) {
+              portrait.style.display = "none";
+            }
+            if (imageLabel) imageLabel.textContent = videoPath;
+            if (imageMeta) {
+              imageMeta.insertAdjacentText(
+                "beforeend",
+                " (Video aktiv, stumm mit Audio synchron)"
+              );
+            }
+          });
+
+          video.addEventListener("error", () => {
+            // Wenn Video nicht geladen werden kann, bleiben wir beim Bild
+            video.style.display = "none";
+          });
+        }
+
+        // --- Audio -----------------------------------------------------------
         const audio = document.getElementById("mira-voice");
         const audioLabel = document.getElementById("audio-path-label");
         const audioMeta = document.getElementById("audio-meta");
-
         const audioPath = "audio/latest.wav";
+
         if (audio) {
           audio.src = audioPath;
 
@@ -279,20 +313,39 @@
                 "Kein gültiges Audio gefunden (erwartet: audio/latest.wav)";
             }
           });
+
+          // Audio und Video koppeln (falls Video vorhanden ist)
+          if (video) {
+            audio.addEventListener("play", () => {
+              try {
+                if (video.readyState >= 2) {
+                  // Wenn Audio von vorn startet, Video auch zurücksetzen
+                  if (audio.currentTime < 0.3) {
+                    video.currentTime = 0;
+                  }
+                  video.play().catch(() => {});
+                }
+              } catch (e) {}
+            });
+
+            audio.addEventListener("pause", () => {
+              try {
+                video.pause();
+              } catch (e) {}
+            });
+
+            audio.addEventListener("seeking", () => {
+              try {
+                video.currentTime = audio.currentTime;
+              } catch (e) {}
+            });
+          }
         }
 
-        // --- Status / Tagesspruch laden --------------------------------------
-        // Liest data/self/status.json, z.B.:
-        // {
-        //   "daily_quote": "Ich bin hier, präsent und klar.",
-        //   "base_tone": "ruhig, klar",
-        //   "updated_at": "2025-11-13T18:49:41.000Z"
-        // }
+        // --- Status / Tagesspruch -------------------------------------------
         fetch("data/self/status.json")
           .then((res) => {
-            if (!res.ok) {
-              throw new Error("HTTP " + res.status);
-            }
+            if (!res.ok) throw new Error("HTTP " + res.status);
             return res.json();
           })
           .then((data) => {
@@ -323,4 +376,4 @@
       });
     </script>
   </body>
-          </html>
+</html>
