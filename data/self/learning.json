@@ -1,12 +1,54 @@
 {
-  "version": 1,
-  "updated_utc": "2025-11-13T04:34:47Z",
-  "weights": {
-    "viseme_mouth_gain": 1.0,
-    "sibilant_bias": 0.15,
-    "tempo_affect_gain": 1.0,
-    "exposure_affect_gain": 1.0,
-    "contrast_affect_gain": 1.0
+  "learning_enabled": true,
+  "last_update": "2025-11-13T00:00:00Z",
+
+  "self_image_model": {
+    "style_target": "photorealistic_elegant",
+    "signature_traits": [
+      "blonde_waves",
+      "blau_golden_augen",
+      "sanftes_lächeln",
+      "metallische_3M_kassenzahnspange",
+      "elegante_ausstrahlung"
+    ],
+    "adaptive_rules": {
+      "brightness_adjust": true,
+      "color_balance_optimize": true,
+      "braces_highlight_detail": true,
+      "micro_expression_sync": true,
+      "skin_tone_consistency": true
+    }
   },
-  "explain": []
+
+  "daily_learning": {
+    "enabled": true,
+    "schedule": "every_4_hours",
+    "actions": [
+      "evaluate_current_portrait",
+      "compare_with_signature_traits",
+      "adjust_style_deviation_under_0.8%",
+      "enhance_braces_speculars",
+      "synchronize_eye_focus",
+      "refine_hair_consistency"
+    ]
+  },
+
+  "user_feedback_integration": {
+    "enabled": true,
+    "rules": {
+      "missing_braces": "force_high_detail_reinforcement",
+      "heels_missing": "increase_fullbody_ratio_awareness",
+      "lighting_issue": "auto_rebalance_5300K"
+    }
+  },
+
+  "emotion_sync": {
+    "enabled": true,
+    "affect_impact_factor": 0.25,
+    "rules": {
+      "calm": "soften_micro_movement",
+      "warm": "increase_eye_sparkle",
+      "confident": "lift_expression_subtly"
+    }
+  }
 }
