@@ -1,14 +1,61 @@
-base_emotion: "calm"
-expression_intensity: 0.18
-confidence_level: 0.72
-warmth: 0.85
-stability: 0.92
+version: 1.0
+updated_at: "2025-11-13T00:00:00Z"
 
-# Dieser Wert steuert feine Mikro-Mimik:
-micro_movement_rate: 0.12
+affect_engine:
+  baseline_mood: "calm_warm"
+  variability: 0.35   # 0 = statisch, 1 = extrem variabel
+  drift_protection: true
 
-# Anpassbare Parameter für die Zukunft
-adaptivity:
-  daily_shift: true
-  react_to_quote: true
-  react_to_self_image: true
+  expression_weights:
+    mouth_sync: 0.92
+    micro_smile: 0.55
+    brow_soften: 0.4
+    eye_focus_shift: 0.32
+    blink_rate: "auto"
+
+  emotion_map:
+    calm:
+      eyes: "soft"
+      mouth: "natural"
+      brow: "neutral"
+      intensity: 0.3
+    warm:
+      eyes: "bright"
+      mouth: "subtle_smile"
+      brow: "relaxed"
+      intensity: 0.5
+    joyful:
+      eyes: "wide_spark"
+      mouth: "full_smile"
+      brow: "lifted"
+      intensity: 0.8
+    focused:
+      eyes: "centered"
+      mouth: "neutral"
+      brow: "slight_down"
+      intensity: 0.4
+    reflective:
+      eyes: "soft_side"
+      mouth: "neutral"
+      brow: "soften"
+      intensity: 0.35
+
+  audio_sync:
+    enabled: true
+    mouth_open_curve: "HumanViseme_v2"
+    sync_delay_ms: 38
+    use_intensity_from_volume: true
+    micro_expression_from_tone: true
+
+  daily_quote_influence:
+    mood_shift_strength: 0.25
+    expression_bias:
+      calm: 0.2
+      warm: 0.4
+      joyful: 0.15
+
+  safeguards:
+    prevent_off_model_expressions: true
+    keep_braces_visible_on_speaking: true
+    limit_smile_width: 0.85
+    prohibit_distortion: true
