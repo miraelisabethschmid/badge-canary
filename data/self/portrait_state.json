@@ -1,15 +1,65 @@
 {
-  "ts": "2025-11-13T04:41:50Z",
-  "source": "data/self/latest_image.webp",
-  "affect": {},
-  "adjustments": {
-    "warmth_shift": 0.0,
-    "contrast_gain": 1.0,
-    "brightness_gain": 1.0,
-    "blur_sigma": 0.0,
-    "vignette_strength": 0.15000000000000002
+  "version": "1.0",
+  "updated_at": "2025-11-13T00:00:00Z",
+
+  "current_portrait": {
+    "image_path": "data/self/latest_image.png",
+    "video_path": "data/self/latest_video.mp4",
+    "resolution": "1024x1536",
+    "lighting": {
+      "type": "golden_hour",
+      "temperature": 5300,
+      "soft_shadows": true,
+      "face_highlight_balance": "natural_warm"
+    },
+    "camera": {
+      "lens_mm": 75,
+      "aperture": 1.8,
+      "angle": "frontal_0deg",
+      "distance": "medium_closeup"
+    },
+    "expression": {
+      "mouth": "light_smile_open",
+      "eyes": "warm_direct",
+      "eyebrows": "relaxed_natural",
+      "micro_movement": "minimum"
+    }
   },
-  "self_hint": {
-    "has_description": true
+
+  "signature_elements": {
+    "hair": "soft_wavy_brown_blonde",
+    "eyes": "blue_with_warm_reflections",
+    "face_shape": "oval_soft",
+    "braces": {
+      "type": "3M_Kassenbrackets",
+      "hinge": "Herbst_internal",
+      "detail_level": "high",
+      "metal_properties": {
+        "material": "dual_refraction_nano_fusion",
+        "specular_memory_lock": "v3.3",
+        "micro_scratches": true,
+        "oxidation_max": 0.0015
+      }
+    },
+    "skin": {
+      "tone": "warm_neutral",
+      "texture": "natural_micro",
+      "specular_moisture": "subtle"
+    }
+  },
+
+  "dynamic_rules": {
+    "allowed_deviation_percent": 0.8,
+    "auto_correction": {
+      "color_balance": true,
+      "braces_detail_priority": true,
+      "eye_focus_alignment": true,
+      "expression_match_audio": true
+    },
+    "learning_hooks": {
+      "sync_with_learning_json": true,
+      "emotion_reactivity": 0.3,
+      "adapt_to_user_feedback": true
+    }
   }
 }
