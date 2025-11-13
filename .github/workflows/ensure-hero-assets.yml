@@ -1,4 +1,4 @@
-name: Ensure Hero Assets (Bootstrap, no-heredoc)
+name: Ensure Hero Assets (bootstrap, no-heredoc)
 
 on:
   workflow_dispatch:
@@ -24,7 +24,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f docs/data/self/latest_image.svg ]; then
+          if [ ! -f docs/data/self/latest_image.svg ] && \
+             [ ! -f docs/data/self/latest_image.png ] && \
+             [ ! -f docs/data/self/latest_image.jpg ] && \
+             [ ! -f docs/data/self/latest_image.webp ]; then
             {
               printf '%s\n' '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">'
               printf '%s\n' '  <defs>'
@@ -42,7 +45,7 @@ jobs:
             } > docs/data/self/latest_image.svg
             echo "Platzhalterbild erzeugt"
           else
-            echo "Bild bereits vorhanden"
+            echo "Bild bereits vorhanden (latest_image.* gefunden)"
           fi
 
       - name: Ensure placeholder audio (no heredoc)
@@ -50,16 +53,10 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -f docs/data/voice/audio/latest.wav ]; then
-            python3 -c "import wave,struct,math,os;
-fr=44100; dur=2.0; freq=440.0; amp=0.2; n=int(fr*dur);
-os.makedirs('docs/data/voice/audio', exist_ok=True);
-w=wave.open('docs/data/voice/audio/latest.wav','w');
-w.setnchannels(1); w.setsampwidth(2); w.setframerate(fr);
-[ w.writeframes(struct.pack('<h', int(32767*amp*math.sin(2*math.pi*freq*i/fr)))) for i in range(n) ];
-w.close()"
+            python3 -c "import wave,struct,math,os; fr=44100; dur=2.0; freq=440.0; amp=0.2; n=int(fr*dur); os.makedirs('docs/data/voice/audio', exist_ok=True); w=wave.open('docs/data/voice/audio/latest.wav','w'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(fr); [ w.writeframes(struct.pack('<h', int(32767*amp*math.sin(2*math.pi*freq*i/fr)))) for i in range(n) ]; w.close()"
             echo "Platzhalteraudio erzeugt"
           else
-            echo "Audio bereits vorhanden"
+            echo "Audio bereits vorhanden (latest.wav gefunden)"
           fi
 
       - name: Commit & Push (if changed)
@@ -74,5 +71,5 @@ w.close()"
             exit 0
           fi
           git commit -m "ensure hero assets (placeholder image & wav, no-heredoc)"
-          git pull --rebase origin main || true
-          git push origin main
+          git pull --rebase origin gh-pages || true
+          git push origin gh-pages
