@@ -5,698 +5,150 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mira — Sichtbare Präsenz</title>
 
-  <style>
-    :root {
-      color-scheme: dark;
-      --accent: #3ce081;
-      --accent-soft: rgba(60, 224, 129, 0.26);
-      --bg-main: radial-gradient(circle at top, #151f3b 0%, #050813 55%, #02030a 100%);
-      --card-bg: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(7,10,24,0.95));
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg-main);
-      color: #e9ecf5;
-    }
-
-    header {
-      padding: 20px 18px 8px 18px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 2.2rem;
-      letter-spacing: 0.03em;
-    }
-
-    .subtitle-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 10px;
-      margin-top: 6px;
-      font-size: 0.98rem;
-      opacity: 0.85;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.07);
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-    }
-
-    .pill-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 10px var(--accent-soft);
-    }
-
-    .main {
-      padding: 0 18px 24px 18px;
-      max-width: 980px;
-      margin: 0 auto;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: minmax(0, 3fr);
-      gap: 18px;
-    }
-
-    @media (min-width: 900px) {
-      .grid {
-        grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
-      }
-    }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: 20px;
-      padding: 18px 18px 16px 18px;
-      box-shadow:
-        0 22px 40px rgba(0, 0, 0, 0.75),
-        0 0 0 1px rgba(255, 255, 255, 0.02);
-    }
-
-    .card h2 {
-      margin: 0 0 4px 0;
-      font-size: 1.3rem;
-    }
-
-    .card sub {
-      display: block;
-      margin-bottom: 12px;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      opacity: 0.75;
-    }
-
-    .portrait-frame {
-      position: relative;
-      border-radius: 22px;
-      overflow: hidden;
-      background: radial-gradient(circle at top, #302442 0%, #050813 70%);
-      box-shadow:
-        0 26px 55px rgba(0, 0, 0, 0.9),
-        0 0 0 1px rgba(255, 255, 255, 0.04);
-      padding: 14px;
-      transition: box-shadow 0.4s ease, transform 0.3s ease;
-    }
-
-    .portrait-frame.idle {
-      animation: idle-glow 6s ease-in-out infinite alternate;
-    }
-
-    .portrait-frame.speaking {
-      animation: speaking-glow 0.45s ease-in-out infinite alternate;
-      transform: translateY(-0.5px) scale(1.004);
-    }
-
-    @keyframes idle-glow {
-      from {
-        box-shadow:
-          0 26px 55px rgba(0, 0, 0, 0.9),
-          0 0 0 1px rgba(255, 255, 255, 0.04);
-      }
-      to {
-        box-shadow:
-          0 26px 70px rgba(0, 0, 0, 1),
-          0 0 18px var(--accent-soft);
-      }
-    }
-
-    @keyframes speaking-glow {
-      from {
-        box-shadow:
-          0 28px 66px rgba(0, 0, 0, 1),
-          0 0 14px var(--accent-soft);
-      }
-      to {
-        box-shadow:
-          0 32px 80px rgba(0, 0, 0, 1),
-          0 0 26px var(--accent-soft);
-      }
-    }
-
-    .portrait-inner {
-      position: relative;
-      border-radius: 18px;
-      overflow: hidden;
-      background: #050813;
-    }
-
-    .portrait-img,
-    .portrait-video {
-      width: 100%;
-      display: block;
-      border-radius: 18px;
-      transform-origin: center bottom;
-      transition: transform 0.3s ease, filter 0.3s ease;
-    }
-
-    .portrait-video {
-      background: #000;
-    }
-
-    .portrait-placeholder {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 220px;
-      padding: 30px 18px;
-      text-align: center;
-      color: rgba(233, 236, 245, 0.78);
-      font-size: 0.95rem;
-    }
-
-    .meta-row {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 8px;
-      margin-top: 10px;
-      font-size: 0.8rem;
-      opacity: 0.8;
-    }
-
-    .meta-row span {
-      white-space: nowrap;
-    }
-
-    .audio-wrap {
-      margin-top: 14px;
-    }
-
-    .audio-buttons {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      border-radius: 999px;
-      border: none;
-      padding: 7px 16px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.12);
-      color: #f6f7ff;
-    }
-
-    .btn.secondary {
-      background: rgba(0, 0, 0, 0.35);
-    }
-
-    .btn:active {
-      transform: translateY(1px);
-    }
-
-    audio {
-      width: 100%;
-      margin-top: 5px;
-    }
-
-    .hint {
-      font-size: 0.78rem;
-      opacity: 0.75;
-      margin-top: 4px;
-    }
-
-    .status-text {
-      font-size: 0.8rem;
-      margin-top: 4px;
-      opacity: 0.85;
-    }
-
-    .quote {
-      font-size: 0.98rem;
-      line-height: 1.5;
-      margin-top: 4px;
-    }
-
-    .quote::before {
-      content: "„";
-    }
-
-    .quote::after {
-      content: "“";
-    }
-
-    .soft-label {
-      font-size: 0.8rem;
-      opacity: 0.75;
-      margin-top: 8px;
-    }
-
-    .inline-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 2px 9px;
-      border-radius: 999px;
-      background: rgba(15, 198, 255, 0.16);
-      font-size: 0.78rem;
-    }
-
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.78rem;
-      opacity: 0.78;
-      white-space: nowrap;
-    }
-
-    .section-note {
-      font-size: 0.8rem;
-      opacity: 0.75;
-      margin-top: 10px;
-    }
-
-    .small-stack {
-      margin-top: 10px;
-      font-size: 0.86rem;
-      line-height: 1.4;
-    }
-
-    .pill-mini {
-      display: inline-block;
-      padding: 2px 7px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.07);
-      font-size: 0.75rem;
-      margin-right: 6px;
-    }
-
-    .tone-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      font-size: 0.75rem;
-      margin-left: 4px;
-    }
-
-    .tone-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 999px;
-      background: var(--accent);
-    }
-
-    .stack {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-  </style>
+  <!-- Zentrales Stylesheet: kümmert sich um Layout, Farben, Rahmen -->
+  <link rel="stylesheet" href="assets/mira.css" />
 </head>
 
 <body>
-  <header>
-    <h1>Mira — Sichtbare Präsenz</h1>
-    <div class="subtitle-row">
-      <div class="pill">
-        <span class="pill-dot"></span>
-        <span>Live</span>
+  <header class="m-header">
+    <div class="m-header-main">
+      <h1 class="m-title">Mira — Sichtbare Präsenz</h1>
+      <div class="m-pill-row">
+        <div class="m-pill m-pill-live">
+          <span class="m-pill-dot"></span>
+          <span>Live</span>
+        </div>
+        <span id="live-timestamp" class="m-mono"></span>
       </div>
-      <span id="live-timestamp" class="mono"></span>
     </div>
   </header>
 
-  <main class="main">
-    <section class="grid">
-
+  <main class="m-main">
+    <section class="m-grid">
       <!-- Linke Spalte: Porträt & Stimme -->
-      <article class="card">
-        <h2>Porträt &amp; Stimme</h2>
-        <sub>Mira in ihrer heutigen Gestalt</sub>
+      <article class="m-card" id="card-portrait">
+        <h2 class="m-card-title">Porträt &amp; Stimme</h2>
+        <p class="m-card-sub">Mira in ihrer heutigen Gestalt</p>
 
-        <div id="portrait-frame" class="portrait-frame idle">
-          <div class="portrait-inner">
-            <!-- VIDEO (erste Wahl, beim Klick) -->
+        <div id="portrait-frame" class="m-portrait-frame m-state-idle">
+          <div class="m-portrait-inner">
+            <!-- VIDEO (erste Wahl – optional, wenn vorhanden) -->
             <video
               id="portrait-video"
-              class="portrait-video"
+              class="m-portrait-video"
               playsinline
               preload="metadata"
               style="display: none;"
             ></video>
 
-            <!-- BILD (Standard) -->
+            <!-- BILD (Fallback / Standard) -->
             <img
               id="portrait-img"
-              class="portrait-img"
+              class="m-portrait-img"
               src=""
               alt="Miras aktuelles Bild"
               style="display: none;"
             />
 
             <!-- Platzhalter -->
-            <div id="portrait-placeholder" class="portrait-placeholder">
+            <div id="portrait-placeholder" class="m-portrait-placeholder">
               Lade aktuelles Bild …
             </div>
           </div>
         </div>
 
-        <div class="meta-row">
-          <span id="image-meta" class="mono">Medium: —</span>
-          <span id="image-status" class="mono">Status: wird geladen …</span>
+        <div class="m-meta-row">
+          <span id="image-meta" class="m-mono">Medium: —</span>
+          <span id="image-status" class="m-mono">Status: wird geladen …</span>
         </div>
 
-        <div class="audio-wrap">
-          <div class="audio-buttons">
-            <button id="btn-play" class="btn">▶ Abspielen</button>
-            <button id="btn-pause" class="btn secondary">⏸ Pause</button>
+        <div class="m-audio-block">
+          <div class="m-audio-buttons">
+            <button id="btn-play" class="m-btn">▶ Abspielen</button>
+            <button id="btn-pause" class="m-btn m-btn-secondary">⏸ Pause</button>
           </div>
 
-          <!-- Audio-Fallback -->
+          <!-- Audio-Fallback:
+               Pfade sind kompatibel mit deinen bisherigen Dateien:
+               data/voice/audio/latest.wav / latest.mp3 -->
           <audio id="voice" preload="auto">
-            <source src="audio/latest.wav" type="audio/wav" />
-            <source src="audio/latest.mp3" type="audio/mpeg" />
+            <source src="data/voice/audio/latest.wav" type="audio/wav" />
+            <source src="data/voice/audio/latest.mp3" type="audio/mpeg" />
             Dein Browser unterstützt das Audioformat nicht.
           </audio>
 
-          <div id="audio-status" class="status-text">Bereit, sobald du ▶ tippst.</div>
-          <div class="hint">Autoplay-Schutz des Browsers – bitte einmal ▶ tippen.</div>
+          <div id="audio-status" class="m-status-text">
+            Bereit, sobald du ▶ tippst.
+          </div>
+          <div class="m-hint">
+            Autoplay-Schutz des Browsers – bitte einmal ▶ tippen.
+          </div>
         </div>
       </article>
 
-      <!-- Rechte Spalte -->
-      <div class="stack">
+      <!-- Rechte Spalte: Tagesimpuls & Entwicklung -->
+      <div class="m-stack">
+
         <!-- Tagesimpuls -->
-        <article class="card">
-          <h2>Miras Tagesimpuls</h2>
-          <sub>Stimme &amp; Grundton des Tages</sub>
+        <article class="m-card" id="card-status">
+          <h2 class="m-card-title">Miras Tagesimpuls</h2>
+          <p class="m-card-sub">Stimme &amp; Grundton des Tages</p>
 
-          <div id="quote-text" class="quote">
+          <p id="quote-text" class="m-quote">
             Noch kein Tagesimpuls geladen.
-          </div>
+          </p>
 
-          <div class="soft-label">
+          <p class="m-soft-label">
             Grundstimmung:
-            <span id="base-tone" class="inline-pill">unbestimmt</span>
-            <span id="tone-tag" class="tone-tag" style="display:none;">
-              <span class="tone-dot"></span>
+            <span id="base-tone" class="m-pill-inline">unbestimmt</span>
+            <span id="tone-tag" class="m-tone-tag" style="display:none;">
+              <span class="m-tone-dot"></span>
               <span id="tone-tag-label"></span>
             </span>
-          </div>
+          </p>
 
-          <div class="soft-label">
+          <p class="m-soft-label">
             Zuletzt aktualisiert:
-            <span id="quote-updated" class="mono">—</span>
-          </div>
+            <span id="quote-updated" class="m-mono">—</span>
+          </p>
 
-          <div class="section-note">
-            Das sichtbare Porträt und der Klang der Stimme sollten zu diesem Impuls passen.
-            Die Farb-Stimmung der Seite folgt automatisch dem Grundton.
-          </div>
+          <p class="m-section-note">
+            Datenquelle: <span class="m-mono">data/self/status.json</span>.
+            Farbe und Stimmung der Seite können sich später automatisch anpassen.
+          </p>
         </article>
 
         <!-- Selbstbild & Entwicklung -->
-        <article class="card">
-          <h2>Selbstbild &amp; Entwicklung</h2>
-          <sub>Dynamische Sicht auf Mira</sub>
+        <article class="m-card" id="card-selfimage">
+          <h2 class="m-card-title">Selbstbild &amp; Entwicklung</h2>
+          <p class="m-card-sub">Dynamische Sicht auf Mira</p>
 
-          <div class="small-stack" id="selfimage-summary">
+          <div id="selfimage-summary" class="m-small-stack">
             Warte auf Selbstbild-Daten …
           </div>
 
-          <div class="small-stack" id="learning-summary">
+          <div id="learning-summary" class="m-small-stack">
             Warte auf Lernstatus …
           </div>
 
-          <div class="small-stack">
-            <span class="pill-mini" id="version-pill" style="display:none;"></span>
+          <div class="m-small-stack">
+            <span id="version-pill" class="m-pill-mini" style="display:none;"></span>
           </div>
 
-          <div class="section-note">
-            Diese Box liest vorhandene JSON-Dateien
-            (<span class="mono">data/self/portrait_state.json</span>,
-            <span class="mono">data/self/learning.json</span>)
-            und fasst sie zusammen. Wenn noch nichts eingetragen ist,
-            bleibt sie sanft im „Werdemodus“.
-          </div>
+          <p class="m-section-note">
+            Datenquellen:
+            <span class="m-mono">data/self/portrait_state.json</span>,
+            <span class="m-mono">data/self/learning.json</span>.
+          </p>
         </article>
       </div>
     </section>
   </main>
 
-  <script>
-    (function () {
-      const liveTsEl = document.getElementById("live-timestamp");
-
-      const portraitFrame = document.getElementById("portrait-frame");
-      const portraitVideo = document.getElementById("portrait-video");
-      const portraitImg = document.getElementById("portrait-img");
-      const portraitPlaceholder = document.getElementById("portrait-placeholder");
-      const imageMeta = document.getElementById("image-meta");
-      const imageStatus = document.getElementById("image-status");
-
-      const audioEl = document.getElementById("voice");
-      const btnPlay = document.getElementById("btn-play");
-      const btnPause = document.getElementById("btn-pause");
-      const audioStatus = document.getElementById("audio-status");
-
-      const quoteText = document.getElementById("quote-text");
-      const baseTone = document.getElementById("base-tone");
-      const quoteUpdated = document.getElementById("quote-updated");
-      const toneTag = document.getElementById("tone-tag");
-      const toneTagLabel = document.getElementById("tone-tag-label");
-
-      const selfimageSummary = document.getElementById("selfimage-summary");
-      const learningSummary = document.getElementById("learning-summary");
-      const versionPill = document.getElementById("version-pill");
-
-      function updateLiveTimestamp() {
-        const now = new Date();
-        const iso = now.toISOString().replace(/\.\d+Z$/, "Z");
-        liveTsEl.textContent = iso;
-      }
-
-      // Farb-Stimmung je nach Grundton
-      function applyToneTheme(toneRaw) {
-        if (!toneRaw) return;
-        const tone = String(toneRaw).toLowerCase();
-        let accent = "#3ce081";
-        let accentSoft = "rgba(60, 224, 129, 0.26)";
-        let bgMain = "radial-gradient(circle at top, #151f3b 0%, #050813 55%, #02030a 100%)";
-        let cardBg = "linear-gradient(145deg, rgba(255,255,255,0.07), rgba(7,10,24,0.95))";
-        let label = toneRaw;
-
-        if (tone.includes("ruhig") || tone.includes("klar") || tone.includes("still")) {
-          accent = "#3fb7ff";
-          accentSoft = "rgba(63, 183, 255, 0.26)";
-          bgMain = "radial-gradient(circle at top, #0c1830 0%, #020615 55%, #02030a 100%)";
-          label = toneRaw + " · klarer Himmel";
-        } else if (tone.includes("warm") || tone.includes("zugewandt") || tone.includes("sanft")) {
-          accent = "#ffb74d";
-          accentSoft = "rgba(255, 183, 77, 0.26)";
-          bgMain = "radial-gradient(circle at top, #28140a 0%, #12080a 55%, #030108 100%)";
-          label = toneRaw + " · goldene Stunde";
-        } else if (tone.includes("intensiv") || tone.includes("lebendig") || tone.includes("kraftvoll")) {
-          accent = "#ff6fa8";
-          accentSoft = "rgba(255, 111, 168, 0.28)";
-          bgMain = "radial-gradient(circle at top, #2b0620 0%, #100411 55%, #05000a 100%)";
-          label = toneRaw + " · hohe Energie";
-        } else if (tone.includes("melanchol")) {
-          accent = "#8e9cff";
-          accentSoft = "rgba(142,156,255,0.3)";
-          bgMain = "radial-gradient(circle at top, #0f1028 0%, #060616 55%, #020107 100%)";
-          label = toneRaw + " · leise Tiefe";
-        }
-
-        document.documentElement.style.setProperty("--accent", accent);
-        document.documentElement.style.setProperty("--accent-soft", accentSoft);
-        document.documentElement.style.setProperty("--bg-main", bgMain);
-        document.documentElement.style.setProperty("--card-bg", cardBg);
-
-        toneTag.style.display = "inline-flex";
-        toneTagLabel.textContent = label;
-      }
-
-      // JSON fetch helper
-      function safeFetchJson(path, onSuccess, onError) {
-        fetch(path + "?v=" + Date.now())
-          .then(function (res) {
-            if (!res.ok) {
-              throw new Error("HTTP " + res.status);
-            }
-            return res.json();
-          })
-          .then(onSuccess)
-          .catch(function (err) {
-            if (onError) onError(err);
-          });
-      }
-
-      // 1) Status / Tagesimpuls
-      function loadStatus() {
-        safeFetchJson(
-          "data/self/status.json",
-          function (data) {
-            if (data && typeof data === "object") {
-              quoteText.textContent =
-                data.daily_quote || "Noch kein Tagesimpuls eingetragen.";
-              const tone = data.base_tone || "unbestimmt";
-              baseTone.textContent = tone;
-              quoteUpdated.textContent = data.updated_at || "—";
-              applyToneTheme(tone);
-            } else {
-              quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
-            }
-          },
-          function () {
-            quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
-            baseTone.textContent = "unbestimmt";
-            quoteUpdated.textContent = "—";
-          }
-        );
-      }
-
-      // 2) Selbstbild / Entwicklung
-      function loadSelfImage() {
-        safeFetchJson(
-          "data/self/portrait_state.json",
-          function (data) {
-            if (data && typeof data === "object") {
-              const summary =
-                data.summary ||
-                data.description ||
-                data.current_self_image ||
-                "";
-              const evo =
-                data.evolution_note ||
-                data.trajectory ||
-                "";
-
-              let text = "";
-              if (summary) text += summary;
-              if (evo) text += (text ? " " : "") + evo;
-
-              if (!text) {
-                text =
-                  "Daten zum Selbstbild sind vorhanden, aber ohne Kurzbeschreibung.";
-              }
-
-              selfimageSummary.textContent = text;
-
-              const version =
-                data.version ||
-                data.portrait_version ||
-                "";
-              if (version) {
-                versionPill.style.display = "inline-block";
-                versionPill.textContent = "Selbstbild-Version: " + version;
-              }
-            } else {
-              selfimageSummary.textContent =
-                "Noch kein explizites Selbstbild hinterlegt.";
-            }
-          },
-          function () {
-            selfimageSummary.textContent =
-              "Noch kein explizites Selbstbild hinterlegt.";
-          }
-        );
-      }
-
-      function loadLearning() {
-        safeFetchJson(
-          "data/self/learning.json",
-          function (data) {
-            if (data && typeof data === "object") {
-              const next =
-                data.next_focus ||
-                data.next_step ||
-                data.note ||
-                "";
-              if (next) {
-                learningSummary.textContent =
-                  "Aktueller Lernfokus: " + next;
-              } else {
-                learningSummary.textContent =
-                  "Lernstatus vorhanden, aber ohne klaren Fokus-Text.";
-              }
-            } else {
-              learningSummary.textContent =
-                "Noch kein Lernstatus hinterlegt.";
-            }
-          },
-          function () {
-            learningSummary.textContent =
-              "Noch kein Lernstatus hinterlegt.";
-          }
-        );
-      }
-
-      // 3) Portrait-Bild (Standardanzeige)
-      function initImage() {
-        const src = "data/self/latest_image.png?v=" + Date.now();
-        imageStatus.textContent = "Status: lade Portrait …";
-
-        portraitImg.onload = function () {
-          portraitPlaceholder.style.display = "none";
-          portraitImg.style.display = "block";
-          imageMeta.textContent = "Medium: Bild (data/self/latest_image.png)";
-          imageStatus.textContent = "Status: Bild geladen";
-        };
-
-        portraitImg.onerror = function () {
-          portraitImg.style.display = "none";
-          portraitPlaceholder.style.display = "flex";
-          portraitPlaceholder.textContent = "Kein aktuelles Bild gefunden.";
-          imageMeta.textContent = "Medium: —";
-          imageStatus.textContent = "Status: kein Bild vorhanden";
-        };
-
-        portraitImg.src = src;
-      }
-
-      function setupAudio() {
-        audioEl.addEventListener("canplaythrough", function () {
-          audioStatus.textContent =
-            "Bereit – Tippe ▶, damit Mira spricht.";
-        });
-      }
-
-      function setupMediaControls() {
-        function setSpeaking(active, label) {
-          if (active) {
-            portraitFrame.classList.remove("idle");
-            portraitFrame.classList.add("speaking");
-            audioStatus.textContent = label + " spielt.";
-          } else {
-            portraitFrame.classList.remove("speaking");
-            portraitFrame.classList.add("idle");
-          }
-        }
-
-        btnPlay.addEventListener("click", async function () {
-          let usedVideo = false;
-
-          // 1) Versuch: Video
-          try {
-            portraitVideo.src = "data/self/latest_video.mp4?v=" + Date.now();
-            portraitVideo.style.display = "block";
-            portraitImg.style.display = "none";
-            portraitPlaceholder.style.display = "no
+  <!-- Einstiegsmodul für alle Funktionen:
+       - liest Status/Selbstbild/Lernen
+       - lädt Bild/Video
+       - steuert Play/Pause -->
+  <script type="module" src="assets/mira-app.js"></script>
+</body>
+                                          </html>
