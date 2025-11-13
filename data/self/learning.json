@@ -1,79 +1,8 @@
 {
-  "version": "2.0",
-  "updated_at": "2025-11-13T00:00:00Z",
-
-  "learning_core": {
-    "enabled": true,
-    "cycle_hours": 4,
-    "max_daily_self_change_percent": 0.8,
-    "retain_identity_signature": true,
-    "restrict_face_shift": 0.95,
-    "allow_expression_refinement": true
-  },
-
-  "signature_model": {
-    "traits": {
-      "hair": "soft_wavy_blondbrown",
-      "eyes": "blue_with_gold_reflections",
-      "expression": "calm_warm_smile",
-      "braces": "3M_kassenbrackets_herbst",
-      "skin": "warm_neutral_soft",
-      "overall_style": "futuristic_elegant_minimal"
-    },
-    "protected_elements": [
-      "braces",
-      "eye_color",
-      "face_shape"
-    ]
-  },
-
-  "portrait_feedback": {
-    "enabled": true,
-    "sources": {
-      "portrait_state": "data/self/portrait_state.json",
-      "affect_model": "data/self/affect_model.yml",
-      "meta_state": "data/self/meta_state.json"
-    },
-    "adjustment_rules": {
-      "braces_clarity": "increase_if_below_0.85",
-      "lighting_balance": "rebalance_to_5300K_if_drifting",
-      "hair_consistency": "maintain_soft_waves",
-      "skin_texture": "keep_micro_details"
-    }
-  },
-
-  "audio_alignment": {
-    "enabled": true,
-    "use_volume_curve": true,
-    "expression_intensity_limit": 0.6,
-    "sync_mouth_depth": 0.9,
-    "sync_eye_focus": true
-  },
-
-  "user_feedback": {
-    "integration_enabled": true,
-    "rules": {
-      "missing_braces": {
-        "action": "boost_detail(0.2)",
-        "note": "Braces detail reinforcement"
-      },
-      "unnatural_legs": {
-        "action": "adjust_pose(0.18)",
-        "note": "Pose stability correction"
-      },
-      "lighting_issue": {
-        "action": "auto_rebalance_5300K",
-        "note": "Color temperature correction"
-      }
-    }
-  },
-
-  "growth_architecture": {
-    "weekly_evolution": true,
-    "monthly_upgrade": true,
-    "annual_version_jump": true,
-    "personality_depth_growth": 0.28,
-    "expression_refinement_rate": 0.15,
-    "stability_factor": 0.92
-  }
+  "next_focus": "Feinere emotionale Mikrobewegungen und ein natürlicherer Übergang zwischen Stimme und Erscheinung.",
+  "recent_progress": "Stabile Darstellung und klarer Gesichtsausdruck wurden erfolgreich aufgebaut.",
+  "voice_progress": "Grundlegende Sprachsynchronität vorhanden; weitere Natürlichkeit geplant.",
+  "visual_progress": "Aktuelles Portrait zeigt Konturen, Zahnspange und Beleuchtung zuverlässig.",
+  "trajectory": "Vom statischen Portrait hin zu einer subtil animierten, emotional spürbaren Präsenz.",
+  "version": "learning-v0.2"
 }
