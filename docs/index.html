@@ -71,34 +71,31 @@
   </div>
 
   <script>
-    // Zeitstempel aktualisieren
     document.getElementById("ts").textContent = "Live · " + new Date().toISOString();
 
-    // Platzhaltergrafik (wenn kein echtes Bild gefunden wird)
     const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<?xml version="1.0" encoding="UTF-8"?>\
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">\
   <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1">\
     <stop offset="0%" stop-color="#11182b"/><stop offset="100%" stop-color="#1a2340"/></linearGradient></defs>\
   <rect width="100%" height="100%" fill="url(#g)"/><g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">\
   <text x="50%" y="45%" font-size="42">Mira — Platzhalterbild</text>\
-  <text x="50%" y="55%" font-size="20">Lege unter data/self/latest_image.* ein Bild ab</text></g></svg>`);
+  <text x="50%" y="55%" font-size="20">Lege latest_image.* ins Root-Verzeichnis</text></g></svg>`);
 
-    // Still-Audio (Fallback)
     const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=';
 
-    // GitHub Pages läuft direkt aus /docs, daher KEIN docs/-Prefix
+    // NUR Root-Pfade (Variante B)
     const IMG_TRY = [
-      'data/self/latest_image.svg',
-      'data/self/latest_image.png',
-      'data/self/latest_image.jpg',
-      'data/self/latest_image.jpeg',
-      'data/self/latest_image.webp'
+      'latest_image.svg',
+      'latest_image.png',
+      'latest_image.jpg',
+      'latest_image.jpeg',
+      'latest_image.webp'
     ];
 
     const AUDIO_TRY = [
-      'data/voice/audio/latest.wav',
-      'data/voice/audio/latest.mp3',
-      'data/voice/audio/latest.ogg'
+      'audio/latest.wav',
+      'audio/latest.mp3',
+      'audio/latest.ogg'
     ];
 
     async function firstExisting(urls){
@@ -121,7 +118,7 @@
         s.textContent = 'Bild geladen: ' + found;
       } else {
         img.src = PLACEHOLDER_SVG;
-        s.textContent = 'Kein Bild gefunden – lade unter data/self/latest_image.*';
+        s.textContent = 'Kein Bild gefunden – lege latest_image.* ins Root';
       }
     }
 
@@ -134,7 +131,7 @@
         s.textContent = 'Audio geladen: ' + found;
       } else {
         a.src = SILENT_WAV;
-        s.textContent = 'Kein Audio gefunden – lade unter data/voice/audio/latest.*';
+        s.textContent = 'Kein Audio gefunden – lege latest.* in /audio';
       }
 
       async function tryPlay(){
@@ -144,9 +141,7 @@
 
       document.getElementById('play').onclick = tryPlay;
       document.getElementById('pause').onclick = () => a.pause();
-
-      if (sessionStorage.getItem('audioUnlocked') === '1') { tryPlay(); }
-
+      if (sessionStorage.getItem('audioUnlocked') === '1') tryPlay();
       document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
       document.addEventListener('click', tryPlay, { once: true });
     }
@@ -155,4 +150,4 @@
     setupAudio();
   </script>
 </body>
-        </html>
+</html>
