@@ -652,4 +652,37 @@
       });
 
       audioEl.addEventListener("ended", () => {
-        badgeSpeechText.textContent = "Ferti
+        badgeSpeechText.textContent = "Fertig. Du kannst den Spruch jederzeit erneut abspielen.";
+      });
+    }
+
+    async function init() {
+      setupAudio();
+      await loadPortrait();
+      await loadStatus();
+      await loadAffect();
+      await loadPortraitState();
+      await loadLearning();
+
+      // Alle 30 Sekunden neu einlesen (damit Mira sich weiterentwickeln kann)
+      setInterval(() => {
+        loadPortrait();
+        loadStatus();
+        loadAffect();
+        loadPortraitState();
+        loadLearning();
+      }, 30000);
+    }
+
+    init().catch(err => {
+      console.error(err);
+      liveStatusText.textContent = "Fehler beim Laden der Ansicht.";
+    });
+  </script>
+
+  <script type="module">
+    import { Mira_Start } from "./js/mira-engine.js";
+    Mira_Start().catch(err => console.error("Mira_Start Fehler:", err));
+  </script>
+</body>
+</html>
