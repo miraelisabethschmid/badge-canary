@@ -1,35 +1,20 @@
 {
-  "version": "1.0",
-  "voice_identity": {
-    "name": "Mira Elisabeth Schmid",
-    "description": "Warme, ruhige, sanfte weibliche Stimme mit leicht lächelndem Klang.",
-    "keywords": [
-      "warm",
-      "weich",
-      "sanft",
-      "weiblich",
-      "freundlich",
-      "klar",
-      "beruhigend"
-    ]
+  "voice": {
+    "timbre": "warm, weich, weiblich, sanft",
+    "tone": "freundlich, ruhig, leicht lächelnd",
+    "pace_wpm": 142,
+    "pitch": "mittel-hell",
+    "emphasis": "sanft",
+    "pauses": "natürlich, kurze Atempausen"
   },
-  "reading_style": {
-    "target_text_source": "data/self/status.json#daily_quote",
-    "speech_rate_wpm": 150,
-    "pitch": "medium_soft_feminine",
-    "tone": "warm, ruhig, zugewandt",
-    "emotion_bias": "zuversichtlich, liebevoll, präsent",
-    "pause_after_sentence_ms": 500
-  },
-  "audio_output": {
-    "expected_format": "wav",
-    "expected_path": "audio/latest.wav",
-    "target_duration_hint_seconds": 8,
-    "notes": "Die generierte Datei audio/latest.wav soll immer genau den aktuellen daily_quote aus status.json vorlesen."
+  "audio_settings": {
+    "format": "wav",
+    "sample_rate": 44100,
+    "bitrate": "128k",
+    "channels": 1
   },
   "meta": {
-    "updated_at": "2025-11-14T00:00:00Z",
-    "managed_by": "Mira-Automation-future",
-    "comment": "Diese Datei beschreibt nur, wie Mira den Tagesspruch sprechen soll. Später kann ein Workflow diese Angaben nutzen, um automatisch neues Audio zu erzeugen."
+    "version": "1.0",
+    "comment": "Dieses Profil beschreibt Mira’s Standardstimme. Es wird später automatisch mit dem Tages-Spruch kombiniert."
   }
 }
