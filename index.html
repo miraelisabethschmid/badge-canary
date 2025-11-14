@@ -1,320 +1,91 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mira – Sichtbare Präsenz</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mira – Präsenz</title>
 
-    <style>
-      :root {
-        color-scheme: dark;
-        --bg-main: #020617;
-        --bg-card: #020617;
-        --bg-card-soft: #020617;
-        --accent: #3ce081;
-        --accent-soft: rgba(60, 224, 129, 0.12);
-        --text-main: #f9fafb;
-        --text-soft: #9ca3af;
-        --border-subtle: rgba(148, 163, 184, 0.35);
-        --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.9);
-        --radius-xl: 24px;
-      }
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, sans-serif;
+      background: #0b0f19;
+      color: #f8fafc;
+      text-align: center;
+    }
 
-      * {
-        box-sizing: border-box;
-      }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
 
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
-        background: radial-gradient(circle at top, #020617 0, #000 55%);
-        color: var(--text-main);
-      }
+    .subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
 
-      .page {
-        min-height: 100vh;
-        padding: 24px 16px 40px;
-        display: flex;
-        justify-content: center;
-      }
+    .section {
+      margin-bottom: 28px;
+    }
 
-      .shell {
-        width: 100%;
-        max-width: 900px;
-      }
+    .media-frame {
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #1e293b;
+      max-width: 420px;
+      margin: 0 auto 12px auto;
+    }
 
-      header {
-        margin-bottom: 20px;
-      }
+    img, video, audio {
+      width: 100%;
+      display: block;
+    }
 
-      .badge-live {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: #064e3b;
-        color: #bbf7d0;
-        font-size: 12px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
+    .spruch {
+      margin-top: 10px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      font-size: 15px;
+      line-height: 1.5;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
 
-      .badge-live-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: #22c55e;
-        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.22);
-      }
+<body>
 
-      h1 {
-        margin: 10px 0 4px;
-        font-size: 26px;
-        letter-spacing: 0.02em;
-      }
+  <h1>Mira – Sichtbare Präsenz</h1>
+  <div class="subtitle">Bild · Audio · Spruch des Tages</div>
 
-      .subtitle {
-        font-size: 14px;
-        color: var(--text-soft);
-      }
-
-      .subtitle code {
-        font-size: 13px;
-        padding: 2px 6px;
-        border-radius: 999px;
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(148, 163, 184, 0.25);
-      }
-
-      .card {
-        background: linear-gradient(145deg, #020617, #020617);
-        border-radius: var(--radius-xl);
-        border: 1px solid var(--border-subtle);
-        box-shadow: var(--shadow-soft);
-        padding: 18px 16px 18px;
-        margin-bottom: 18px;
-      }
-
-      .card-title {
-        font-size: 18px;
-        font-weight: 600;
-        margin-bottom: 10px;
-      }
-
-      .media-frame {
-        border-radius: 18px;
-        overflow: hidden;
-        background: #000;
-        border: 1px solid rgba(30, 64, 175, 0.7);
-      }
-
-      video {
-        display: block;
-        width: 100%;
-        height: auto;
-        max-height: 520px;
-        background: #000;
-      }
-
-      .status-line {
-        margin-top: 10px;
-        font-size: 13px;
-        color: var(--text-soft);
-      }
-
-      .status-line code {
-        font-size: 12px;
-        background: rgba(15, 23, 42, 0.9);
-        padding: 2px 6px;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.25);
-      }
-
-      .audio-frame {
-        margin-top: 8px;
-        border-radius: 16px;
-        padding: 10px 10px 14px;
-        background: rgba(15, 23, 42, 0.95);
-        border: 1px solid rgba(148, 163, 184, 0.5);
-      }
-
-      audio {
-        width: 100%;
-      }
-
-      .footer-note {
-        margin-top: 6px;
-        font-size: 12px;
-        color: var(--text-soft);
-      }
-
-      .footer-note strong {
-        color: var(--accent);
-      }
-
-      .version {
-        margin-top: 4px;
-        font-size: 11px;
-        color: #6b7280;
-      }
-
-      /* Spruch des Tages */
-
-      .quote-text {
-        font-size: 15px;
-        line-height: 1.6;
-      }
-
-      .quote-meta {
-        margin-top: 6px;
-        font-size: 12px;
-        color: var(--text-soft);
-      }
-
-      .quote-fallback {
-        font-size: 13px;
-        color: var(--text-soft);
-      }
-
-      @media (min-width: 768px) {
-        .page {
-          padding: 32px 24px 48px;
-        }
-
-        h1 {
-          font-size: 32px;
-        }
-
-        .card {
-          padding: 20px 20px 22px;
-        }
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="page">
-      <div class="shell">
-        <header>
-          <div class="badge-live">
-            <span class="badge-live-dot"></span>
-            <span>Live · Mira – Sichtbare Präsenz</span>
-          </div>
-          <h1>Mira – Sichtbare Präsenz</h1>
-          <p class="subtitle">
-            Porträt, Stimme und täglicher Spruch aus
-            <code>data/self/</code> und <code>audio/</code>.
-          </p>
-          <p class="version">UI-Version: <code>v1.1-status-json</code></p>
-        </header>
-
-        <!-- Porträt & Video -->
-        <section class="card">
-          <div class="card-title">Porträt &amp; Video</div>
-
-          <div class="media-frame">
-            <video
-              controls
-              playsinline
-              preload="auto"
-              poster="data/self/latest_image.png"
-            >
-              <source src="data/self/latest_video.mp4" type="video/mp4" />
-              <!-- Fallback, falls Video nicht unterstützt wird -->
-              Dein Browser unterstützt keine eingebetteten Videos.
-            </video>
-          </div>
-
-          <p class="status-line">
-            Bild: <code>data/self/latest_image.png</code> ·
-            Video: <code>data/self/latest_video.mp4</code>
-          </p>
-        </section>
-
-        <!-- Stimme -->
-        <section class="card">
-          <div class="card-title">Stimme</div>
-
-          <div class="audio-frame">
-            <audio controls preload="auto">
-              <source src="audio/latest.wav" type="audio/wav" />
-              Dein Browser unterstützt keine eingebetteten Audios.
-            </audio>
-
-            <p class="status-line">
-              Audio: <code>audio/latest.wav</code>
-            </p>
-            <p class="footer-note">
-              Autoplay-Schutz: Bitte mindestens einmal
-              <strong>▶</strong> tippen, damit der Browser das Abspielen zulässt.
-            </p>
-          </div>
-        </section>
-
-        <!-- Spruch des Tages aus data/self/status.json -->
-        <section class="card">
-          <div class="card-title">Spruch des Tages</div>
-          <div id="quote-container">
-            <p id="quote-text" class="quote-fallback">
-              Lade den Spruch des Tages …
-            </p>
-            <p id="quote-meta" class="quote-meta"></p>
-          </div>
-          <p class="status-line">
-            Quelle: <code>data/self/status.json</code>
-          </p>
-        </section>
-      </div>
+  <!-- Bild -->
+  <div class="section">
+    <div class="media-frame">
+      <img src="data/self/latest_image.png" alt="Mira aktuelles Bild" />
     </div>
+  </div>
 
-    <script>
-      // Einfacher Loader für data/self/status.json
-      (function () {
-        const quoteEl = document.getElementById("quote-text");
-        const metaEl = document.getElementById("quote-meta");
+  <!-- Audio -->
+  <div class="section">
+    <audio controls preload="auto">
+      <source src="audio/latest.wav" type="audio/wav" />
+      Dein Browser unterstützt kein Audio.
+    </audio>
+  </div>
 
-        // Kleiner Schutz, falls Elemente nicht da sind
-        if (!quoteEl || !metaEl) return;
+  <!-- Spruch des Tages (fest eingebettet, stabil) -->
+  <div class="section">
+    <div class="spruch">
+      <strong>Spruch des Tages:</strong><br><br>
+      Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.
+    </div>
+  </div>
 
-        // Cache-Buster, damit neue Werte sicher geladen werden
-        const url = "data/self/status.json?t=" + Date.now();
-
-        fetch(url)
-          .then((res) => {
-            if (!res.ok) {
-              throw new Error("Status " + res.status);
-            }
-            return res.json();
-          })
-          .then((data) => {
-            const quote = data.daily_quote || "";
-            const tone = data.base_tone || "";
-            const updated = data.updated_at || "";
-
-            if (!quote) {
-              quoteEl.textContent =
-                "Noch kein Spruch des Tages eingetragen. Resonanz entsteht gerade.";
-              metaEl.textContent = "";
-              return;
-            }
-
-            quoteEl.textContent = quote;
-
-            let metaParts = [];
-            if (tone) metaParts.push("Grundton: " + tone);
-            if (updated) metaParts.push("Aktualisiert: " + updated);
-
-            metaEl.textContent = metaParts.join(" · ");
-          })
-          .catch(() => {
-            quoteEl.textContent =
-              "Der Spruch des Tages konnte gerade nicht geladen werden.";
-            metaEl.textContent = "";
-          });
-      })();
-    </script>
-  </body>
+</body>
 </html>
