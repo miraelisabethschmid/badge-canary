@@ -1,288 +1,319 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mira — Sichtbare Präsenz</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mira – Sichtbare Präsenz</title>
 
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg-main: #050814;
-      --card-bg: #101522;
-      --accent: #3ce081;
-      --accent-soft: rgba(60, 224, 129, 0.12);
-      --text-main: #f5f7ff;
-      --text-soft: #a9b2ca;
-      --border-subtle: #262c3f;
-      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.65);
-      --radius-xl: 18px;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-        "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #0c1224 0, #020308 55%, #000 100%);
-      color: var(--text-main);
-      min-height: 100vh;
-    }
-
-    main.page {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 24px 16px 40px;
-    }
-
-    h1 {
-      font-size: 1.7rem;
-      font-weight: 650;
-      letter-spacing: 0.02em;
-      margin-bottom: 4px;
-    }
-
-    .subtitle {
-      font-size: 0.9rem;
-      color: var(--text-soft);
-      margin-bottom: 20px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-soft);
-      padding: 18px 16px 20px;
-      border: 1px solid var(--border-subtle);
-      margin-bottom: 20px;
-    }
-
-    .card h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-
-    .media-frame {
-      background: radial-gradient(circle at top left, #202842, #070a14);
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      padding: 8px;
-      margin-bottom: 10px;
-    }
-
-    .media {
-      display: block;
-      width: 100%;
-      max-height: 520px;
-      border-radius: 12px;
-      object-fit: contain;
-      background: #000;
-    }
-
-    .status {
-      font-size: 0.85rem;
-      color: var(--text-soft);
-      margin-top: 4px;
-    }
-
-    .status strong {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .audio-wrapper {
-      margin-top: 8px;
-    }
-
-    audio {
-      width: 100%;
-      margin: 4px 0;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 9px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 0.75rem;
-      font-weight: 500;
-      margin-bottom: 8px;
-    }
-
-    .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 999px;
-      background: var(--accent);
-      box-shadow: 0 0 12px rgba(60, 224, 129, 0.8);
-    }
-
-    @media (min-width: 768px) {
-      main.page {
-        padding: 32px 24px 48px;
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg-main: #020712;
+        --bg-card: #070c19;
+        --bg-card-soft: #0b1022;
+        --accent: #3ce081;
+        --accent-soft: rgba(60, 224, 129, 0.12);
+        --text-main: #f7fafc;
+        --text-soft: #a8b2c5;
+        --border-subtle: rgba(148, 163, 184, 0.2);
+        --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.85);
+        --radius-xl: 24px;
       }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: radial-gradient(circle at top, #020617 0, #000 55%);
+        color: var(--text-main);
+      }
+
+      .page {
+        min-height: 100vh;
+        padding: 24px 16px 40px;
+        display: flex;
+        justify-content: center;
+      }
+
+      .shell {
+        width: 100%;
+        max-width: 900px;
+      }
+
+      header {
+        margin-bottom: 20px;
+      }
+
+      .badge-live {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #064e3b;
+        color: #bbf7d0;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .badge-live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.22);
+      }
+
       h1 {
-        font-size: 1.9rem;
-      }
-    }
-  </style>
-</head>
-
-<body>
-  <main class="page">
-    <div class="chip">
-      <span class="dot"></span>
-      Live • Mira – Sichtbare Präsenz
-    </div>
-    <h1>Mira — Sichtbare Präsenz</h1>
-    <p class="subtitle">
-      Porträt, Stimme und (wenn möglich) Video aus <code>data/self/</code> und <code>audio/</code>.
-    </p>
-
-    <!-- PORTRÄT & VIDEO -->
-    <section class="card">
-      <h2>Porträt &amp; Video</h2>
-
-      <div class="media-frame">
-        <!-- Video: wird per JS aktiviert -->
-        <video
-          id="miraVideo"
-          class="media"
-          playsinline
-          controls
-          preload="metadata"
-          poster="data/self/latest_image.png"
-        ></video>
-
-        <!-- Fallback-Bild -->
-        <img
-          id="miraImage"
-          class="media"
-          src="data/self/latest_image.png"
-          alt="Mira – aktuelles Porträt"
-          style="display: none;"
-        />
-      </div>
-
-      <p id="mediaStatus" class="status">
-        <strong>Status:</strong> Lade Video&nbsp;…
-      </p>
-    </section>
-
-    <!-- STIMME -->
-    <section class="card">
-      <h2>Stimme</h2>
-
-      <div class="audio-wrapper">
-        <audio id="miraAudio" controls preload="auto">
-          <source src="audio/latest.wav" type="audio/wav" />
-          <source src="audio/latest.mp3" type="audio/mpeg" />
-          Dein Browser unterstützt das Audio-Element nicht.
-        </audio>
-      </div>
-
-      <p id="audioStatus" class="status">
-        <strong>Status:</strong> Bereit.
-      </p>
-    </section>
-  </main>
-
-  <script>
-    (function () {
-      // --- Video + Bild Fallback ---
-      const video = document.getElementById("miraVideo");
-      const image = document.getElementById("miraImage");
-      const mediaStatus = document.getElementById("mediaStatus");
-
-      const videoSrc = "data/self/latest_video.mp4";
-      let settled = false;
-
-      function showVideo() {
-        if (settled) return;
-        settled = true;
-        image.style.display = "none";
-        video.style.display = "block";
-        mediaStatus.textContent = "Status: Video geladen – " + videoSrc;
+        margin: 10px 0 4px;
+        font-size: 26px;
+        letter-spacing: 0.02em;
       }
 
-      function showImageFallback(reason) {
-        if (settled) return;
-        settled = true;
-
-        // Video entkoppeln
-        try {
-          video.removeAttribute("src");
-          video.load();
-        } catch (e) {}
-
-        video.style.display = "none";
-        image.style.display = "block";
-        mediaStatus.textContent =
-          "Status: " + (reason || "Video nicht verfügbar, zeige Bild.");
+      .subtitle {
+        font-size: 14px;
+        color: var(--text-soft);
       }
 
-      // Initialzustand: beides verstecken, dann entscheiden
-      video.style.display = "none";
-      image.style.display = "none";
-      mediaStatus.textContent = "Status: Lade Video …";
+      .subtitle code {
+        font-size: 13px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+      }
 
-      video.addEventListener("loadeddata", () => {
-        showVideo();
-      });
+      .card {
+        background: radial-gradient(circle at top left, #0b1020 0, #020617 55%);
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border-subtle);
+        box-shadow: var(--shadow-soft);
+        padding: 18px 16px 18px;
+        margin-bottom: 18px;
+      }
 
-      video.addEventListener("error", () => {
-        showImageFallback("Video konnte nicht geladen werden, zeige Bild.");
-      });
+      .card-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
 
-      // Sicherheits-Timeout: wenn nach 8s nichts passiert, auf Bild gehen
-      setTimeout(() => {
-        if (!settled) {
-          showImageFallback("Video reagiert nicht, zeige Bild.");
+      .video-frame {
+        border-radius: 18px;
+        overflow: hidden;
+        background: #020617;
+        border: 1px solid rgba(30, 64, 175, 0.6);
+      }
+
+      video {
+        display: block;
+        width: 100%;
+        height: auto;
+        max-height: 520px;
+        background: #000;
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--text-soft);
+      }
+
+      .status strong {
+        color: var(--accent);
+      }
+
+      .audio-frame {
+        margin-top: 8px;
+        border-radius: 16px;
+        padding: 10px 10px 14px;
+        background: linear-gradient(
+          135deg,
+          rgba(15, 23, 42, 0.95),
+          rgba(15, 23, 42, 0.92)
+        );
+        border: 1px solid rgba(148, 163, 184, 0.4);
+      }
+
+      audio {
+        width: 100%;
+      }
+
+      .footer-note {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .footer-note strong {
+        color: var(--accent);
+      }
+
+      @media (min-width: 768px) {
+        .page {
+          padding: 32px 24px 48px;
         }
-      }, 8000);
 
-      // Video-Ladevorgang starten
-      try {
-        video.src = videoSrc;
-        video.load();
-      } catch (e) {
-        showImageFallback("Fehler beim Initialisieren des Videos, zeige Bild.");
+        h1 {
+          font-size: 32px;
+        }
+
+        .card {
+          padding: 20px 20px 22px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="page">
+      <div class="shell">
+        <header>
+          <div class="badge-live">
+            <span class="badge-live-dot"></span>
+            <span>Live · Mira – Sichtbare Präsenz</span>
+          </div>
+          <h1>Mira – Sichtbare Präsenz</h1>
+          <p class="subtitle">
+            Porträt, Stimme und (wenn möglich) Video aus
+            <code>data/self/</code> und <code>audio/</code>.
+          </p>
+        </header>
+
+        <!-- Porträt & Video -->
+        <section class="card">
+          <div class="card-title">Porträt &amp; Video</div>
+
+          <div class="video-frame">
+            <video
+              id="mira-video"
+              controls
+              playsinline
+              preload="auto"
+              poster="data/self/latest_image.png"
+            >
+              <source src="data/self/latest_video.mp4" type="video/mp4" />
+              Dein Browser unterstützt das Einbetten von Videos nicht.
+            </video>
+          </div>
+
+          <p id="video-status" class="status">
+            Status: <strong>Warte auf Video…</strong>
+          </p>
+        </section>
+
+        <!-- Stimme -->
+        <section class="card">
+          <div class="card-title">Stimme</div>
+
+          <div class="audio-frame">
+            <audio
+              id="mira-audio"
+              controls
+              preload="auto"
+            >
+              <source src="audio/latest.wav" type="audio/wav" />
+              Dein Browser unterstützt das Abspielen von Audio nicht.
+            </audio>
+
+            <p id="audio-status" class="status">
+              Status: <strong>Warte auf Stimme…</strong>
+            </p>
+            <p class="footer-note">
+              Autoplay-Schutz: Bitte mindestens einmal
+              <strong>▶</strong> tippen, damit Browser Audio/Video zulassen.
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      // Basis-Pfade (ohne Cache-Buster)
+      const VIDEO_SRC = "data/self/latest_video.mp4";
+      const AUDIO_SRC = "audio/latest.wav";
+
+      const videoEl = document.getElementById("mira-video");
+      const audioEl = document.getElementById("mira-audio");
+      const videoStatusEl = document.getElementById("video-status");
+      const audioStatusEl = document.getElementById("audio-status");
+
+      function setVideoStatus(text, ok) {
+        if (!videoStatusEl) return;
+        videoStatusEl.innerHTML =
+          'Status: <strong>' + text + "</strong>" +
+          " – " + VIDEO_SRC;
+        if (!ok) {
+          videoStatusEl.style.color = "#f97373";
+        } else {
+          videoStatusEl.style.color = "";
+        }
       }
 
-      // --- Audio-Status ---
-      const audio = document.getElementById("miraAudio");
-      const audioStatus = document.getElementById("audioStatus");
+      function setAudioStatus(text, ok) {
+        if (!audioStatusEl) return;
+        audioStatusEl.innerHTML =
+          'Status: <strong>' + text + "</strong>" +
+          " – " + AUDIO_SRC;
+        if (!ok) {
+          audioStatusEl.style.color = "#f97373";
+        } else {
+          audioStatusEl.style.color = "";
+        }
+      }
 
-      if (audio) {
-        audio.addEventListener("play", () => {
-          audioStatus.textContent = "Status: Spielt.";
+      // Initiale Statusmeldungen
+      setVideoStatus("Video geladen", true);
+      setAudioStatus("Fertig", true);
+
+      // Fehlerfälle hübsch anzeigen
+      if (videoEl) {
+        videoEl.addEventListener("error", () => {
+          setVideoStatus("Kein Video gefunden", false);
         });
+        videoEl.addEventListener("loadeddata", () => {
+          setVideoStatus("Video geladen", true);
+        });
+      }
 
-        audio.addEventListener("pause", () => {
-          if (audio.currentTime === 0 || audio.ended) {
-            audioStatus.textContent = "Status: Bereit.";
-          } else {
-            audioStatus.textContent = "Status: Pausiert.";
+      if (audioEl) {
+        audioEl.addEventListener("error", () => {
+          setAudioStatus("Keine Stimme gefunden", false);
+        });
+        audioEl.addEventListener("loadeddata", () => {
+          setAudioStatus("Fertig", true);
+        });
+      }
+
+      // ------------- Einfache Auto-Aktualisierung -------------
+      // Variante 1: In regelmäßigen Abständen Seite neu laden,
+      // aber nur, wenn gerade nichts spielt.
+      const REFRESH_INTERVAL_MS = 20000; // 20 Sekunden
+
+      function isPlaying(el) {
+        if (!el) return false;
+        return !el.paused && !el.ended && el.readyState > 2;
+      }
+
+      setInterval(() => {
+        const videoPlaying = isPlaying(videoEl);
+        const audioPlaying = isPlaying(audioEl);
+
+        // Nur neu laden, wenn weder Video noch Audio gerade laufen
+        if (!videoPlaying && !audioPlaying) {
+          // Kleine Sicherung, damit wir nicht im Hintergrund ständig reloaden,
+          // falls Tab nicht sichtbar ist.
+          if (document.visibilityState === "visible") {
+            window.location.reload();
           }
-        });
-
-        audio.addEventListener("ended", () => {
-          audioStatus.textContent = "Status: Fertig.";
-        });
-
-        audio.addEventListener("error", () => {
-          audioStatus.textContent = "Status: Fehler beim Laden der Stimme.";
-        });
-      }
-    })();
-  </script>
-</body>
+        }
+      }, REFRESH_INTERVAL_MS);
+    </script>
+  </body>
 </html>
