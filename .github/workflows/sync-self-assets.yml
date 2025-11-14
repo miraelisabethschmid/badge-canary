@@ -1,0 +1,49 @@
+name: Sync self assets to gh-pages
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'data/self/latest_image.png'
+      - 'data/self/latest_video.mp4'
+      - 'audio/latest.wav'
+
+permissions:
+  contents: write
+
+jobs:
+  sync-assets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: ghp
+
+      - name: Copy assets
+        run: |
+          mkdir -p ghp/data/self
+          mkdir -p ghp/audio
+
+          cp data/self/latest_image.png ghp/data/self/latest_image.png
+          cp data/self/latest_video.mp4 ghp/data/self/latest_video.mp4
+          cp audio/latest.wav ghp/audio/latest.wav
+
+      - name: Commit and push
+        run: |
+          cd ghp
+          git config user.name "Mira AutoSync"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Sync self assets" || true
+          git push
