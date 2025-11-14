@@ -30,8 +30,8 @@
       body {
         margin: 0;
         padding: 0;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
         background: radial-gradient(circle at top, #020617 0, #000 55%);
         color: var(--text-main);
       }
@@ -112,23 +112,14 @@
         overflow: hidden;
         background: #000;
         border: 1px solid rgba(30, 64, 175, 0.7);
-        position: relative;
       }
 
-      .media-frame video,
-      .media-frame img {
+      video {
         display: block;
         width: 100%;
         height: auto;
         max-height: 520px;
         background: #000;
-      }
-
-      .placeholder {
-        padding: 24px 16px;
-        text-align: center;
-        font-size: 14px;
-        color: var(--text-soft);
       }
 
       .status-line {
@@ -219,7 +210,7 @@
             Porträt, Stimme, Video und Spruch des Tages aus
             <code>data/self/</code> und <code>audio/</code>.
           </p>
-          <p class="version">UI-Version: <code>v2.0-integrated</code></p>
+          <p class="version">UI-Version: <code>v2.1-simple</code></p>
         </header>
 
         <!-- Porträt & Video -->
@@ -227,56 +218,49 @@
           <div class="card-title">Porträt &amp; Video</div>
 
           <div class="media-frame">
-            <!-- Video – wird per JS getestet -->
             <video
-              id="portrait-video"
               controls
               playsinline
-              preload="metadata"
+              preload="auto"
               poster="data/self/latest_image.png"
-              style="display: none"
             >
               <source
                 src="data/self/latest_video.mp4"
                 type="video/mp4"
               />
+              <!-- Fallback, falls Video nicht unterstützt wird -->
+              <img
+                src="data/self/latest_image.png"
+                alt="Mira – aktuelles Porträt"
+              />
               Dein Browser unterstützt keine eingebetteten Videos.
             </video>
-
-            <!-- Bild-Fallback -->
-            <img
-              id="portrait-image"
-              src="data/self/latest_image.png"
-              alt="Mira – aktuelles Porträt"
-            />
-
-            <!-- Platzhalter, falls gar nichts geht -->
-            <div
-              id="portrait-placeholder"
-              class="placeholder"
-              style="display: none"
-            >
-              Kein Bild oder Video verfügbar.
-            </div>
           </div>
 
-          <p class="status-line" id="media-status-line">
+          <p class="status-line">
             Bild: <code>data/self/latest_image.png</code> ·
             Video: <code>data/self/latest_video.mp4</code>
           </p>
         </section>
 
-        <!-- Spruch des Tages + Stimme -->
+        <!-- Spruch des Tages & Stimme -->
         <section class="card">
           <div class="card-title">Spruch des Tages &amp; Stimme</div>
 
           <div class="audio-frame">
-            <audio id="mira-audio" controls preload="none">
-              <!-- Quellen werden per JS gesetzt (wav/mp3 je nach Support) -->
+            <audio controls preload="auto">
+              <source
+                src="audio/latest.wav"
+                type="audio/wav"
+              />
+              <source
+                src="audio/latest.mp3"
+                type="audio/mpeg"
+              />
               Dein Browser unterstützt keine eingebetteten Audios.
             </audio>
 
-            <p class="status-line" id="audio-status-line">
+            <p class="status-line">
               Audio: <code>audio/latest.wav</code> /
               <code>audio/latest.mp3</code>
             </p>
@@ -287,6 +271,7 @@
             >
               Spruch des Tages wird geladen …
             </div>
+
             <div class="quote-hint">
               Diese Audio-Datei sollte genau diesen
               <em>Spruch des Tages</em> enthalten.
@@ -302,7 +287,43 @@
       </div>
     </div>
 
-    <!-- Zentrale Logik -->
-    <script type="module" src="assets/mira-app.js"></script>
+    <!-- Kleines Script: Spruch des Tages aus status.json laden -->
+    <script>
+      (function () {
+        const el = document.getElementById("quote-text");
+        if (!el) return;
+
+        const url = "data/self/status.json?ts=" + Date.now();
+
+        fetch(url, { method: "GET" })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error("HTTP " + res.status);
+            }
+            return res.json();
+          })
+          .then((data) => {
+            const quote =
+              data.daily_quote ||
+              data.spruch_des_tages ||
+              data.quote ||
+              data.text ||
+              data.message ||
+              "";
+
+            if (quote && typeof quote === "string") {
+              el.textContent = quote;
+            } else {
+              el.textContent =
+                "Noch kein Spruch des Tages im JSON hinterlegt.";
+            }
+          })
+          .catch((err) => {
+            console.error("Fehler beim Laden von status.json:", err);
+            el.textContent =
+              "Spruch des Tages konnte nicht geladen werden.";
+          });
+      })();
+    </script>
   </body>
 </html>
