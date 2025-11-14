@@ -1,0 +1,72 @@
+name: Sync self assets to gh-pages
+
+on:
+  # Manuell im Actions-Tab starten
+  workflow_dispatch:
+
+  # Automatisch, wenn sich die Assets auf main ändern
+  push:
+    branches:
+      - main
+    paths:
+      - 'data/self/latest_image.png'
+      - 'data/self/latest_video.mp4'
+      - 'audio/latest.wav'
+
+permissions:
+  contents: write
+
+jobs:
+  sync-assets:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) main auschecken (hier liegen deine „Arbeits“-Dateien)
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # 2) Ordner für gh-pages vorbereiten
+      - name: Prepare gh-pages workspace
+        run: |
+          mkdir -p /tmp/gh-pages
+
+      # 3) gh-pages in eigenes Verzeichnis auschecken
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: /tmp/gh-pages
+
+      # 4) Bild, Video, Audio von main nach gh-pages kopieren
+      - name: Copy self assets into gh-pages
+        run: |
+          set -e
+          # Zielordner in gh-pages
+          cd /tmp/gh-pages
+          mkdir -p data/self
+          mkdir -p audio
+
+          # Quelle: erster Checkout (main) im Standard-Workspace
+          cp "$GITHUB_WORKSPACE/data/self/latest_image.png" "data/self/latest_image.png" || true
+          cp "$GITHUB_WORKSPACE/data/self/latest_video.mp4" "data/self/latest_video.mp4" || true
+          cp "$GITHUB_WORKSPACE/audio/latest.wav" "audio/latest.wav" || true
+
+      # 5) Änderungen committen und nach gh-pages pushen
+      - name: Commit and push changes to gh-pages
+        run: |
+          cd /tmp/gh-pages
+
+          if git status --porcelain | grep .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            git add data/self/latest_image.png || true
+            git add data/self/latest_video.mp4 || true
+            git add audio/latest.wav || true
+
+            git commit -m "Sync self assets from main"
+            git push origin gh-pages
+          else
+            echo "No changes to commit."
