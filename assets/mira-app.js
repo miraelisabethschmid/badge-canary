@@ -1,126 +1,128 @@
 // -------------------------------------------------------------
 // MIRA APP – zentraler Kern
-// Lädt: Video → Bild → Platzhalter
-// Lädt Audio: WAV → MP3
-// Lädt JSON-Dateien (status, self, learning)
-// Zukunft: Avatar + LipSync Hook
+// Nutzt:
+//   - modules/assetModule.js für Video/Bild-Fallback
+//   - internes Audio-Handling (WAV → MP3)
+//   - JSON-Loader für Status, Selbstbild, Lernen
 // -------------------------------------------------------------
 
-// ---- MEDIA LOADER ------------------------------------------------
+import { loadMedia as loadHeroMedia } from "./modules/assetModule.js";
 
-export async function loadMedia() {
-  const mediaContainer = document.getElementById("mediaContainer");
-
-  // 1) VIDEO versuchen
-  const videoPath = "./data/self/latest_video.mp4";
-  const video = document.createElement("video");
-  video.src = videoPath + "?v=" + Date.now();
-  video.autoplay = true;
-  video.loop = true;
-  video.muted = true;
-  video.playsInline = true;
-
-  const videoOK = await fetch(videoPath, { method: "HEAD" })
-    .then(res => res.ok)
-    .catch(() => false);
-
-  if (videoOK) {
-    mediaContainer.innerHTML = "";
-    mediaContainer.appendChild(video);
-    return "video";
-  }
-
-  // 2) BILD versuchen
-  const imgPath = "./data/self/latest_image.png";
-  const img = new Image();
-  img.src = imgPath + "?v=" + Date.now();
-
-  const imgOK = await fetch(imgPath, { method: "HEAD" })
-    .then(res => res.ok)
-    .catch(() => false);
-
-  if (imgOK) {
-    mediaContainer.innerHTML = "";
-    mediaContainer.appendChild(img);
-    return "image";
-  }
-
-  // 3) KEIN MEDIUM → Platzhalter
-  mediaContainer.innerHTML = "<div style='padding:20px;text-align:center;'>Kein Medium verfügbar</div>";
-  return "none";
-}
-
-
-// ---- AUDIO LOADER ----------------------------------------------
+// ---- AUDIO LOADER ------------------------------------------------
 
 export async function loadAudio() {
   const audio = document.getElementById("voice");
+  const statusEl = document.getElementById("audio-status");
+  if (!audio) return;
 
   // WAV bevorzugen
-  const wavOK = await fetch("./audio/latest.wav", { method: "HEAD" })
+  let chosen = null;
+
+  const wavOK = await fetch("audio/latest.wav", { method: "HEAD" })
     .then(r => r.ok)
     .catch(() => false);
 
   if (wavOK) {
-    audio.src = "./audio/latest.wav?v=" + Date.now();
-    return "wav";
+    audio.src = "audio/latest.wav?v=" + Date.now();
+    chosen = "wav";
+  } else {
+    const mp3OK = await fetch("audio/latest.mp3", { method: "HEAD" })
+      .then(r => r.ok)
+      .catch(() => false);
+    if (mp3OK) {
+      audio.src = "audio/latest.mp3?v=" + Date.now();
+      chosen = "mp3";
+    }
   }
 
-  // MP3 Fallback
-  const mp3OK = await fetch("./audio/latest.mp3", { method: "HEAD" })
-    .then(r => r.ok)
-    .catch(() => false);
-
-  if (mp3OK) {
-    audio.src = "./audio/latest.mp3?v=" + Date.now();
-    return "mp3";
+  if (!chosen) {
+    audio.removeAttribute("src");
+    if (statusEl) {
+      statusEl.textContent = "Kein Audio gefunden.";
+    }
+    return "none";
   }
 
-  // Nichts vorhanden
-  audio.removeAttribute("src");
-  return "none";
+  if (statusEl) {
+    statusEl.textContent = "Bereit – Tippe ▶, damit Mira spricht.";
+  }
+  return chosen;
 }
 
-
-// ---- JSON LOADER ------------------------------------------------
+// ---- JSON HELFER -------------------------------------------------
 
 async function safeLoadJson(path) {
-  return fetch(path + "?v=" + Date.now())
-    .then(r => (r.ok ? r.json() : null))
-    .catch(() => null);
+  try {
+    const res = await fetch(path + "?v=" + Date.now());
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
+
+// ---- JSON GESAMTLADELOGIK ----------------------------------------
 
 export async function loadAllJson() {
-  const status = await safeLoadJson("./data/self/status.json");
-  const self = await safeLoadJson("./data/self/self-describe.json");
-  const learning = await safeLoadJson("./data/self/learning.json");
+  const quoteEl = document.getElementById("quote");
+  const selfBox = document.getElementById("selfbox");
+  const learningBox = document.getElementById("learningbox");
 
-  // UI aktualisieren
-  if (status && status.daily_quote) {
-    document.getElementById("quote").textContent = status.daily_quote;
+  const [status, self, learning] = await Promise.all([
+    safeLoadJson("data/self/status.json"),
+    safeLoadJson("data/self/self-describe.json"),
+    safeLoadJson("data/self/learning.json")
+  ]);
+
+  // Tagesimpuls
+  if (quoteEl) {
+    if (status && status.daily_quote) {
+      quoteEl.textContent = status.daily_quote;
+    } else {
+      quoteEl.textContent = "Noch kein Tagesimpuls eingetragen.";
+    }
   }
 
-  if (self && self.physical) {
-    document.getElementById("selfbox").innerHTML =
-      `<b>Körper:</b> ${self.physical.description}<br>` +
-      `<b>Stimme:</b> ${self.voice?.profile || "—"}<br>` +
-      `<b>Affekt:</b> ${self.affect?.narrative || "—"}`;
+  // Selbstbild
+  if (selfBox) {
+    if (self && typeof self === "object") {
+      const phys = self.physical?.description || "—";
+      const voice = self.voice?.profile || "—";
+      const affect = self.affect?.narrative || "—";
+
+      selfBox.innerHTML =
+        `<b>Körper:</b> ${phys}<br>` +
+        `<b>Stimme:</b> ${voice}<br>` +
+        `<b>Affekt:</b> ${affect}`;
+    } else {
+      selfBox.textContent = "Noch kein explizites Selbstbild hinterlegt.";
+    }
   }
 
-  if (learning && learning.next_focus) {
-    document.getElementById("learningbox").textContent =
-      "Nächster Fokus: " + learning.next_focus;
+  // Lernen
+  if (learningBox) {
+    if (learning && learning.next_focus) {
+      learningBox.textContent = "Aktueller Lernfokus: " + learning.next_focus;
+    } else if (learning) {
+      learningBox.textContent =
+        "Lernstatus vorhanden, aber ohne klaren Fokus-Text.";
+    } else {
+      learningBox.textContent = "Noch kein Lernstatus hinterlegt.";
+    }
   }
 }
 
-
-// ---- INIT -------------------------------------------------------
+// ---- INIT --------------------------------------------------------
 
 export async function initApp() {
-  await loadMedia();
+  // Medien (Video/Bild)
+  await loadHeroMedia("mediaContainer");
+
+  // Audio
   await loadAudio();
+
+  // JSON-Zustände
   await loadAllJson();
 
-  // später: lipSync.init()
-  console.log("Mira-App ist bereit");
-    }
+  console.log("Mira-App initialisiert.");
+}
