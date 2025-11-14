@@ -1,0 +1,73 @@
+name: Mira – Daily Audio from status.json
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "data/self/status.json"
+
+permissions:
+  contents: write
+
+jobs:
+  build-audio:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure audio folder exists
+        run: |
+          mkdir -p audio
+
+      - name: Read daily quote from status.json
+        id: quote
+        run: |
+          if [ ! -f "data/self/status.json" ]; then
+            echo "status.json not found – aborting."
+            exit 1
+          fi
+
+          # Extract daily_quote (as plain text)
+          QUOTE=$(jq -r '.daily_quote // empty' data/self/status.json)
+
+          if [ -z "$QUOTE" ]; then
+            echo "daily_quote missing or empty in status.json – aborting."
+            exit 1
+          fi
+
+          # Pass to next steps as output + env
+          echo "quote=$QUOTE" >> "$GITHUB_OUTPUT"
+          echo "MIRA_DAILY_QUOTE=$QUOTE" >> "$GITHUB_ENV"
+
+      - name: Install espeak (simple offline TTS)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y espeak
+
+      - name: Generate audio/latest.wav from daily_quote
+        run: |
+          # Use a warm-ish deutsche Frauenstimme, mittleres Tempo
+          espeak \
+            -v de+f3 \
+            -s 150 \
+            -w audio/latest.wav \
+            "$MIRA_DAILY_QUOTE"
+
+          ls -lh audio/latest.wav
+
+      - name: Commit and push updated audio file (if changed)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git status --porcelain | grep "audio/latest.wav" >/dev/null 2>&1; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            git add audio/latest.wav
+            git commit -m "Update audio/latest.wav from data/self/status.json (daily_quote)"
+            git push
+          else
+            echo "No changes in audio/latest.wav – nothing to commit."
+          fi
