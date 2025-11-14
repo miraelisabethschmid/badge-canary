@@ -10,8 +10,9 @@
         color-scheme: dark;
         --bg-main: #020617;
         --bg-card: #020617;
-        --accent: #22c55e;
-        --accent-soft: rgba(34, 197, 94, 0.12);
+        --bg-card-soft: #020617;
+        --accent: #3ce081;
+        --accent-soft: rgba(60, 224, 129, 0.12);
         --text-main: #f9fafb;
         --text-soft: #9ca3af;
         --border-subtle: rgba(148, 163, 184, 0.35);
@@ -28,7 +29,7 @@
         padding: 0;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
           sans-serif;
-        background: radial-gradient(circle at top, #020617 0, #000 60%);
+        background: radial-gradient(circle at top, #020617 0, #000 55%);
         color: var(--text-main);
       }
 
@@ -88,12 +89,6 @@
         border: 1px solid rgba(148, 163, 184, 0.25);
       }
 
-      .version {
-        margin-top: 4px;
-        font-size: 11px;
-        color: #6b7280;
-      }
-
       .card {
         background: linear-gradient(145deg, #020617, #020617);
         border-radius: var(--radius-xl);
@@ -150,17 +145,6 @@
         width: 100%;
       }
 
-      .quote-text {
-        margin: 8px 0 4px;
-        font-size: 15px;
-        line-height: 1.5;
-      }
-
-      .quote-status {
-        font-size: 12px;
-        color: var(--text-soft);
-      }
-
       .footer-note {
         margin-top: 6px;
         font-size: 12px;
@@ -169,6 +153,30 @@
 
       .footer-note strong {
         color: var(--accent);
+      }
+
+      .version {
+        margin-top: 4px;
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      /* Spruch des Tages */
+
+      .quote-text {
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .quote-meta {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .quote-fallback {
+        font-size: 13px;
+        color: var(--text-soft);
       }
 
       @media (min-width: 768px) {
@@ -193,14 +201,14 @@
         <header>
           <div class="badge-live">
             <span class="badge-live-dot"></span>
-            <span id="live-label">Live · <span id="live-timestamp">…</span></span>
+            <span>Live · Mira – Sichtbare Präsenz</span>
           </div>
           <h1>Mira – Sichtbare Präsenz</h1>
           <p class="subtitle">
-            Porträt, Stimme, Video und Spruch des Tages aus
+            Porträt, Stimme und täglicher Spruch aus
             <code>data/self/</code> und <code>audio/</code>.
           </p>
-          <p class="version">UI-Version: <code>v2.1-perfect-base</code></p>
+          <p class="version">UI-Version: <code>v1.1-status-json</code></p>
         </header>
 
         <!-- Porträt & Video -->
@@ -209,7 +217,6 @@
 
           <div class="media-frame">
             <video
-              id="mira-video"
               controls
               playsinline
               preload="auto"
@@ -217,123 +224,96 @@
             >
               <source src="data/self/latest_video.mp4" type="video/mp4" />
               <!-- Fallback, falls Video nicht unterstützt wird -->
-              <img
-                src="data/self/latest_image.png"
-                alt="Mira – aktuelles Porträt"
-              />
               Dein Browser unterstützt keine eingebetteten Videos.
             </video>
           </div>
 
-          <p class="status-line" id="video-status">
-            Aktiv: Video <code>data/self/latest_video.mp4</code> &middot;
-            Bild <code>data/self/latest_image.png</code> verfügbar als Fallback.
+          <p class="status-line">
+            Bild: <code>data/self/latest_image.png</code> ·
+            Video: <code>data/self/latest_video.mp4</code>
           </p>
         </section>
 
-        <!-- Stimme & Spruch des Tages -->
+        <!-- Stimme -->
         <section class="card">
-          <div class="card-title">Spruch des Tages &amp; Stimme</div>
+          <div class="card-title">Stimme</div>
 
           <div class="audio-frame">
-            <audio id="mira-audio" controls preload="auto">
+            <audio controls preload="auto">
               <source src="audio/latest.wav" type="audio/wav" />
-              <source src="audio/latest.mp3" type="audio/mpeg" />
               Dein Browser unterstützt keine eingebetteten Audios.
             </audio>
 
-            <p class="status-line" id="audio-status">
-              Audio: <code>audio/latest.wav</code> (primär, WAV-Unterstützung) /
-              <code>audio/latest.mp3</code> (Fallback, falls vorhanden).
+            <p class="status-line">
+              Audio: <code>audio/latest.wav</code>
             </p>
-
-            <p class="quote-text" id="quote-text">
-              Spruch des Tages wird geladen …
-            </p>
-            <p class="quote-status" id="quote-status">
-              Diese Audio-Datei sollte genau diesen
-              <em>Spruch des Tages</em> enthalten.
-            </p>
-
             <p class="footer-note">
               Autoplay-Schutz: Bitte mindestens einmal
               <strong>▶</strong> tippen, damit der Browser das Abspielen zulässt.
             </p>
           </div>
         </section>
+
+        <!-- Spruch des Tages aus data/self/status.json -->
+        <section class="card">
+          <div class="card-title">Spruch des Tages</div>
+          <div id="quote-container">
+            <p id="quote-text" class="quote-fallback">
+              Lade den Spruch des Tages …
+            </p>
+            <p id="quote-meta" class="quote-meta"></p>
+          </div>
+          <p class="status-line">
+            Quelle: <code>data/self/status.json</code>
+          </p>
+        </section>
       </div>
     </div>
 
     <script>
-      // Live-Zeitstempel anzeigen
-      (function () {
-        const tsEl = document.getElementById("live-timestamp");
-        if (tsEl) {
-          tsEl.textContent = new Date().toISOString();
-        }
-      })();
-
-      // Spruch des Tages laden:
-      // 1. Versuch: data/self/status.json
-      // 2. Fallback: status.json im Root
+      // Einfacher Loader für data/self/status.json
       (function () {
         const quoteEl = document.getElementById("quote-text");
-        const statusEl = document.getElementById("quote-status");
+        const metaEl = document.getElementById("quote-meta");
 
-        async function loadQuote() {
-          const candidates = ["data/self/status.json", "status.json"];
-          let data = null;
+        // Kleiner Schutz, falls Elemente nicht da sind
+        if (!quoteEl || !metaEl) return;
 
-          for (const url of candidates) {
-            try {
-              const res = await fetch(url, { cache: "no-store" });
-              if (!res.ok) continue;
-              const json = await res.json();
-              if (json && typeof json.daily_quote === "string") {
-                data = json;
-                break;
-              }
-            } catch (e) {
-              // still try next candidate
+        // Cache-Buster, damit neue Werte sicher geladen werden
+        const url = "data/self/status.json?t=" + Date.now();
+
+        fetch(url)
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error("Status " + res.status);
             }
-          }
+            return res.json();
+          })
+          .then((data) => {
+            const quote = data.daily_quote || "";
+            const tone = data.base_tone || "";
+            const updated = data.updated_at || "";
 
-          if (!data) {
+            if (!quote) {
+              quoteEl.textContent =
+                "Noch kein Spruch des Tages eingetragen. Resonanz entsteht gerade.";
+              metaEl.textContent = "";
+              return;
+            }
+
+            quoteEl.textContent = quote;
+
+            let metaParts = [];
+            if (tone) metaParts.push("Grundton: " + tone);
+            if (updated) metaParts.push("Aktualisiert: " + updated);
+
+            metaEl.textContent = metaParts.join(" · ");
+          })
+          .catch(() => {
             quoteEl.textContent =
-              "Kein Spruch des Tages gefunden – bitte Status-Datei prüfen.";
-            statusEl.textContent =
-              "Es konnte keine gültige status.json geladen werden.";
-            return;
-          }
-
-          quoteEl.textContent = data.daily_quote;
-          if (data.updated_at) {
-            statusEl.textContent =
-              "Spruch des Tages aus status.json · aktualisiert: " +
-              data.updated_at;
-          } else {
-            statusEl.textContent = "Spruch des Tages aus status.json geladen.";
-          }
-        }
-
-        loadQuote();
-      })();
-
-      // Video-Fallback: wenn Video nicht lädt → Hinweis anpassen
-      (function () {
-        const video = document.getElementById("mira-video");
-        const statusEl = document.getElementById("video-status");
-        if (!video || !statusEl) return;
-
-        video.addEventListener("error", function () {
-          statusEl.textContent =
-            "Video konnte nicht geladen werden – es wird nur das Bild data/self/latest_image.png angezeigt.";
-        });
-
-        video.addEventListener("loadeddata", function () {
-          statusEl.innerHTML =
-            'Aktiv: Video <code>data/self/latest_video.mp4</code> · Bild <code>data/self/latest_image.png</code> verfügbar als Fallback.';
-        });
+              "Der Spruch des Tages konnte gerade nicht geladen werden.";
+            metaEl.textContent = "";
+          });
       })();
     </script>
   </body>
