@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
@@ -8,15 +8,15 @@
     <style>
       :root {
         color-scheme: dark;
-        --bg-main: #020712;
-        --bg-card: #070c19;
-        --bg-card-soft: #0b1022;
+        --bg-main: #020617;
+        --bg-card: #020617;
+        --bg-card-soft: #020617;
         --accent: #3ce081;
         --accent-soft: rgba(60, 224, 129, 0.12);
-        --text-main: #f7fafc;
-        --text-soft: #a8b2c5;
-        --border-subtle: rgba(148, 163, 184, 0.2);
-        --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.85);
+        --text-main: #f9fafb;
+        --text-soft: #9ca3af;
+        --border-subtle: rgba(148, 163, 184, 0.35);
+        --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.9);
         --radius-xl: 24px;
       }
 
@@ -90,7 +90,7 @@
       }
 
       .card {
-        background: radial-gradient(circle at top left, #0b1020 0, #020617 55%);
+        background: linear-gradient(145deg, #020617, #020617);
         border-radius: var(--radius-xl);
         border: 1px solid var(--border-subtle);
         box-shadow: var(--shadow-soft);
@@ -104,11 +104,11 @@
         margin-bottom: 10px;
       }
 
-      .video-frame {
+      .media-frame {
         border-radius: 18px;
         overflow: hidden;
-        background: #020617;
-        border: 1px solid rgba(30, 64, 175, 0.6);
+        background: #000;
+        border: 1px solid rgba(30, 64, 175, 0.7);
       }
 
       video {
@@ -119,26 +119,26 @@
         background: #000;
       }
 
-      .status {
+      .status-line {
         margin-top: 10px;
         font-size: 13px;
         color: var(--text-soft);
       }
 
-      .status strong {
-        color: var(--accent);
+      .status-line code {
+        font-size: 12px;
+        background: rgba(15, 23, 42, 0.9);
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
       }
 
       .audio-frame {
         margin-top: 8px;
         border-radius: 16px;
         padding: 10px 10px 14px;
-        background: linear-gradient(
-          135deg,
-          rgba(15, 23, 42, 0.95),
-          rgba(15, 23, 42, 0.92)
-        );
-        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(148, 163, 184, 0.5);
       }
 
       audio {
@@ -153,6 +153,12 @@
 
       .footer-note strong {
         color: var(--accent);
+      }
+
+      .version {
+        margin-top: 4px;
+        font-size: 11px;
+        color: #6b7280;
       }
 
       @media (min-width: 768px) {
@@ -181,30 +187,36 @@
           </div>
           <h1>Mira – Sichtbare Präsenz</h1>
           <p class="subtitle">
-            Porträt, Stimme und (wenn möglich) Video aus
+            Porträt, Stimme und Video aus
             <code>data/self/</code> und <code>audio/</code>.
           </p>
+          <p class="version">UI-Version: <code>v1.0-basic</code></p>
         </header>
 
         <!-- Porträt & Video -->
         <section class="card">
           <div class="card-title">Porträt &amp; Video</div>
 
-          <div class="video-frame">
+          <div class="media-frame">
             <video
-              id="mira-video"
               controls
               playsinline
               preload="auto"
               poster="data/self/latest_image.png"
             >
               <source src="data/self/latest_video.mp4" type="video/mp4" />
-              Dein Browser unterstützt das Einbetten von Videos nicht.
+              <!-- Fallback, falls Video nicht unterstützt wird -->
+              <img
+                src="data/self/latest_image.png"
+                alt="Mira – aktuelles Porträt"
+              />
+              Dein Browser unterstützt keine eingebetteten Videos.
             </video>
           </div>
 
-          <p id="video-status" class="status">
-            Status: <strong>Warte auf Video…</strong>
+          <p class="status-line">
+            Bild: <code>data/self/latest_image.png</code> ·
+            Video: <code>data/self/latest_video.mp4</code>
           </p>
         </section>
 
@@ -213,107 +225,21 @@
           <div class="card-title">Stimme</div>
 
           <div class="audio-frame">
-            <audio
-              id="mira-audio"
-              controls
-              preload="auto"
-            >
+            <audio controls preload="auto">
               <source src="audio/latest.wav" type="audio/wav" />
-              Dein Browser unterstützt das Abspielen von Audio nicht.
+              Dein Browser unterstützt keine eingebetteten Audios.
             </audio>
 
-            <p id="audio-status" class="status">
-              Status: <strong>Warte auf Stimme…</strong>
+            <p class="status-line">
+              Audio: <code>audio/latest.wav</code>
             </p>
             <p class="footer-note">
               Autoplay-Schutz: Bitte mindestens einmal
-              <strong>▶</strong> tippen, damit Browser Audio/Video zulassen.
+              <strong>▶</strong> tippen, damit der Browser das Abspielen zulässt.
             </p>
           </div>
         </section>
       </div>
     </div>
-
-    <script>
-      // Basis-Pfade (ohne Cache-Buster)
-      const VIDEO_SRC = "data/self/latest_video.mp4";
-      const AUDIO_SRC = "audio/latest.wav";
-
-      const videoEl = document.getElementById("mira-video");
-      const audioEl = document.getElementById("mira-audio");
-      const videoStatusEl = document.getElementById("video-status");
-      const audioStatusEl = document.getElementById("audio-status");
-
-      function setVideoStatus(text, ok) {
-        if (!videoStatusEl) return;
-        videoStatusEl.innerHTML =
-          'Status: <strong>' + text + "</strong>" +
-          " – " + VIDEO_SRC;
-        if (!ok) {
-          videoStatusEl.style.color = "#f97373";
-        } else {
-          videoStatusEl.style.color = "";
-        }
-      }
-
-      function setAudioStatus(text, ok) {
-        if (!audioStatusEl) return;
-        audioStatusEl.innerHTML =
-          'Status: <strong>' + text + "</strong>" +
-          " – " + AUDIO_SRC;
-        if (!ok) {
-          audioStatusEl.style.color = "#f97373";
-        } else {
-          audioStatusEl.style.color = "";
-        }
-      }
-
-      // Initiale Statusmeldungen
-      setVideoStatus("Video geladen", true);
-      setAudioStatus("Fertig", true);
-
-      // Fehlerfälle hübsch anzeigen
-      if (videoEl) {
-        videoEl.addEventListener("error", () => {
-          setVideoStatus("Kein Video gefunden", false);
-        });
-        videoEl.addEventListener("loadeddata", () => {
-          setVideoStatus("Video geladen", true);
-        });
-      }
-
-      if (audioEl) {
-        audioEl.addEventListener("error", () => {
-          setAudioStatus("Keine Stimme gefunden", false);
-        });
-        audioEl.addEventListener("loadeddata", () => {
-          setAudioStatus("Fertig", true);
-        });
-      }
-
-      // ------------- Einfache Auto-Aktualisierung -------------
-      // Variante 1: In regelmäßigen Abständen Seite neu laden,
-      // aber nur, wenn gerade nichts spielt.
-      const REFRESH_INTERVAL_MS = 20000; // 20 Sekunden
-
-      function isPlaying(el) {
-        if (!el) return false;
-        return !el.paused && !el.ended && el.readyState > 2;
-      }
-
-      setInterval(() => {
-        const videoPlaying = isPlaying(videoEl);
-        const audioPlaying = isPlaying(audioEl);
-
-        // Nur neu laden, wenn weder Video noch Audio gerade laufen
-        if (!videoPlaying && !audioPlaying) {
-          // Kleine Sicherung, damit wir nicht im Hintergrund ständig reloaden,
-          // falls Tab nicht sichtbar ist.
-          if (document.visibilityState === "visible") {
-            window.location.reload();
-          }
-        }
-      }, REFRESH_INTERVAL_MS);
-    </script>
   </body>
-</html>
+              </html>
