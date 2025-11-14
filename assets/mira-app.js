@@ -1,41 +1,38 @@
 // assets/mira-app.js
-// Zentrale Orchestrierung: Medien, Audio, JSON & Live-Timestamp
+// ZENTRALE STEUERUNG: lädt alle Module (Media, Audio, JSON)
+// und initialisiert Mira vollständig.
 
-import { initMedia } from "./modules/assets.js";
-import { initAudio } from "./modules/audio.js";
-import { initJson } from "./modules/json.js";
+import { initMedia } from './modules/assets.js';
+import { initAudio } from './modules/audio.js';
+import { initJson } from './modules/json.js';
 
-function updateLiveTimestamp() {
-  const el = document.getElementById("live-timestamp");
-  if (!el) return;
-  const now = new Date();
-  const iso = now.toISOString().replace(/\.\d+Z$/, "Z");
-  el.textContent = iso;
-}
+// Warten, bis der DOM fertig ist
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("[mira-app] Starte Initialisierung …");
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Live-Zeitstempel direkt und dann regelmäßig aktualisieren
-  updateLiveTimestamp();
-  setInterval(updateLiveTimestamp, 30000); // alle 30 Sekunden
-
-  // Medien (Video/Bild/Platzhalter)
+  // 1) Bild/Video
   try {
     initMedia();
-  } catch (e) {
-    console.error("initMedia() fehlgeschlagen:", e);
+    console.log("[mira-app] Media-Modul geladen.");
+  } catch (err) {
+    console.error("[mira-app] Fehler im Media-Modul:", err);
   }
 
-  // Audio / Buttons
+  // 2) Audio
   try {
     initAudio();
-  } catch (e) {
-    console.error("initAudio() fehlgeschlagen:", e);
+    console.log("[mira-app] Audio-Modul geladen.");
+  } catch (err) {
+    console.error("[mira-app] Fehler im Audio-Modul:", err);
   }
 
-  // JSON: Tagesimpuls, Selbstbild, Lernen
+  // 3) JSON
   try {
     initJson();
-  } catch (e) {
-    console.error("initJson() fehlgeschlagen:", e);
+    console.log("[mira-app] JSON-Modul geladen.");
+  } catch (err) {
+    console.error("[mira-app] Fehler im JSON-Modul:", err);
   }
+
+  console.log("[mira-app] Initialisierung abgeschlossen.");
 });
