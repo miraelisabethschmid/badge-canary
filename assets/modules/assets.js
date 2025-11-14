@@ -1,151 +1,85 @@
 // assets/modules/assets.js
-// Medien-Logik für Mira: Video → Bild → Platzhalter
-// funktioniert mit den IDs aus deiner aktuellen index.html
+// Video → Bild → Platzhalter (robust, GitHub Pages freundlich)
 
 export function initMedia() {
-  const frame = document.getElementById("portrait-frame");
   const video = document.getElementById("portrait-video");
   const img = document.getElementById("portrait-img");
   const placeholder = document.getElementById("portrait-placeholder");
-  const meta = document.getElementById("image-meta");
-  const status = document.getElementById("image-status");
 
-  // Wenn die Elemente nicht existieren, still aussteigen
-  if (!frame || !video || !img || !placeholder || !meta || !status) {
-    return;
-  }
+  const metaEl = document.getElementById("image-meta");
+  const statusEl = document.getElementById("image-status");
 
-  // Grundzustand
-  placeholder.style.display = "flex";
+  // Initialer Zustand
+  let mode = "placeholder";
+  placeholder.style.display = "block";
   img.style.display = "none";
   video.style.display = "none";
-  meta.textContent = "Medium: —";
-  status.textContent = "Status: lade Video …";
 
-  const VIDEO_PATH = "data/self/latest_video.mp4";
-  const IMAGE_PATHS = [
-    "data/self/latest_image.png",
-    "data/mira-placeholder.svg"
-  ];
+  statusEl.textContent = "Status: lädt …";
 
-  let imageTriedIndex = 0;
-  let mediaType = "placeholder"; // "video" | "image" | "placeholder"
+  // -----------------------------------
+  // VIDEO LADEN
+  // -----------------------------------
+  const videoSrc = "data/self/latest_video.mp4?ts=" + Date.now();
 
-  function setMediaType(newType) {
-    mediaType = newType;
-    // Globales Event, damit avatar.js o.ä. später reagieren kann
-    try {
-      window.dispatchEvent(
-        new CustomEvent("mira-media-ready", {
-          detail: { mediaType: newType }
-        })
-      );
-    } catch (_) {
-      // ignorieren, falls CustomEvent nicht unterstützt
-    }
-  }
+  // Video vorbereiten
+  video.preload = "metadata";
+  video.src = videoSrc;
 
-  function showPlaceholder(message) {
-    video.style.display = "none";
+  video.addEventListener("loadeddata", () => {
+    // Video erfolgreich geladen
+    mode = "video";
+    video.style.display = "block";
     img.style.display = "none";
-    placeholder.style.display = "flex";
-    placeholder.textContent = message || "Kein Medium verfügbar.";
-    meta.textContent = "Medium: —";
-    status.textContent = "Status: Platzhalter aktiv";
-    setMediaType("placeholder");
-  }
+    placeholder.style.display = "none";
 
-  function tryLoadNextImage() {
-    if (imageTriedIndex >= IMAGE_PATHS.length) {
-      showPlaceholder("Kein aktuelles Bild gefunden.");
-      return;
-    }
+    metaEl.textContent = "Medium: Video";
+    statusEl.textContent = "Status: Video aktiv";
 
-    const path = IMAGE_PATHS[imageTriedIndex];
-    imageTriedIndex += 1;
+    window.dispatchEvent(
+      new CustomEvent("mira-media-ready", { detail: { mediaType: "video" } })
+    );
+  });
 
-    video.style.display = "none";
-    img.style.display = "none";
-    placeholder.style.display = "flex";
-    placeholder.textContent = "Lade Bild …";
-    meta.textContent = "Medium: —";
-    status.textContent = "Status: lade " + path + " …";
+  video.addEventListener("error", () => {
+    // Video konnte NICHT geladen werden → Bild versuchen
+    loadImageFallback();
+  });
 
-    const ts = Date.now();
-    img.onload = function () {
-      placeholder.style.display = "none";
+  // -----------------------------------
+  // BILDFALLBACK
+  // -----------------------------------
+  function loadImageFallback() {
+    const imgSrc = "data/self/latest_image.png?ts=" + Date.now();
+    img.src = imgSrc;
+
+    img.onload = () => {
+      mode = "image";
       img.style.display = "block";
       video.style.display = "none";
-      meta.textContent = "Medium: Bild (" + path + ")";
-      status.textContent = "Status: Bild erfolgreich geladen";
-      setMediaType("image");
-    };
-
-    img.onerror = function () {
-      // nächstes Bild / Platzhalter probieren
-      tryLoadNextImage();
-    };
-
-    img.src = path + "?ts=" + ts;
-  }
-
-  function initVideo() {
-    // Sicherstellen, dass Event-Handler gesetzt sind, bevor wir src setzen
-    video.preload = "metadata";
-    video.muted = true;
-    video.playsInline = true;
-    video.loop = false; // Du kannst das später ändern, falls du Loop möchtest
-
-    const ts = Date.now();
-    const srcWithTs = VIDEO_PATH + "?ts=" + ts;
-
-    // Event: Video konnte geladen werden
-    function onLoadedData() {
-      video.removeEventListener("loadeddata", onLoadedData);
-      video.removeEventListener("error", onError);
-      video.removeEventListener("stalled", onStalled);
-
       placeholder.style.display = "none";
+
+      metaEl.textContent = "Medium: Bild";
+      statusEl.textContent = "Status: Bild aktiv";
+
+      window.dispatchEvent(
+        new CustomEvent("mira-media-ready", { detail: { mediaType: "image" } })
+      );
+    };
+
+    img.onerror = () => {
+      // Weder Video noch Bild → Platzhalter
+      mode = "placeholder";
       img.style.display = "none";
-      video.style.display = "block";
+      video.style.display = "none";
+      placeholder.style.display = "block";
 
-      meta.textContent = "Medium: Video (" + VIDEO_PATH + ")";
-      status.textContent = "Status: Video bereit";
+      metaEl.textContent = "Medium: keines";
+      statusEl.textContent = "Status: Platzhalter";
 
-      setMediaType("video");
-    }
-
-    // Event: es gab direkt einen Fehler beim Laden
-    function onError() {
-      video.removeEventListener("loadeddata", onLoadedData);
-      video.removeEventListener("error", onError);
-      video.removeEventListener("stalled", onStalled);
-      status.textContent = "Status: Video konnte nicht geladen werden – Bild-Fallback.";
-      tryLoadNextImage();
-    }
-
-    // Event: gestallt / hängt – als Soft-Fallback nach 15s
-    function onStalled() {
-      // Soft-Fallback nur, wenn wirklich sehr lange nichts passiert
-      setTimeout(function () {
-        if (video.readyState < 2) {
-          // Noch immer keine Daten → wie Fehler behandeln
-          onError();
-        }
-      }, 15000);
-    }
-
-    video.addEventListener("loadeddata", onLoadedData);
-    video.addEventListener("error", onError);
-    video.addEventListener("stalled", onStalled);
-
-    // Jetzt Quelle setzen und Laden anstoßen
-    status.textContent = "Status: versuche Video zu laden …";
-    meta.textContent = "Medium: Video (wird geprüft)";
-    video.src = srcWithTs;
-    // kein .play() hier, das macht später audio.js oder ein Button, falls gewünscht
+      window.dispatchEvent(
+        new CustomEvent("mira-media-ready", { detail: { mediaType: "placeholder" } })
+      );
+    };
   }
-
-  // Initial starten wir mit dem Versuch, Video zu laden
-  initVideo();
-      }
+}
