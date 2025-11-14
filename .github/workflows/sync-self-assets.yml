@@ -1,16 +1,17 @@
 name: Sync self assets to gh-pages
 
 on:
-  # Manuell im Actions-Tab starten
+  # Manuell im Actions-Tab startbar
   workflow_dispatch:
 
-  # Automatisch, wenn sich die Assets ändern
+  # Automatisch, wenn sich Assets im main-Branch ändern
   push:
     branches:
       - main
     paths:
       - 'data/self/latest_image.png'
       - 'data/self/latest_video.mp4'
+      - 'audio/latest.wav'
 
 permissions:
   contents: write
@@ -24,6 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          path: main
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -34,14 +36,42 @@ jobs:
       - name: Copy assets
         run: |
           mkdir -p ghp/data/self
-          cp data/self/latest_image.png ghp/data/self/latest_image.png
-          cp data/self/latest_video.mp4 ghp/data/self/latest_video.mp4
+          mkdir -p ghp/audio
 
-      - name: Commit and push
+          # Bild
+          if [ -f main/data/self/latest_image.png ]; then
+            cp main/data/self/latest_image.png ghp/data/self/latest_image.png
+            echo "Bild kopiert."
+          else
+            echo "Kein data/self/latest_image.png gefunden – übersprungen."
+          fi
+
+          # Video
+          if [ -f main/data/self/latest_video.mp4 ]; then
+            cp main/data/self/latest_video.mp4 ghp/data/self/latest_video.mp4
+            echo "Video kopiert."
+          else
+            echo "Kein data/self/latest_video.mp4 gefunden – übersprungen."
+          fi
+
+          # Audio (optional, bricht NIE ab)
+          if [ -f main/audio/latest.wav ]; then
+            cp main/audio/latest.wav ghp/audio/latest.wav
+            echo "Audio kopiert."
+          else
+            echo "Kein audio/latest.wav gefunden – Audio wird übersprungen."
+          fi
+
+      - name: Commit and push changes
+        working-directory: ghp
         run: |
-          cd ghp
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add .
-          git commit -m "Sync latest self assets" || echo "No changes to commit"
-          git push
+          if git status --porcelain | grep .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "Sync self assets to gh-pages"
+            git push origin gh-pages
+            echo "Änderungen nach gh-pages gepusht."
+          else
+            echo "Keine Änderungen – nichts zu committen."
+          fi
