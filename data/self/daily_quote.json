@@ -7,6 +7,6 @@
   "meta": {
     "auto_update_daily": true,
     "last_generated": null,
-    "comment": "Diese Datei wird später automatisch jeden Tag aktualisiert und dann automatisch in Audio verwandelt."
+    "comment": "Diese Datei wird später von Workflows genutzt, um täglich einen neuen gesprochenen Spruch zu erzeugen."
   }
 }
