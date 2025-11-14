@@ -1,15 +1,16 @@
 name: Sync self assets to gh-pages
 
 on:
+  # Manuell im Actions-Tab starten
   workflow_dispatch:
 
+  # Automatisch, wenn sich die Assets ändern
   push:
     branches:
       - main
     paths:
       - 'data/self/latest_image.png'
       - 'data/self/latest_video.mp4'
-      - 'audio/latest.wav'
 
 permissions:
   contents: write
@@ -33,17 +34,14 @@ jobs:
       - name: Copy assets
         run: |
           mkdir -p ghp/data/self
-          mkdir -p ghp/audio
-
           cp data/self/latest_image.png ghp/data/self/latest_image.png
           cp data/self/latest_video.mp4 ghp/data/self/latest_video.mp4
-          cp audio/latest.wav ghp/audio/latest.wav
 
       - name: Commit and push
         run: |
           cd ghp
-          git config user.name "Mira AutoSync"
-          git config user.email "actions@github.com"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git add .
-          git commit -m "Sync self assets" || true
+          git commit -m "Sync latest self assets" || echo "No changes to commit"
           git push
