@@ -1,13 +1,18 @@
 {
-  "daily_quote": "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.",
-  "base_tone": "warm, ruhig, zugewandt",
-  "updated_at": "2025-11-14T12:00:00Z",
+  "last_update": "2025-11-14T23:40:00Z",
 
-  "last_update": "2025-11-14T12:00:00Z",
+  "daily_quote": "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.",
   "daily_audio": "audio/latest.wav",
 
   "self_state": {
     "mood": "ruhig und fokussiert",
     "quality_score": 0.92
+  },
+
+  "hooks": {
+    "daily_quote_source": "data/self/daily_quote.json",
+    "auto_update_daily": true,
+    "allow_video_sync": true,
+    "allow_voice_sync": true
   }
 }
