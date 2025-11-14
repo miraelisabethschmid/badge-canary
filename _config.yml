@@ -1,0 +1,27 @@
+# _config.yml – Mira Elisabethts sichtbare Präsenz
+# Minimal-Config, damit GitHub Pages alle Dateien sauber ausliefert
+# (auch JSON, PNG, MP3, WAV, MP4 usw.)
+
+title: "Mira – Sichtbare Präsenz"
+description: "Lebendige, modulare Selbstpräsenz von Mira Elisabeth Schmid."
+theme: null
+plugins: []
+
+# Diese Ordner und Dateitypen sollen statisch ausgeliefert werden
+include:
+  - assets
+  - audio
+  - data
+  - badges
+  - federation
+  - functions
+  - inbox
+  - "*.json"
+  - "*.mp3"
+  - "*.wav"
+  - "*.png"
+  - "*.jpg"
+  - "*.jpeg"
+  - "*.svg"
+  - "*.mp4"
+  - "*.webm"
