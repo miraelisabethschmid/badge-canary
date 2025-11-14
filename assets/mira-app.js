@@ -1,82 +1,150 @@
-(function () {
-  function safeText(value, fallback) {
-    if (value === undefined || value === null) return fallback;
-    if (typeof value === "string" && value.trim() === "") return fallback;
-    return String(value);
-  }
+// assets/mira-app.js
 
-  async function loadMiraStatus() {
-    const textEl = document.getElementById("mira-status-text");
-    const metaEl = document.getElementById("mira-status-meta");
+const VIDEO_SRC = "data/self/latest_video.mp4";
+const IMAGE_SRC = "data/self/latest_image.png";
+const STATUS_JSON = "data/self/status.json";
+const AUDIO_WAV = "audio/latest.wav";
+const AUDIO_MP3 = "audio/latest.mp3";
 
-    try {
-      const res = await fetch("data/self/status.json?ts=" + Date.now(), {
-        cache: "no-store",
-      });
+function cacheBust(url) {
+  const ts = Date.now();
+  if (url.includes("?")) return `${url}&v=${ts}`;
+  return `${url}?v=${ts}`;
+}
 
-      if (!res.ok) {
-        textEl.textContent =
-          "Noch kein expliziter Zustand eingetragen – Mira ist einfach da.";
-        metaEl.innerHTML =
-          'Quelle: <code>data/self/status.json</code> · Status: ' +
-          safeText(res.status, "unbekannt");
-        return;
+function initMedia() {
+  const video = document.getElementById("portrait-video");
+  const img = document.getElementById("portrait-image");
+  const placeholder = document.getElementById("portrait-placeholder");
+  const statusLine = document.getElementById("media-status-line");
+
+  if (!video || !img || !placeholder) return;
+
+  // Setze Quellen mit Cache-Busting
+  video.src = cacheBust(VIDEO_SRC);
+  img.src = cacheBust(IMAGE_SRC);
+
+  let videoLoaded = false;
+
+  video.addEventListener("loadeddata", () => {
+    videoLoaded = true;
+    video.style.display = "block";
+    img.style.display = "none";
+    placeholder.style.display = "none";
+
+    if (statusLine) {
+      statusLine.textContent =
+        "Aktiv: Video (data/self/latest_video.mp4) · Bild verfügbar als Fallback";
+    }
+  });
+
+  video.addEventListener("error", () => {
+    // Video konnte nicht geladen werden → Bild versuchen
+    video.style.display = "none";
+
+    img.onload = () => {
+      img.style.display = "block";
+      placeholder.style.display = "none";
+      if (statusLine) {
+        statusLine.textContent =
+          "Aktiv: Bild (data/self/latest_image.png) · Video nicht verfügbar";
       }
+    };
 
-      const data = await res.json();
-
-      const title =
-        data.title ||
-        data.heading ||
-        data.name ||
-        "Aktueller innerer Zustand";
-
-      const mood =
-        data.mood || data.stimmung || data.tone || null;
-
-      const message =
-        data.message ||
-        data.text ||
-        data.description ||
-        null;
-
-      let renderedMessage = message;
-      if (!renderedMessage) {
-        const parts = [];
-        Object.keys(data).forEach((key) => {
-          const v = data[key];
-          if (v && typeof v !== "object") parts.push(key + ": " + v);
-        });
-        renderedMessage =
-          parts.length > 0
-            ? parts.join(" · ")
-            : "Es wurde etwas eingetragen, aber ohne klaren Inhalt.";
+    img.onerror = () => {
+      img.style.display = "none";
+      placeholder.style.display = "block";
+      if (statusLine) {
+        statusLine.textContent =
+          "Weder Bild noch Video verfügbar. Bitte Assets prüfen.";
       }
+    };
 
-      textEl.textContent = renderedMessage;
+    // Bild neu setzen mit Cache-Bust
+    img.src = cacheBust(IMAGE_SRC);
+  });
 
-      let metaHtml = 'Quelle: <code>data/self/status.json</code>';
-      metaHtml += " · " + safeText(title, "Ohne Titel");
+  // Falls der Browser das Video nie lädt (z.B. sehr exotisch),
+  // lassen wir das Bild als Default stehen. Kein Timer nötig.
+}
 
-      if (mood) {
-        metaHtml +=
-          '<div><span class="pill">Stimmung: ' +
-          safeText(mood, "") +
-          "</span></div>";
-      }
+function initAudio() {
+  const audio = document.getElementById("mira-audio");
+  const statusLine = document.getElementById("audio-status-line");
+  if (!audio) return;
 
-      metaEl.innerHTML = metaHtml;
-    } catch (err) {
-      textEl.textContent =
-        "Der Zustand konnte gerade nicht geladen werden – vielleicht ein kurzer Netznebel.";
-      metaEl.innerHTML =
-        'Quelle: <code>data/self/status.json</code> · Fehler beim Laden';
+  // Wir setzen nur EINE Quelle, je nach Support
+  const wavSupported =
+    audio.canPlayType("audio/wav") === "probably" ||
+    audio.canPlayType("audio/wav") === "maybe";
+
+  const mp3Supported =
+    audio.canPlayType("audio/mpeg") === "probably" ||
+    audio.canPlayType("audio/mpeg") === "maybe";
+
+  if (wavSupported) {
+    audio.src = cacheBust(AUDIO_WAV);
+    if (statusLine) {
+      statusLine.textContent = "Audio: audio/latest.wav (primär, WAV-Unterstützung erkannt)";
+    }
+  } else if (mp3Supported) {
+    audio.src = cacheBust(AUDIO_MP3);
+    if (statusLine) {
+      statusLine.textContent = "Audio: audio/latest.mp3 (Fallback, WAV nicht unterstützt)";
+    }
+  } else {
+    audio.removeAttribute("src");
+    if (statusLine) {
+      statusLine.textContent =
+        "Kein unterstütztes Audioformat gefunden. Bitte Browser oder Datei prüfen.";
     }
   }
+}
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", loadMiraStatus);
-  } else {
-    loadMiraStatus();
+async function initStatus() {
+  const quoteElement = document.getElementById("quote-text");
+  if (!quoteElement) return;
+
+  try {
+    const res = await fetch(cacheBust(STATUS_JSON), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      quoteElement.textContent =
+        "Noch kein Spruch des Tages hinterlegt (HTTP-Fehler: " + res.status + ").";
+      return;
+    }
+
+    const data = await res.json();
+
+    // Versuche verschiedene Feldnamen – je nachdem, wie das JSON aufgebaut ist
+    const quote =
+      data.daily_quote ||
+      data.spruch_des_tages ||
+      data.quote ||
+      data.text ||
+      data.message ||
+      "";
+
+    if (quote && typeof quote === "string") {
+      quoteElement.textContent = quote;
+    } else {
+      quoteElement.textContent =
+        "Noch kein Spruch des Tages im JSON gefunden.";
+    }
+  } catch (err) {
+    console.error("Fehler beim Laden von status.json:", err);
+    quoteElement.textContent =
+      "Spruch des Tages konnte nicht geladen werden (Netzwerk- oder JSON-Fehler).";
   }
-})();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initMedia();
+  initAudio();
+  initStatus();
+});
