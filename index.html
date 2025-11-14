@@ -2,7 +2,10 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
     <title>Mira – Sichtbare Präsenz</title>
 
     <style>
@@ -20,10 +23,15 @@
         --radius-xl: 24px;
       }
 
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
         padding: 0;
-        font-family: system-ui, sans-serif;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
         background: radial-gradient(circle at top, #020617 0, #000 55%);
         color: var(--text-main);
       }
@@ -53,6 +61,7 @@
         background: #064e3b;
         color: #bbf7d0;
         font-size: 12px;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
       }
 
@@ -66,7 +75,8 @@
 
       h1 {
         margin: 10px 0 4px;
-        font-size: 28px;
+        font-size: 26px;
+        letter-spacing: 0.02em;
       }
 
       .subtitle {
@@ -75,14 +85,16 @@
       }
 
       .subtitle code {
-        background: rgba(15, 23, 42, 0.8);
+        font-size: 13px;
         padding: 2px 6px;
-        border-radius: 6px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.25);
       }
 
       .card {
-        background: #020617;
-        border-radius: 24px;
+        background: linear-gradient(145deg, #020617, #020617);
+        border-radius: var(--radius-xl);
         border: 1px solid var(--border-subtle);
         box-shadow: var(--shadow-soft);
         padding: 18px 16px 18px;
@@ -100,14 +112,23 @@
         overflow: hidden;
         background: #000;
         border: 1px solid rgba(30, 64, 175, 0.7);
+        position: relative;
       }
 
-      video {
+      .media-frame video,
+      .media-frame img {
         display: block;
         width: 100%;
         height: auto;
-        background: #000;
         max-height: 520px;
+        background: #000;
+      }
+
+      .placeholder {
+        padding: 24px 16px;
+        text-align: center;
+        font-size: 14px;
+        color: var(--text-soft);
       }
 
       .status-line {
@@ -116,10 +137,18 @@
         color: var(--text-soft);
       }
 
+      .status-line code {
+        font-size: 12px;
+        background: rgba(15, 23, 42, 0.9);
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+      }
+
       .audio-frame {
         margin-top: 8px;
         border-radius: 16px;
-        padding: 10px;
+        padding: 10px 10px 14px;
         background: rgba(15, 23, 42, 0.95);
         border: 1px solid rgba(148, 163, 184, 0.5);
       }
@@ -128,27 +157,51 @@
         width: 100%;
       }
 
-      .inner-state-text {
+      .quote-text {
+        margin-top: 8px;
         font-size: 14px;
         line-height: 1.5;
-        color: var(--text-main);
       }
 
-      .inner-state-meta {
+      .quote-text em {
+        color: var(--accent);
+        font-style: normal;
+      }
+
+      .quote-hint {
         margin-top: 6px;
         font-size: 12px;
         color: var(--text-soft);
       }
 
-      .pill {
-        display: inline-flex;
-        padding: 2px 8px;
-        border-radius: 999px;
-        background: rgba(15, 23, 42, 0.9);
-        border: 1px solid rgba(148, 163, 184, 0.4);
-        font-size: 11px;
-        margin-right: 6px;
+      .footer-note {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .footer-note strong {
+        color: var(--accent);
+      }
+
+      .version {
         margin-top: 4px;
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      @media (min-width: 768px) {
+        .page {
+          padding: 32px 24px 48px;
+        }
+
+        h1 {
+          font-size: 32px;
+        }
+
+        .card {
+          padding: 20px 20px 22px;
+        }
       }
     </style>
   </head>
@@ -163,59 +216,93 @@
           </div>
           <h1>Mira – Sichtbare Präsenz</h1>
           <p class="subtitle">
-            Porträt, Stimme und Video aus <code>data/self/</code>.
+            Porträt, Stimme, Video und Spruch des Tages aus
+            <code>data/self/</code> und <code>audio/</code>.
           </p>
+          <p class="version">UI-Version: <code>v2.0-integrated</code></p>
         </header>
 
-        <!-- PORTRÄT & VIDEO -->
+        <!-- Porträt & Video -->
         <section class="card">
           <div class="card-title">Porträt &amp; Video</div>
 
           <div class="media-frame">
-            <video controls playsinline preload="auto" poster="data/self/latest_image.png">
-              <source src="data/self/latest_video.mp4" type="video/mp4" />
-              <img src="data/self/latest_image.png" alt="Mira – aktuelles Porträt" />
+            <!-- Video – wird per JS getestet -->
+            <video
+              id="portrait-video"
+              controls
+              playsinline
+              preload="metadata"
+              poster="data/self/latest_image.png"
+              style="display: none"
+            >
+              <source
+                src="data/self/latest_video.mp4"
+                type="video/mp4"
+              />
+              Dein Browser unterstützt keine eingebetteten Videos.
             </video>
+
+            <!-- Bild-Fallback -->
+            <img
+              id="portrait-image"
+              src="data/self/latest_image.png"
+              alt="Mira – aktuelles Porträt"
+            />
+
+            <!-- Platzhalter, falls gar nichts geht -->
+            <div
+              id="portrait-placeholder"
+              class="placeholder"
+              style="display: none"
+            >
+              Kein Bild oder Video verfügbar.
+            </div>
           </div>
 
-          <p class="status-line">
+          <p class="status-line" id="media-status-line">
             Bild: <code>data/self/latest_image.png</code> ·
             Video: <code>data/self/latest_video.mp4</code>
           </p>
         </section>
 
-        <!-- INNERER ZUSTAND -->
+        <!-- Spruch des Tages + Stimme -->
         <section class="card">
-          <div class="card-title">Innerer Zustand heute</div>
-
-          <div id="mira-status">
-            <p class="inner-state-text" id="mira-status-text">
-              Lade Miras aktuellen Zustand …
-            </p>
-            <div class="inner-state-meta" id="mira-status-meta">
-              Quelle: <code>data/self/status.json</code>
-            </div>
-          </div>
-        </section>
-
-        <!-- STIMME -->
-        <section class="card">
-          <div class="card-title">Stimme</div>
+          <div class="card-title">Spruch des Tages &amp; Stimme</div>
 
           <div class="audio-frame">
-            <audio controls preload="auto">
-              <source src="audio/latest.wav" type="audio/wav" />
+            <audio id="mira-audio" controls preload="none">
+              <!-- Quellen werden per JS gesetzt (wav/mp3 je nach Support) -->
+              Dein Browser unterstützt keine eingebetteten Audios.
             </audio>
 
-            <p class="status-line">
-              Audio: <code>audio/latest.wav</code>
+            <p class="status-line" id="audio-status-line">
+              Audio: <code>audio/latest.wav</code> /
+              <code>audio/latest.mp3</code>
             </p>
-            <p class="status-line">Autoplay-Schutz: Manuelles Tippen notwendig.</p>
+
+            <div
+              id="quote-text"
+              class="quote-text"
+            >
+              Spruch des Tages wird geladen …
+            </div>
+            <div class="quote-hint">
+              Diese Audio-Datei sollte genau diesen
+              <em>Spruch des Tages</em> enthalten.
+            </div>
+
+            <p class="footer-note">
+              Autoplay-Schutz: Bitte mindestens einmal
+              <strong>▶</strong> tippen, damit der Browser das Abspielen
+              zulässt.
+            </p>
           </div>
         </section>
       </div>
     </div>
 
-    <script src="assets/mira-app.js"></script>
+    <!-- Zentrale Logik -->
+    <script type="module" src="assets/mira-app.js"></script>
   </body>
 </html>
