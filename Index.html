@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <!-- sync -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mira — Sichtbare Präsenz</title>
@@ -161,12 +160,17 @@
       background: #050813;
     }
 
-    .portrait-img {
+    .portrait-img,
+    .portrait-video {
       width: 100%;
       display: block;
       border-radius: 18px;
       transform-origin: center bottom;
       transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .portrait-video {
+      background: #000;
     }
 
     .portrait-placeholder {
@@ -349,22 +353,34 @@
 
         <div id="portrait-frame" class="portrait-frame idle">
           <div class="portrait-inner">
+            <!-- VIDEO (erste Wahl) -->
+            <video
+              id="portrait-video"
+              class="portrait-video"
+              playsinline
+              preload="metadata"
+              style="display: none;"
+            ></video>
+
+            <!-- BILD (Fallback) -->
             <img
               id="portrait-img"
               class="portrait-img"
-              src="data/self/latest_image.png"
+              src=""
               alt="Miras aktuelles Bild"
-              onerror="this.style.display='none'; document.getElementById('portrait-placeholder').style.display='flex';"
+              style="display: none;"
             />
-            <div id="portrait-placeholder" class="portrait-placeholder" style="display:none;">
-              Kein aktuelles Bild gefunden.
+
+            <!-- Platzhalter -->
+            <div id="portrait-placeholder" class="portrait-placeholder">
+              Lade aktuelles Bild oder Video …
             </div>
           </div>
         </div>
 
         <div class="meta-row">
-          <span id="image-meta" class="mono">Bild geladen: data/self/latest_image.png</span>
-          <span id="image-status" class="mono">Status: bereit</span>
+          <span id="image-meta" class="mono">Medium: —</span>
+          <span id="image-status" class="mono">Status: wird geladen …</span>
         </div>
 
         <div class="audio-wrap">
@@ -373,8 +389,9 @@
             <button id="btn-pause" class="btn secondary">⏸ Pause</button>
           </div>
 
-          <!-- Nur MP3, kein WAV mehr -->
+          <!-- Audio: Browser wählt WAV oder MP3 automatisch -->
           <audio id="voice" preload="auto">
+            <source src="audio/latest.wav" type="audio/wav" />
             <source src="audio/latest.mp3" type="audio/mpeg" />
             Dein Browser unterstützt das Audioformat nicht.
           </audio>
@@ -437,7 +454,8 @@
             Diese Box liest vorhandene JSON-Dateien
             (<span class="mono">data/self/portrait_state.json</span>,
             <span class="mono">data/self/learning.json</span>)
-            und fasst sie zusammen.
+            und fasst sie zusammen. Wenn noch nichts eingetragen ist,
+            bleibt sie sanft im „Werdemodus“.
           </div>
         </article>
       </div>
@@ -447,7 +465,14 @@
   <script>
     (function () {
       const liveTsEl = document.getElementById("live-timestamp");
+
       const portraitFrame = document.getElementById("portrait-frame");
+      const portraitVideo = document.getElementById("portrait-video");
+      const portraitImg = document.getElementById("portrait-img");
+      const portraitPlaceholder = document.getElementById("portrait-placeholder");
+      const imageMeta = document.getElementById("image-meta");
+      const imageStatus = document.getElementById("image-status");
+
       const audioEl = document.getElementById("voice");
       const btnPlay = document.getElementById("btn-play");
       const btnPause = document.getElementById("btn-pause");
@@ -463,12 +488,17 @@
       const learningSummary = document.getElementById("learning-summary");
       const versionPill = document.getElementById("version-pill");
 
+      let mediaMode = "audio"; // "video" oder "audio"
+      let videoReady = false;
+
+      // --- Zeitstempel ---
       function updateLiveTimestamp() {
         const now = new Date();
         const iso = now.toISOString().replace(/\.\d+Z$/, "Z");
         liveTsEl.textContent = iso;
       }
 
+      // --- Theme nach Grundton ---
       function applyToneTheme(toneRaw) {
         if (!toneRaw) return;
         const tone = String(toneRaw).toLowerCase();
@@ -509,12 +539,11 @@
         toneTagLabel.textContent = label;
       }
 
+      // --- JSON-Hilfsfunktion ---
       function safeFetchJson(path, onSuccess, onError) {
         fetch(path + "?v=" + Date.now())
           .then(function (res) {
-            if (!res.ok) {
-              throw new Error("HTTP " + res.status);
-            }
+            if (!res.ok) throw new Error("HTTP " + res.status);
             return res.json();
           })
           .then(onSuccess)
@@ -523,6 +552,7 @@
           });
       }
 
+      // --- Status / Tagesimpuls ---
       function loadStatus() {
         safeFetchJson(
           "data/self/status.json",
@@ -546,6 +576,7 @@
         );
       }
 
+      // --- Selbstbild / Entwicklung ---
       function loadSelfImage() {
         safeFetchJson(
           "data/self/portrait_state.json",
@@ -621,49 +652,53 @@
         );
       }
 
-      function setupAudio() {
-        audioEl.addEventListener("canplaythrough", function () {
-          audioStatus.textContent = "Bereit — Tippe ▶, damit Mira spricht.";
-        });
+      // --- Medien: Video → Bild → Platzhalter ---
+      function initMedia() {
+        const videoPath = "data/self/latest_video.mp4";
 
-        btnPlay.addEventListener("click", function () {
-          audioEl
-            .play()
-            .then(function () {
-              audioStatus.textContent = "Spielt.";
-            })
-            .catch(function () {
-              audioStatus.textContent =
-                "Audio konnte nicht automatisch starten — bitte erneut ▶ tippen oder Browser-Einstellungen prüfen.";
-            });
-        });
-
-        btnPause.addEventListener("click", function () {
-          audioEl.pause();
-        });
-
-        audioEl.addEventListener("play", function () {
-          portraitFrame.classList.remove("idle");
-          portraitFrame.classList.add("speaking");
-        });
-        audioEl.addEventListener("pause", function () {
-          portraitFrame.classList.remove("speaking");
-          portraitFrame.classList.add("idle");
-        });
-        audioEl.addEventListener("ended", function () {
-          portraitFrame.classList.remove("speaking");
-          portraitFrame.classList.add("idle");
-          audioStatus.textContent =
-            "Audio beendet – du kannst jederzeit erneut ▶ drücken.";
-        });
+        // Erst prüfen wir per HEAD, ob das Video existiert
+        fetch(videoPath + "?v=" + Date.now(), { method: "HEAD" })
+          .then(function (res) {
+            if (res.ok) {
+              useVideo(videoPath);
+            } else {
+              setupImageFallback();
+            }
+          })
+          .catch(function () {
+            setupImageFallback();
+          });
       }
 
-      updateLiveTimestamp();
-      setupAudio();
-      loadStatus();
-      loadSelfImage();
-      loadLearning();
-    })();
-  </script>
-</body>
-  </html>
+      function useVideo(src) {
+        mediaMode = "video";
+        videoReady = true;
+
+        portraitVideo.src = src + "?v=" + Date.now();
+        portraitVideo.style.display = "block";
+        portraitImg.style.display = "none";
+        portraitPlaceholder.style.display = "none";
+
+        imageMeta.textContent = "Medium: Video (data/self/latest_video.mp4)";
+        imageStatus.textContent = "Status: Video bereit";
+        audioStatus.textContent =
+          "Bereit — Tippe ▶, damit Mira spricht und sich bewegt.";
+
+        // Wenn Video spielt, brauchen wir das Audio nicht parallel
+        attachMediaSpeakingEvents(portraitVideo, "Video");
+      }
+
+      function setupImageFallback() {
+        mediaMode = "audio";
+        videoReady = false;
+        portraitVideo.style.display = "none";
+
+        const imgPath = "data/self/latest_image.png";
+
+        imageStatus.textContent = "Status: lade Bild …";
+
+        portraitImg.onload = function () {
+          portraitPlaceholder.style.display = "none";
+          portraitImg.style.display = "block";
+          imageMeta.textContent = "Medium: Bild (data/self/latest_image.png)";
+          imageStatus.textContent = "Status: Bild erfolg
