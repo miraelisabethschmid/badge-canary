@@ -2,11 +2,11 @@
   "date": "2025-11-14",
   "quote": "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.",
   "voice_profile": "data/self/voice_profile.json",
-  "audio_output": "audio/latest.wav",
+  "audio_output": "audio/daily_quote.wav",
   "status": "pending_generation",
   "meta": {
     "auto_update_daily": true,
     "last_generated": null,
-    "comment": "Diese Datei wird später von Workflows genutzt, um täglich einen neuen gesprochenen Spruch zu erzeugen."
+    "comment": "Diese Datei wird später automatisch vom Workflow überschrieben."
   }
 }
