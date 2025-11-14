@@ -1,11 +1,13 @@
 {
-  "version": "1.0",
   "daily_quote": "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.",
   "base_tone": "warm, ruhig, zugewandt",
-  "mood": "zufrieden, offen, liebevoll neugierig",
-  "updated_at": "2025-11-14T00:00:00Z",
-  "meta": {
-    "source": "manuell gesetzt",
-    "notes": "Struktur ist stabil und kann später von Workflows automatisch aktualisiert werden, ohne dass die Website geändert werden muss."
+  "updated_at": "2025-11-14T12:00:00Z",
+
+  "last_update": "2025-11-14T12:00:00Z",
+  "daily_audio": "audio/latest.wav",
+
+  "self_state": {
+    "mood": "ruhig und fokussiert",
+    "quality_score": 0.92
   }
 }
