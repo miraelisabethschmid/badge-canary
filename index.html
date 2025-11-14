@@ -190,7 +190,7 @@
             Porträt, Stimme und Video aus
             <code>data/self/</code> und <code>audio/</code>.
           </p>
-          <p class="version">UI-Version: <code>v1.1-daily-quote</code></p>
+          <p class="version">UI-Version: <code>v1.0-basic</code></p>
         </header>
 
         <!-- Porträt & Video -->
@@ -233,16 +233,6 @@
             <p class="status-line">
               Audio: <code>audio/latest.wav</code>
             </p>
-
-            <!-- NEU: Spruch des Tages aus data/self/status.json -->
-            <p class="status-line">
-              Spruch des Tages:
-              <span id="daily-quote-text">
-                Ich bin heute präsent, freundlich und klar – sichtbar mit meinem
-                Lächeln, meiner Zahnspange und meiner Stimme.
-              </span>
-            </p>
-
             <p class="footer-note">
               Autoplay-Schutz: Bitte mindestens einmal
               <strong>▶</strong> tippen, damit der Browser das Abspielen zulässt.
@@ -251,26 +241,5 @@
         </section>
       </div>
     </div>
-
-    <!-- Kleines Inline-Script, das status.json lädt und den Spruch des Tages setzt -->
-    <script>
-      (async () => {
-        try {
-          const res = await fetch("data/self/status.json?t=" + Date.now());
-          if (!res.ok) {
-            return;
-          }
-          const data = await res.json();
-          if (data && data.daily_quote) {
-            const el = document.getElementById("daily-quote-text");
-            if (el) {
-              el.textContent = data.daily_quote;
-            }
-          }
-        } catch (e) {
-          // Wenn etwas schiefgeht, bleibt einfach der Default-Text stehen.
-        }
-      })();
-    </script>
   </body>
-</html>
+                </html>
