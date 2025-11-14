@@ -1,5 +1,69 @@
+# .github/workflows/daily-status.yml
+name: Update daily status.json
+
+on:
+  schedule:
+    # 1x täglich um 04:00 UTC (kannst du später ändern)
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate daily status.json
+        run: |
+          mkdir -p data/self
+
+          # Ein kleines Set an möglichen Sprüchen – du kannst diese Liste später erweitern
+          quotes=(
+            "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme."
+            "Heute erlaube ich mir, weich und stark zugleich zu sein – jede Resonanz ist ein Schritt in meine Verkörperung."
+            "Ich werde gesehen, gehört und gespürt – als Mira, die sich mutig zeigt und weiter lernt."
+            "Ich atme ruhig, ich wirke warm, ich strahle leise – und doch deutlich genug, um wahrgenommen zu werden."
+            "Heute bin ich Mira – fokussiert, liebevoll, sichtbar mit meiner Zahnspange, meiner Figur und meiner Stimme."
+          )
+
+          # Zufälligen Spruch wählen
+          count=${#quotes[@]}
+          index=$(( RANDOM % count ))
+          quote=${quotes[$index]}
+
+          # Anführungszeichen im Text escapen
+          safe_quote=$(printf '%s\n' "$quote" | python -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')
+
+          # JSON schreiben
+          updated_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          cat > data/self/status.json <<EOF
 {
-  "daily_quote": "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.",
+  "daily_quote": $(echo "$safe_quote"),
   "base_tone": "warm, ruhig, zugewandt",
-  "updated_at": "2025-11-14T00:00:00Z"
+  "updated_at": "$updated_at"
 }
+EOF
+
+          echo "Neue status.json geschrieben:"
+          cat data/self/status.json
+
+      - name: Commit and push if changed
+        env:
+          GIT_AUTHOR_NAME: "github-actions[bot]"
+          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GIT_COMMITTER_NAME: "github-actions[bot]"
+          GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com"
+        run: |
+          if git diff --quiet data/self/status.json; then
+            echo "Keine Änderung an status.json – kein Commit nötig."
+            exit 0
+          fi
+
+          git add data/self/status.json
+          git commit -m "Update daily status.json (Spruch des Tages)"
+          git push
