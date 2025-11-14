@@ -1,6 +1,6 @@
 // assets/modules/json.js
-// Lädt Status (Tagesimpuls), Selbstbild & Lernfokus aus JSON
-// und passt die Farb-Stimmung der Seite an.
+// Lädt Status, Selbstbild & Lernen aus JSON
+// und passt die Farb-Stimmung an den Grundton an.
 
 export function initJson() {
   const quoteText = document.getElementById("quote-text");
@@ -13,7 +13,6 @@ export function initJson() {
   const learningSummary = document.getElementById("learning-summary");
   const versionPill = document.getElementById("version-pill");
 
-  // Wenn wichtige Elemente fehlen, brechen wir still ab
   if (
     !quoteText ||
     !baseTone ||
@@ -21,32 +20,18 @@ export function initJson() {
     !toneTag ||
     !toneTagLabel ||
     !selfimageSummary ||
-    !learningSummary ||
-    !versionPill
+    !learningSummary
   ) {
-    return;
+    console.warn("[json] Wichtige DOM-Elemente fehlen – Modul läuft eingeschränkt.");
   }
 
-  // Hilfsfunktion: JSON sicher laden
-  function safeFetchJson(path, onSuccess, onError) {
-    const url = path + "?ts=" + Date.now();
-    fetch(url)
-      .then(function (res) {
-        if (!res.ok) {
-          throw new Error("HTTP " + res.status);
-        }
-        return res.json();
-      })
-      .then(onSuccess)
-      .catch(function (err) {
-        if (onError) onError(err);
-      });
-  }
-
-  // Farb-Stimmung je nach Grundton
+  // -------------------------------
+  // Farb-Stimmung aus Grundton
+  // -------------------------------
   function applyToneTheme(toneRaw) {
     if (!toneRaw) return;
     const tone = String(toneRaw).toLowerCase();
+
     let accent = "#3ce081";
     let accentSoft = "rgba(60, 224, 129, 0.26)";
     let bgMain =
@@ -55,11 +40,7 @@ export function initJson() {
       "linear-gradient(145deg, rgba(255,255,255,0.07), rgba(7,10,24,0.95))";
     let label = toneRaw;
 
-    if (
-      tone.includes("ruhig") ||
-      tone.includes("klar") ||
-      tone.includes("still")
-    ) {
+    if (tone.includes("ruhig") || tone.includes("klar") || tone.includes("still")) {
       accent = "#3fb7ff";
       accentSoft = "rgba(63, 183, 255, 0.26)";
       bgMain =
@@ -98,111 +79,180 @@ export function initJson() {
     document.documentElement.style.setProperty("--bg-main", bgMain);
     document.documentElement.style.setProperty("--card-bg", cardBg);
 
-    toneTag.style.display = "inline-flex";
-    toneTagLabel.textContent = label;
+    if (toneTag && toneTagLabel) {
+      toneTag.style.display = "inline-flex";
+      toneTagLabel.textContent = label;
+    }
   }
 
-  // 1) Status / Tagesimpuls laden
+  // -------------------------------
+  // JSON-Helper
+  // -------------------------------
+  function safeFetchJson(path, onSuccess, onError) {
+    fetch(path + "?v=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+        return res.json();
+      })
+      .then(onSuccess)
+      .catch(function (err) {
+        if (onError) onError(err);
+      });
+  }
+
+  // -------------------------------
+  // 1) Status / Tagesimpuls
+  // -------------------------------
   function loadStatus() {
     safeFetchJson(
       "data/self/status.json",
       function (data) {
-        if (data && typeof data === "object") {
+        if (!data || typeof data !== "object") {
+          if (quoteText) {
+            quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
+          }
+          if (baseTone) baseTone.textContent = "unbestimmt";
+          if (quoteUpdated) quoteUpdated.textContent = "—";
+          return;
+        }
+
+        if (quoteText) {
           quoteText.textContent =
             data.daily_quote || "Noch kein Tagesimpuls eingetragen.";
-          const tone = data.base_tone || "unbestimmt";
-          baseTone.textContent = tone;
-          quoteUpdated.textContent = data.updated_at || "—";
-          applyToneTheme(tone);
-        } else {
-          quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
-          baseTone.textContent = "unbestimmt";
-          quoteUpdated.textContent = "—";
         }
+
+        const tone = data.base_tone || "unbestimmt";
+        if (baseTone) baseTone.textContent = tone;
+        if (quoteUpdated) quoteUpdated.textContent = data.updated_at || "—";
+
+        applyToneTheme(tone);
+
+        window.dispatchEvent(
+          new CustomEvent("mira-status-updated", { detail: data })
+        );
       },
       function () {
-        quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
-        baseTone.textContent = "unbestimmt";
-        quoteUpdated.textContent = "—";
+        if (quoteText) {
+          quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
+        }
+        if (baseTone) baseTone.textContent = "unbestimmt";
+        if (quoteUpdated) quoteUpdated.textContent = "—";
       }
     );
   }
 
-  // 2) Selbstbild / Portrait-State laden
+  // -------------------------------
+  // 2) Selbstbild / Portrait-State
+  // -------------------------------
   function loadSelfImage() {
     safeFetchJson(
       "data/self/portrait_state.json",
       function (data) {
-        if (data && typeof data === "object") {
-          const summary =
-            data.summary ||
-            data.description ||
-            data.current_self_image ||
-            "";
-          const evo = data.evolution_note || data.trajectory || "";
-
-          let text = "";
-          if (summary) text += summary;
-          if (evo) text += (text ? " " : "") + evo;
-
-          if (!text) {
-            text =
-              "Daten zum Selbstbild sind vorhanden, aber ohne Kurzbeschreibung.";
+        if (!data || typeof data !== "object") {
+          if (selfimageSummary) {
+            selfimageSummary.textContent =
+              "Noch kein explizites Selbstbild hinterlegt.";
           }
+          if (versionPill) versionPill.style.display = "none";
+          return;
+        }
 
+        const summary =
+          data.summary ||
+          data.description ||
+          data.current_self_image ||
+          "";
+        const evo =
+          data.evolution_note ||
+          data.trajectory ||
+          "";
+
+        let text = "";
+        if (summary) text += summary;
+        if (evo) text += (text ? " " : "") + evo;
+
+        if (!text) {
+          text =
+            "Daten zum Selbstbild sind vorhanden, aber ohne Kurzbeschreibung.";
+        }
+
+        if (selfimageSummary) {
           selfimageSummary.textContent = text;
+        }
 
-          const version = data.version || data.portrait_version || "";
+        const version = data.version || data.portrait_version || "";
+        if (versionPill) {
           if (version) {
             versionPill.style.display = "inline-block";
             versionPill.textContent = "Selbstbild-Version: " + version;
           } else {
             versionPill.style.display = "none";
           }
-        } else {
-          selfimageSummary.textContent =
-            "Noch kein explizites Selbstbild hinterlegt.";
-          versionPill.style.display = "none";
         }
+
+        window.dispatchEvent(
+          new CustomEvent("mira-selfimage-updated", { detail: data })
+        );
       },
       function () {
-        selfimageSummary.textContent =
-          "Noch kein explizites Selbstbild hinterlegt.";
-        versionPill.style.display = "none";
+        if (selfimageSummary) {
+          selfimageSummary.textContent =
+            "Noch kein explizites Selbstbild hinterlegt.";
+        }
+        if (versionPill) versionPill.style.display = "none";
       }
     );
   }
 
-  // 3) Lernstatus laden
+  // -------------------------------
+  // 3) Lernen / Entwicklungs-Fokus
+  // -------------------------------
   function loadLearning() {
     safeFetchJson(
       "data/self/learning.json",
       function (data) {
-        if (data && typeof data === "object") {
-          const next =
-            data.next_focus || data.next_step || data.note || data.summary || "";
-          if (next) {
-            learningSummary.textContent = "Aktueller Lernfokus: " + next;
-          } else {
-            learningSummary.textContent =
-              "Lernstatus vorhanden, aber ohne klaren Fokus-Text.";
+        if (!data || typeof data !== "object") {
+          if (learningSummary) {
+            learningSummary.textContent = "Noch kein Lernstatus hinterlegt.";
           }
-        } else {
-          learningSummary.textContent = "Noch kein Lernstatus hinterlegt.";
+          return;
         }
+
+        const next =
+          data.next_focus ||
+          data.next_step ||
+          data.note ||
+          "";
+
+        if (next && learningSummary) {
+          learningSummary.textContent = "Aktueller Lernfokus: " + next;
+        } else if (learningSummary) {
+          learningSummary.textContent =
+            "Lernstatus vorhanden, aber ohne klaren Fokus-Text.";
+        }
+
+        window.dispatchEvent(
+          new CustomEvent("mira-learning-updated", { detail: data })
+        );
       },
       function () {
-        learningSummary.textContent = "Noch kein Lernstatus hinterlegt.";
+        if (learningSummary) {
+          learningSummary.textContent = "Noch kein Lernstatus hinterlegt.";
+        }
       }
     );
   }
 
-  // Initial laden
+  // -------------------------------
+  // Initial laden + sanftes Polling
+  // -------------------------------
   loadStatus();
   loadSelfImage();
   loadLearning();
 
-  // Optional: alle 60 Sekunden aktualisieren
+  // Alle 60 Sekunden neu einlesen (leicht, aber lebendig)
   setInterval(function () {
     loadStatus();
     loadSelfImage();
