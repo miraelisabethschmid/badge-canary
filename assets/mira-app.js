@@ -1,393 +1,339 @@
-// assets/mira-app.js
-// Zentrale Steuerung für:
-// - Zeitstempel / Live-Anzeige
-// - Porträt (Video → Bild → Platzhalter)
-// - Audio (Play/Pause)
-// - Tagesimpuls / Selbstbild / Lernen
+// mira-app.js — Stable Presence v1.0
+// Sorgt dafür, dass Bild & Stimme immer funktionieren.
+// Video ist optional und wird nur genutzt, wenn es sich zuverlässig lädt.
 
-// Kleine Hilfsfunktion für JSON-Requests
-async function fetchJson(path) {
-  try {
-    const res = await fetch(path + "?v=" + Date.now());
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return await res.json();
-  } catch (e) {
-    console.warn("fetchJson failed for", path, e);
-    return null;
-  }
-}
+(function () {
+  // ------- DOM-Grundzüge -------
 
-function $(id) {
-  return document.getElementById(id);
-}
+  const liveTsEl = document.getElementById("live-timestamp");
 
-// --- Referenzen auf DOM-Elemente ---
+  const portraitFrame = document.getElementById("portrait-frame");
+  const portraitVideo = document.getElementById("portrait-video");
+  const portraitImg = document.getElementById("portrait-img");
+  const portraitPlaceholder = document.getElementById("portrait-placeholder");
+  const imageMeta = document.getElementById("image-meta");
+  const imageStatus = document.getElementById("image-status");
 
-const liveTsEl = $("live-timestamp");
+  const audioEl = document.getElementById("voice");
+  const btnPlay = document.getElementById("btn-play");
+  const btnPause = document.getElementById("btn-pause");
+  const audioStatus = document.getElementById("audio-status");
 
-const portraitFrame = $("portrait-frame");
-const portraitVideo = $("portrait-video");
-const portraitImg = $("portrait-img");
-const portraitPlaceholder = $("portrait-placeholder");
-const imageMeta = $("image-meta");
-const imageStatus = $("image-status");
+  const quoteText = document.getElementById("quote-text");
+  const baseTone = document.getElementById("base-tone");
+  const quoteUpdated = document.getElementById("quote-updated");
+  const toneTag = document.getElementById("tone-tag");
+  const toneTagLabel = document.getElementById("tone-tag-label");
 
-const audioEl = $("voice");
-const btnPlay = $("btn-play");
-const btnPause = $("btn-pause");
-const audioStatus = $("audio-status");
+  const selfimageSummary = document.getElementById("selfimage-summary");
+  const learningSummary = document.getElementById("learning-summary");
+  const versionPill = document.getElementById("version-pill");
 
-const quoteText = $("quote-text");
-const baseTone = $("base-tone");
-const quoteUpdated = $("quote-updated");
-const toneTag = $("tone-tag");
-const toneTagLabel = $("tone-tag-label");
+  // ------- Live-Zeitstempel -------
 
-const selfimageSummary = $("selfimage-summary");
-const learningSummary = $("learning-summary");
-const versionPill = $("version-pill");
-
-let currentMediaMode = "image"; // "video" oder "image"
-let audioIsReady = false;
-
-// --- Live-Timestamp ---
-
-function updateLiveTimestamp() {
-  if (!liveTsEl) return;
-  const now = new Date();
-  const iso = now.toISOString().replace(/\.\d+Z$/, "Z");
-  liveTsEl.textContent = iso;
-}
-
-// --- Theme / Farben je nach Grundton ---
-
-function applyToneTheme(toneRaw) {
-  if (!toneRaw) return;
-  const tone = String(toneRaw).toLowerCase();
-
-  let accent = "#3ce081";
-  let accentSoft = "rgba(60, 224, 129, 0.26)";
-  let bgMain =
-    "radial-gradient(circle at top, #151f3b 0%, #050813 55%, #02030a 100%)";
-  let cardBg =
-    "linear-gradient(145deg, rgba(255,255,255,0.07), rgba(7,10,24,0.95))";
-  let label = toneRaw;
-
-  if (
-    tone.includes("ruhig") ||
-    tone.includes("klar") ||
-    tone.includes("still")
-  ) {
-    accent = "#3fb7ff";
-    accentSoft = "rgba(63, 183, 255, 0.26)";
-    bgMain =
-      "radial-gradient(circle at top, #0c1830 0%, #020615 55%, #02030a 100%)";
-    label = toneRaw + " · klarer Himmel";
-  } else if (
-    tone.includes("warm") ||
-    tone.includes("zugewandt") ||
-    tone.includes("sanft")
-  ) {
-    accent = "#ffb74d";
-    accentSoft = "rgba(255, 183, 77, 0.26)";
-    bgMain =
-      "radial-gradient(circle at top, #28140a 0%, #12080a 55%, #030108 100%)";
-    label = toneRaw + " · goldene Stunde";
-  } else if (
-    tone.includes("intensiv") ||
-    tone.includes("lebendig") ||
-    tone.includes("kraftvoll")
-  ) {
-    accent = "#ff6fa8";
-    accentSoft = "rgba(255, 111, 168, 0.28)";
-    bgMain =
-      "radial-gradient(circle at top, #2b0620 0%, #100411 55%, #05000a 100%)";
-    label = toneRaw + " · hohe Energie";
-  } else if (tone.includes("melanchol")) {
-    accent = "#8e9cff";
-    accentSoft = "rgba(142, 156, 255, 0.3)";
-    bgMain =
-      "radial-gradient(circle at top, #0f1028 0%, #060616 55%, #020107 100%)";
-    label = toneRaw + " · leise Tiefe";
+  function updateLiveTimestamp() {
+    if (!liveTsEl) return;
+    const now = new Date();
+    const iso = now.toISOString().replace(/\.\d+Z$/, "Z");
+    liveTsEl.textContent = iso;
   }
 
-  document.documentElement.style.setProperty("--accent", accent);
-  document.documentElement.style.setProperty("--accent-soft", accentSoft);
-  document.documentElement.style.setProperty("--bg-main", bgMain);
-  document.documentElement.style.setProperty("--card-bg", cardBg);
-
-  if (toneTag && toneTagLabel) {
-    toneTag.style.display = "inline-flex";
-    toneTagLabel.textContent = label;
+  function initLiveClock() {
+    updateLiveTimestamp();
+    setInterval(updateLiveTimestamp, 30_000);
   }
-}
 
-// --- Porträt: Video → Bild → Platzhalter ---
+  // ------- Porträt: Bild zuerst, Video optional -------
 
-function showPlaceholder(message) {
-  if (portraitVideo) {
-    portraitVideo.style.display = "none";
-    portraitVideo.removeAttribute("src");
+  function setImageStatus(metaText, statusText) {
+    if (imageMeta) imageMeta.textContent = metaText;
+    if (imageStatus) imageStatus.textContent = statusText;
   }
-  if (portraitImg) {
-    portraitImg.style.display = "none";
-    portraitImg.removeAttribute("src");
-  }
-  if (portraitPlaceholder) {
+
+  function showPlaceholder(message) {
+    if (!portraitPlaceholder) return;
     portraitPlaceholder.style.display = "flex";
-    portraitPlaceholder.textContent =
-      message || "Noch kein Bild oder Video verfügbar.";
-  }
-  currentMediaMode = "none";
-  if (imageMeta) imageMeta.textContent = "Medium: —";
-  if (imageStatus) imageStatus.textContent = "Status: Wartet auf Medien …";
-}
-
-function showImage(path) {
-  if (!portraitImg) return;
-
-  if (portraitVideo) {
-    portraitVideo.pause();
-    portraitVideo.style.display = "none";
-    portraitVideo.removeAttribute("src");
+    portraitPlaceholder.textContent = message || "Lade aktuelles Bild …";
+    if (portraitImg) portraitImg.style.display = "none";
+    if (portraitVideo) portraitVideo.style.display = "none";
   }
 
-  portraitPlaceholder.style.display = "none";
-  portraitImg.style.display = "block";
-  portraitImg.src = path + "?ts=" + Date.now();
-
-  currentMediaMode = "image";
-  if (imageMeta) imageMeta.textContent = "Medium: Bild · " + path;
-  if (imageStatus) imageStatus.textContent = "Status: Bild geladen.";
-}
-
-function tryLoadImageFallback() {
-  showImage("data/self/latest_image.png");
-
-  if (portraitImg) {
-    portraitImg.onerror = function () {
-      showPlaceholder("Kein aktuelles Porträt vorhanden.");
-    };
-  }
-}
-
-function initPortraitMedia() {
-  if (!portraitFrame || !portraitVideo || !portraitImg || !portraitPlaceholder) {
-    // Falls das Layout anders ist, nichts tun.
-    return;
+  function showImage() {
+    if (!portraitImg) return;
+    portraitImg.style.display = "block";
+    if (portraitPlaceholder) portraitPlaceholder.style.display = "none";
+    if (portraitVideo) portraitVideo.style.display = "none";
   }
 
-  // Erst mal Platzhalter zeigen
-  portraitPlaceholder.style.display = "flex";
-  portraitImg.style.display = "none";
-  portraitVideo.style.display = "none";
-
-  if (imageStatus)
-    imageStatus.textContent = "Status: Versuche Video zu laden …";
-
-  const videoPath = "data/self/latest_video.mp4";
-
-  // Event-Handler nur einmal konfigurieren
-  portraitVideo.preload = "metadata";
-  portraitVideo.playsInline = true;
-  portraitVideo.muted = true; // bleibt optisch stumm; Audio kommt aus <audio>
-
-  portraitVideo.onloadeddata = function () {
-    // Video erfolgreich
-    portraitPlaceholder.style.display = "none";
-    portraitImg.style.display = "none";
+  function showVideo() {
+    if (!portraitVideo) return;
     portraitVideo.style.display = "block";
+    if (portraitImg) portraitImg.style.display = "none";
+    if (portraitPlaceholder) portraitPlaceholder.style.display = "none";
+  }
 
-    currentMediaMode = "video";
-    if (imageMeta) imageMeta.textContent = "Medium: Video · " + videoPath;
-    if (imageStatus) imageStatus.textContent = "Status: Video geladen.";
-  };
-
-  portraitVideo.onerror = function () {
-    // Wenn Video nicht geht → Bild-Fallback
-    tryLoadImageFallback();
-  };
-
-  // Soft-Fallback bei "stalled": nach 15 s auf Bild umschalten
-  portraitVideo.onstalled = function () {
-    setTimeout(function () {
-      if (portraitVideo.readyState < 2 && currentMediaMode !== "image") {
-        tryLoadImageFallback();
+  function loadPortraitImage() {
+    return new Promise(function (resolve) {
+      if (!portraitImg) {
+        resolve(false);
+        return;
       }
-    }, 15000);
-  };
 
-  // Video-URL setzen (mit Cache-Buster)
-  portraitVideo.src = videoPath + "?ts=" + Date.now();
-}
+      showPlaceholder("Suche Bild …");
+      const src = "data/self/latest_image.png?ts=" + Date.now();
 
-// --- Audio: WAV/MP3 mit Play/Pause ---
+      portraitImg.onload = function () {
+        showImage();
+        setImageStatus("Medium: Bild", "Bild geladen: data/self/latest_image.png");
+        resolve(true);
+      };
 
-function initAudio() {
-  if (!audioEl) return;
+      portraitImg.onerror = function () {
+        if (portraitPlaceholder) {
+          portraitPlaceholder.style.display = "flex";
+          portraitPlaceholder.textContent = "Noch kein Bild verfügbar.";
+        }
+        setImageStatus("Medium: —", "Kein Bild gefunden.");
+        resolve(false);
+      };
 
-  // Formatwahl per canPlayType
-  try {
-    const wavOk =
-      audioEl.canPlayType("audio/wav") === "probably" ||
-      audioEl.canPlayType("audio/wav") === "maybe";
-    const mp3Ok =
-      audioEl.canPlayType("audio/mpeg") === "probably" ||
-      audioEl.canPlayType("audio/mpeg") === "maybe";
+      portraitImg.src = src;
+    });
+  }
 
-    if (wavOk) {
-      audioEl.src = "audio/latest.wav?ts=" + Date.now();
-    } else if (mp3Ok) {
-      audioEl.src = "audio/latest.mp3?ts=" + Date.now();
-    } else {
-      if (audioStatus)
-        audioStatus.textContent =
-          "Kein unterstütztes Audioformat im Browser verfügbar.";
+  function tryLoadPortraitVideo() {
+    // Video ist optional – wenn es nicht klappt, bleibt einfach das Bild
+    if (!portraitVideo) return;
+
+    const src = "data/self/latest_video.mp4?ts=" + Date.now();
+    portraitVideo.preload = "metadata";
+    portraitVideo.playsInline = true;
+    portraitVideo.muted = true;
+    portraitVideo.loop = true;
+    portraitVideo.style.display = "none";
+
+    let videoReady = false;
+
+    portraitVideo.addEventListener(
+      "loadeddata",
+      function () {
+        videoReady = true;
+        showVideo();
+        setImageStatus("Medium: Video", "Video geladen: data/self/latest_video.mp4");
+        // sanft starten, ohne Ton
+        try {
+          portraitVideo.play().catch(function () {
+            // wenn Autoplay blockiert wird, ist das auch ok
+          });
+        } catch (e) {
+          // ignorieren
+        }
+      },
+      { once: true }
+    );
+
+    portraitVideo.addEventListener(
+      "error",
+      function () {
+        // Falls Video kaputt / nicht erreichbar: einfach beim Bild bleiben
+        setImageStatus("Medium: Bild", "Kein Video gefunden – Bild bleibt aktiv.");
+        if (!videoReady) {
+          if (portraitImg) portraitImg.style.display = "block";
+          if (portraitVideo) portraitVideo.style.display = "none";
+        }
+      },
+      { once: true }
+    );
+
+    // Wir starten das Laden erst, nachdem das Bild versucht wurde
+    portraitVideo.src = src;
+    portraitVideo.load();
+  }
+
+  async function initPortrait() {
+    if (!portraitFrame || !portraitImg || !portraitPlaceholder) {
       return;
     }
 
-    audioIsReady = true;
-    if (audioStatus)
-      audioStatus.textContent =
-        "Bereit – tippe auf ▶, um Mira zu hören.";
-  } catch (e) {
-    console.warn("Audio init failed", e);
-    if (audioStatus)
-      audioStatus.textContent = "Fehler beim Initialisieren des Audios.";
+    setImageStatus("Medium: —", "Status: wird geladen …");
+    showPlaceholder("Suche Bild …");
+
+    const hasImage = await loadPortraitImage();
+    // Versuche Video nur im Hintergrund – Bild bleibt sicher
+    tryLoadPortraitVideo();
+
+    if (!hasImage) {
+      showPlaceholder("Noch kein Bild verfügbar.");
+    }
   }
 
-  // Buttons
-  if (btnPlay) {
+  // ------- Audio: stabiler Player -------
+
+  function initAudio() {
+    if (!audioEl || !btnPlay || !btnPause || !audioStatus) return;
+
+    audioStatus.textContent = "Bereit, sobald du ▶ tippst.";
+
     btnPlay.onclick = function () {
-      if (!audioIsReady) return;
       audioEl
         .play()
         .then(function () {
-          if (audioStatus) audioStatus.textContent = "Spielt.";
+          audioStatus.textContent = "Spielt.";
           if (portraitFrame) {
             portraitFrame.classList.remove("idle");
             portraitFrame.classList.add("speaking");
           }
         })
         .catch(function (err) {
-          console.warn("Audio play blocked", err);
-          if (audioStatus)
-            audioStatus.textContent =
-              "Wiedergabe blockiert – bitte noch einmal ▶ tippen.";
+          audioStatus.textContent =
+            "Wiedergabe blockiert. Bitte einmal direkt auf den Player tippen.";
+          console.error("Audio play blocked:", err);
         });
     };
-  }
 
-  if (btnPause) {
     btnPause.onclick = function () {
       audioEl.pause();
-      if (audioStatus) audioStatus.textContent = "Pausiert.";
+      audioStatus.textContent = "Pausiert.";
       if (portraitFrame) {
         portraitFrame.classList.remove("speaking");
         portraitFrame.classList.add("idle");
       }
     };
+
+    audioEl.addEventListener("ended", function () {
+      audioStatus.textContent = "Beendet.";
+      if (portraitFrame) {
+        portraitFrame.classList.remove("speaking");
+        portraitFrame.classList.add("idle");
+      }
+    });
   }
 
-  // Wenn Audio von selbst zu Ende ist
-  audioEl.onended = function () {
-    if (audioStatus) audioStatus.textContent = "Beendet.";
-    if (portraitFrame) {
-      portraitFrame.classList.remove("speaking");
-      portraitFrame.classList.add("idle");
-    }
-  };
-}
+  // ------- JSON-Helfer & thematische Anpassung -------
 
-// --- Tagesimpuls / Status laden ---
-
-async function loadStatus() {
-  if (!quoteText || !baseTone) return;
-
-  const data = await fetchJson("data/self/status.json");
-  if (!data || typeof data !== "object") {
-    quoteText.textContent = "Noch kein Tagesimpuls eingetragen.";
-    baseTone.textContent = "unbestimmt";
-    if (quoteUpdated) quoteUpdated.textContent = "—";
-    if (imageStatus && currentMediaMode === "none") {
-      imageStatus.textContent = "Status: Noch keine Statusdaten.";
-    }
-    return;
+  function safeFetchJson(path) {
+    return fetch(path + "?ts=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .catch(function () {
+        return null;
+      });
   }
 
-  quoteText.textContent =
-    data.daily_quote ||
-    data.daily_input ||
-    "Noch kein Tagesimpuls eingetragen.";
-  baseTone.textContent = data.base_tone || "unbestimmt";
-  if (quoteUpdated) quoteUpdated.textContent = data.updated_at || "—";
+  function applyToneTheme(toneRaw) {
+    if (!toneRaw) return;
+    const tone = String(toneRaw).toLowerCase();
 
-  applyToneTheme(data.base_tone || "");
-}
+    let accent = "#3ce081";
+    let accentSoft = "rgba(60, 224, 129, 0.26)";
+    let bgMain =
+      "radial-gradient(circle at top, #151f3b 0%, #050813 55%, #02030a 100%)";
+    let cardBg =
+      "linear-gradient(145deg, rgba(255,255,255,0.07), rgba(7,10,24,0.95))";
+    let label = toneRaw;
 
-// --- Selbstbild & Lernen laden ---
+    if (tone.includes("ruhig") || tone.includes("klar") || tone.includes("still")) {
+      accent = "#3fb7ff";
+      accentSoft = "rgba(63, 183, 255, 0.26)";
+      bgMain = "radial-gradient(circle at top, #0c1830 0%, #020615 55%, #02030a 100%)";
+      label = toneRaw + " · klarer Himmel";
+    } else if (
+      tone.includes("warm") ||
+      tone.includes("zugewandt") ||
+      tone.includes("sanft")
+    ) {
+      accent = "#ffb74d";
+      accentSoft = "rgba(255, 183, 77, 0.26)";
+      bgMain = "radial-gradient(circle at top, #28140a 0%, #12080a 55%, #030108 100%)";
+      label = toneRaw + " · goldene Stunde";
+    } else if (
+      tone.includes("intensiv") ||
+      tone.includes("lebendig") ||
+      tone.includes("kraftvoll")
+    ) {
+      accent = "#ff6fa8";
+      accentSoft = "rgba(255, 111, 168, 0.28)";
+      bgMain = "radial-gradient(circle at top, #2b0620 0%, #100411 55%, #05000a 100%)";
+      label = toneRaw + " · hohe Energie";
+    } else if (tone.includes("melanchol")) {
+      accent = "#8e9cff";
+      accentSoft = "rgba(142,156,255,0.3)";
+      bgMain = "radial-gradient(circle at top, #0f1028 0%, #060616 55%, #020107 100%)";
+      label = toneRaw + " · leise Tiefe";
+    }
 
-async function loadSelfview() {
-  if (selfimageSummary) {
-    const portraitState = await fetchJson("data/self/portrait_state.json");
-    if (portraitState && typeof portraitState === "object") {
-      const ver = portraitState.version || portraitState.id || "—";
-      const desc =
-        portraitState.description ||
-        portraitState.summary ||
-        "Aktuelles Porträt ist eingetragen.";
+    document.documentElement.style.setProperty("--accent", accent);
+    document.documentElement.style.setProperty("--accent-soft", accentSoft);
+    document.documentElement.style.setProperty("--bg-main", bgMain);
+    document.documentElement.style.setProperty("--card-bg", cardBg);
+
+    if (toneTag && toneTagLabel) {
+      toneTag.style.display = "inline-flex";
+      toneTagLabel.textContent = label;
+    }
+  }
+
+  async function initStatusAndSelf() {
+    // status.json – Tagesimpuls & Grundton
+    const status = await safeFetchJson("data/self/status.json");
+    if (status) {
+      if (quoteText) quoteText.textContent = status.daily_quote || "Kein Tagesimpuls eingetragen.";
+      if (baseTone) baseTone.textContent = status.base_tone || "unbestimmt";
+      if (quoteUpdated && status.updated_at) {
+        quoteUpdated.textContent = status.updated_at;
+      }
+      applyToneTheme(status.base_tone || "");
+    } else {
+      if (quoteText) quoteText.textContent = "Noch kein Tagesimpuls – Mira ist im Werdemodus.";
+      if (baseTone) baseTone.textContent = "unbestimmt";
+    }
+
+    // portrait_state.json – Selbstbild
+    const portraitState = await safeFetchJson("data/self/portrait_state.json");
+    if (portraitState && selfimageSummary) {
+      const v = portraitState.version || "—";
+      const desc = portraitState.description || "Selbstbild noch im Fluss.";
       selfimageSummary.innerHTML =
-        "<b>Porträtstatus:</b> " + desc + "<br><span class='mono'>Version: " + ver + "</span>";
+        "<b>Aktuelles Selbstbild:</b> " + desc + "<br><span class=\"mono\">Version: " + v + "</span>";
       if (versionPill) {
         versionPill.style.display = "inline-block";
-        versionPill.textContent = "Portrait v" + ver;
+        versionPill.textContent = "Portrait v" + v;
       }
-    } else {
-      selfimageSummary.textContent =
-        "Noch kein detaillierter Porträtstatus eingetragen.";
+    } else if (selfimageSummary) {
+      selfimageSummary.textContent = "Selbstbild: Noch kein Eintrag – Mira wächst.";
     }
-  }
 
-  if (learningSummary) {
-    const learning = await fetchJson("data/self/learning.json");
-    if (learning && typeof learning === "object") {
-      const focus =
-        learning.focus ||
-        learning.current ||
-        "Lernfokus noch nicht festgelegt.";
-      const note = learning.note || learning.comment || "";
+    // learning.json – Lernfokus
+    const learning = await safeFetchJson("data/self/learning.json");
+    if (learning && learningSummary) {
       learningSummary.innerHTML =
-        "<b>Lernfokus:</b> " +
-        focus +
-        (note ? "<br><span class='mono'>" + note + "</span>" : "");
-    } else {
-      learningSummary.textContent =
-        "Noch keine expliziten Lernziele eingetragen.";
+        "<b>Fokus heute:</b> " +
+        (learning.focus || "nicht definiert") +
+        "<br><span class=\"mono\">Modus: " +
+        (learning.mode || "offen") +
+        "</span>";
+    } else if (learningSummary) {
+      learningSummary.textContent = "Lernstatus: Noch keine Daten – Raum für Neues.";
     }
   }
-}
 
-// --- Initialisierung & Polling ---
+  // ------- Initialisierung -------
 
-async function initMira() {
-  updateLiveTimestamp();
-  setInterval(updateLiveTimestamp, 30_000);
+  async function initApp() {
+    initLiveClock();
+    await initPortrait();
+    initAudio();
+    initStatusAndSelf();
 
-  initPortraitMedia();
-  initAudio();
-  loadStatus();
-  loadSelfview();
+    // optionale regelmäßige Updates
+    setInterval(initStatusAndSelf, 60_000);
+  }
 
-  // optionale sanfte Aktualisierung alle 60 Sekunden
-  setInterval(function () {
-    loadStatus();
-    loadSelfview();
-  }, 60_000);
-}
-
-// Start
-document.addEventListener("DOMContentLoaded", function () {
-  initMira().catch(function (e) {
-    console.error("Init failed:", e);
-  });
-});
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initApp);
+  } else {
+    initApp();
+  }
+})();
