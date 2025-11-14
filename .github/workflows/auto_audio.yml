@@ -1,0 +1,51 @@
+name: Auto Generate Daily Audio
+
+on:
+  schedule:
+    - cron: "0 4 * * *"   # jeden Tag um 04:00 UTC
+  workflow_dispatch:      # manuelles Auslösen möglich
+
+jobs:
+  generate_audio:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Read daily quote
+        id: quote
+        run: |
+          QUOTE=$(cat data/self/status.json | jq -r '.daily_quote')
+          echo "quote=$QUOTE" >> $GITHUB_OUTPUT
+
+      - name: Read voice profile
+        id: voice
+        run: |
+          VOICE=$(cat data/self/voice_profile.json)
+          echo "voice=$VOICE" >> $GITHUB_OUTPUT
+
+      - name: Generate TTS via GitHub API
+        id: tts
+        run: |
+          curl -X POST "https://api.github.com/repos/${{ github.repository }}/tts" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"text\": \"${{ steps.quote.outputs.quote }}\",
+            \"voice\": ${{ steps.voice.outputs.voice }}
+          }" \
+          --output new_audio.wav
+
+      - name: Move audio into place
+        run: |
+          mkdir -p audio
+          mv new_audio.wav audio/latest.wav
+
+      - name: Commit & push
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions"
+          git add audio/latest.wav
+          git commit -m "Auto-update daily audio"
+          git push
