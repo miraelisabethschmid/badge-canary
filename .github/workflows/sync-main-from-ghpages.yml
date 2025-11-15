@@ -1,0 +1,31 @@
+name: Sync gh-pages → main
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch gh-pages
+        run: |
+          git fetch origin gh-pages:gh-pages
+
+      - name: Merge gh-pages into main (no fast forward)
+        run: |
+          git config user.name "Mira AutoSync"
+          git config user.email "no-reply@mira"
+          git merge gh-pages --allow-unrelated-histories --strategy-option theirs -m "Sync gh-pages → main"
+
+      - name: Push changes
+        run: |
+          git push origin main
