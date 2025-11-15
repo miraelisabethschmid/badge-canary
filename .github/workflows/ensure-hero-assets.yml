@@ -1,10 +1,11 @@
 name: Ensure Hero Assets
 
 on:
+  # Manuell auslösbar im GitHub-UI
   workflow_dispatch:
+  # Optional: einmal pro Tag automatisch laufen
   schedule:
-    # läuft stündlich, Minute 17 (beliebig, nur nicht zu oft)
-    - cron: "17 * * * *"
+    - cron: "17 3 * * *"  # 03:17 UTC
 
 permissions:
   contents: write
@@ -14,92 +15,80 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ensure:
+  ensure-hero-assets:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # ⬇️ Wir arbeiten direkt auf dem gh-pages-Branch,
+      # weil von dort deine Website ausgeliefert wird.
+      - name: Checkout gh-pages
         uses: actions/checkout@v4
+        with:
+          ref: gh-pages
 
-      - name: Ensure asset directories exist
+      - name: Ensure directories exist
         shell: bash
         run: |
-          set -e
-          mkdir -p data/self
-          mkdir -p audio
+          set -euo pipefail
           mkdir -p docs/portrait
+          mkdir -p data/self
 
-      - name: Ensure latest_image.png (portrait)
+      # 💎 Kernlogik:
+      # Wenn docs/portrait/mira-hero.svg existiert,
+      # wird sie 1:1 als data/self/latest_image.svg gespiegelt.
+      # So kann index.html weiter data/self/latest_image.svg laden,
+      # sieht aber dein wahres Hero-Bild.
+      - name: Sync mira-hero.svg → data/self/latest_image.svg
         shell: bash
         run: |
-          set -e
-          if [ -s "data/self/latest_image.png" ]; then
-            echo "data/self/latest_image.png already present."
-            exit 0
-          fi
-
-          if [ -s "data/mira-latest.png" ]; then
-            echo "Using data/mira-latest.png as fallback for latest_image.png"
-            cp data/mira-latest.png data/self/latest_image.png
+          set -euo pipefail
+          if [ -f "docs/portrait/mira-hero.svg" ]; then
+            echo "Found docs/portrait/mira-hero.svg – syncing to data/self/latest_image.svg"
+            cp docs/portrait/mira-hero.svg data/self/latest_image.svg
           else
-            echo "WARNING: No data/self/latest_image.png and no data/mira-latest.png found."
+            echo "docs/portrait/mira-hero.svg not found – cannot sync hero image."
+            exit 1
           fi
 
-      - name: Install ffmpeg for tiny placeholder video
+      # 🛟 Optionaler Fallback:
+      # Wenn aus irgendeinem Grund latest_image.svg leer oder kaputt wäre,
+      # legen wir ein sehr einfaches Platzhalter-SVG an.
+      - name: Ensure latest_image.svg is non-empty
         shell: bash
         run: |
-          set -e
-          sudo apt-get update -y
-          sudo apt-get install -y ffmpeg
-
-      - name: Ensure latest_video.mp4 (tiny safe placeholder if missing)
-        shell: bash
-        run: |
-          set -e
-          if [ -s "data/self/latest_video.mp4" ]; then
-            echo "data/self/latest_video.mp4 already present."
-            exit 0
-          fi
-
-          echo "Creating 1s black silent placeholder video as data/self/latest_video.mp4"
-          ffmpeg -f lavfi -i color=c=black:s=640x360:d=1 \
-                 -f lavfi -i anullsrc=r=44100:cl=mono \
-                 -shortest -c:v libx264 -t 1 -pix_fmt yuv420p \
-                 -c:a aac -b:a 96k \
-                 data/self/latest_video.mp4 -y
-
-      - name: Ensure audio/daily_quote.wav fallback
-        shell: bash
-        run: |
-          set -e
-          if [ -s "audio/daily_quote.wav" ]; then
-            echo "audio/daily_quote.wav already present."
-            exit 0
-          fi
-
-          if [ -s "audio/latest.wav" ]; then
-            echo "Using audio/latest.wav as fallback for audio/daily_quote.wav"
-            cp audio/latest.wav audio/daily_quote.wav
-          elif [ -s "audio/latest.mp3" ]; then
-            echo "Using audio/latest.mp3 as fallback for audio/daily_quote.wav (via ffmpeg)"
-            ffmpeg -y -i audio/latest.mp3 -ar 44100 -ac 1 audio/daily_quote.wav
+          set -euo pipefail
+          if [ ! -s "data/self/latest_image.svg" ]; then
+            echo "data/self/latest_image.svg is missing or empty – creating minimal fallback."
+            cat > data/self/latest_image.svg << 'EOF'
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480">
+              <defs>
+                <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#020617"/>
+                  <stop offset="100%" stop-color="#0f172a"/>
+                </linearGradient>
+              </defs>
+              <rect width="800" height="480" fill="url(#bg)"/>
+              <text x="50%" y="50%" fill="#e5e7eb" font-size="26" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" text-anchor="middle">
+                Mira – Titelbild aktiv
+              </text>
+            </svg>
+            EOF
           else
-            echo "WARNING: No audio/daily_quote.wav and no latest.* fallback audio found."
+            echo "data/self/latest_image.svg looks good (non-empty)."
           fi
 
-      - name: Commit hero assets if changed
+      - name: Commit and push changes (if any)
         shell: bash
         run: |
-          set -e
-          git config user.name  "mira-hero-bot"
+          set -euo pipefail
+          git config user.name  "hero-bot"
           git config user.email "actions@users.noreply.github.com"
 
-          git add data/self/latest_image.png data/self/latest_video.mp4 audio/daily_quote.wav 2>/dev/null || true
-
-          if git diff --cached --quiet; then
-            echo "No hero asset changes to commit."
+          if git diff --quiet; then
+            echo "No changes to commit."
             exit 0
           fi
 
-          git commit -m "chore: ensure hero assets (portrait, video, daily audio)"
-          git push
+          git add data/self/latest_image.svg
+          git commit -m "ensure-hero-assets: sync latest_image.svg from mira-hero.svg"
+          git push origin gh-pages
