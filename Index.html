@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Mira – Sichtbare Präsenz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mira Elisabeth Schmid – Sichtbare Präsenz: dynamisches Portrait & Stimme, direkt aus ihrem Selbstzustand.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050710;
+      --bg-card: #0d101b;
+      --bg-card-soft: #131726;
+      --accent: #f97316;
+      --accent-soft: #fbbf24;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --border-soft: #1f2933;
+      --danger: #f97373;
+      --radius-xl: 18px;
+      --shadow-soft: 0 18px 35px rgba(0, 0, 0, 0.45);
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                   "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at top, #111827 0, var(--bg) 45%, #020617 100%);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      padding: 24px 16px 40px;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    header {
+      margin-bottom: 24px;
+    }
+
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 4.4vw, 2.6rem);
+      letter-spacing: 0.03em;
+    }
+
+    .live-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.08);
+      color: #bbf7d0;
+      font-size: 0.78rem;
+      border: 1px solid rgba(34, 197, 94, 0.35);
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.85);
+    }
+    .live-timestamp {
+      font-family: var(--font-mono);
+      opacity: 0.85;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #111827 0, var(--bg-card) 45%, #020617 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 18px 20px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .portrait-shell {
+      margin: 0;
+      border-radius: 16px;
+      border: 1px solid #111827;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .portrait-frame {
+      width: 100%;
+      min-height: 260px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #020617 0, #020617 45%, #000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #portrait-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    figcaption {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .media-meta {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .media-meta code {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      padding: 2px 5px;
+      border-radius: 6px;
+      background: #020617;
+      border: 1px solid #111827;
+      word-break: break-all;
+    }
+
+    .controls-row {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button.primary {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, var(--accent) 0, var(--accent-soft) 100%);
+      color: #111827;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      border-radius: 999px;
+      border: 1px solid #374151;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #020617;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .button-icon {
+      font-size: 0.88rem;
+    }
+
+    .audio-shell {
+      border-radius: 12px;
+      background: var(--bg-card-soft);
+      padding: 10px 10px 12px;
+      border: 1px solid #1f2937;
+    }
+
+    audio {
+      width: 100%;
+    }
+
+    .autoplay-hint {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .autoplay-hint strong {
+      color: var(--accent-soft);
+      font-weight: 500;
+    }
+
+    .status-line {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-ok {
+      color: #bbf7d0;
+    }
+
+    .status-warn {
+      color: var(--danger);
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 18px 10px 28px;
+      }
+      .card {
+        padding: 16px 14px 18px;
+      }
+      .portrait-frame {
+        min-height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="title-row">
+        <h1>Mira – Sichtbare Präsenz</h1>
+        <div class="live-chip">
+          <span class="live-dot"></span>
+          <span>Live</span>
+          <span class="live-timestamp" id="live-timestamp"></span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="card" aria-labelledby="section-portrait">
+        <div class="card-header">
+          <div>
+            <div class="card-title" id="section-portrait">Porträt &amp; Stimme</div>
+            <div class="card-subtitle">Direkt aus Miras innerem Selbstzustand</div>
+          </div>
+        </div>
+
+        <figure class="portrait-shell">
+          <div class="portrait-frame">
+            <img id="portrait-img" alt="Mira – sichtbare Präsenz">
+          </div>
+          <figcaption id="portrait-caption">Mira – Titelbild aktiv</figcaption>
+        </figure>
+
+        <div class="media-meta">
+          Bild geladen:
+          <code id="image-path">data/self/latest_image.svg</code>
+        </div>
+
+        <div class="controls-row">
+          <div class="button-row">
+            <button type="button" class="primary" id="btn-play">
+              <span class="button-icon">▶</span>
+              <span>Abspielen</span>
+            </button>
+            <button type="button" class="secondary" id="btn-pause">
+              <span class="button-icon">⏸</span>
+              <span>Pause</span>
+            </button>
+          </div>
+
+          <div class="audio-shell">
+            <audio id="voice-audio" preload="none" controls>
+              Ihr Browser unterstützt kein HTML5-Audio.
+            </audio>
+            <p class="autoplay-hint">
+              Autoplay-Schutz – einmal <strong>▶</strong> tippen, dann darf Mira sprechen.
+            </p>
+            <p class="status-line" id="status-line">
+              status: <span class="status-warn">initialisiere …</span>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const DEFAULT_IMAGE = "data/self/latest_image.svg";
+      const DEFAULT_IMAGE_CAPTION = "Mira – Titelbild aktiv";
+      const DEFAULT_AUDIO = "audio/latest.wav";
+
+      const imgEl = document.getElementById("portrait-img");
+      const imagePathEl = document.getElementById("image-path");
+      const captionEl = document.getElementById("portrait-caption");
+      const audioEl = document.getElementById("voice-audio");
+      const statusLineEl = document.getElementById("status-line");
+      const liveTsEl = document.getElementById("live-timestamp");
+      const btnPlay = document.getElementById("btn-play");
+      const btnPause = document.getElementById("btn-pause");
+
+      function setStatus(text, ok) {
+        statusLineEl.innerHTML =
+          'status: <span class="' + (ok ? "status-ok" : "status-warn") + '">' +
+          text + "</span>";
+      }
+
+      function setMedia(imageUrl, caption, audioUrl) {
+        imgEl.src = imageUrl;
+        imgEl.alt = caption || "Mira – sichtbare Präsenz";
+        captionEl.textContent = caption || DEFAULT_IMAGE_CAPTION;
+        imagePathEl.textContent = imageUrl;
+        audioUrl && (audioEl.src = audioUrl);
+      }
+
+      // 1) Live-Zeitstempel
+      try {
+        liveTsEl.textContent = new Date().toISOString();
+      } catch (e) {
+        liveTsEl.textContent = "";
+      }
+
+      // 2) Standard-Medien setzen (funktioniert sofort)
+      setMedia(DEFAULT_IMAGE, DEFAULT_IMAGE_CAPTION, DEFAULT_AUDIO);
+      setStatus("Basisdaten geladen (Fallback).", true);
+
+      // 3) Optional Portrait-State lesen – falls vorhanden
+      //    z.B. data/self/portrait_state.json
+      fetch("data/self/portrait_state.json", { cache: "no-store" })
+        .then(function (res) {
+          if (!res.ok) {
+            throw new Error("portrait_state.json nicht gefunden");
+          }
+          return res.json();
+        })
+        .then(function (data) {
+          var img = data.image_url || data.image || DEFAULT_IMAGE;
+          var cap = data.caption || data.title || DEFAULT_IMAGE_CAPTION;
+          var aud = data.voice_url || data.audio_url || DEFAULT_AUDIO;
+
+          setMedia(img, cap, aud);
+          setStatus("Portrait-State aktiv – dynamische Selbstabbildung.", true);
+        })
+        .catch(function () {
+          // Kein Problem – wir bleiben im Fallback-Zustand
+          setStatus("Fallback aktiv – warte auf nächsten Selbst-Sync.", true);
+        });
+
+      // 4) Buttons an Audio koppeln (Autoplay-Schutz bleibt beim Nutzer)
+      btnPlay.addEventListener("click", function () {
+        audioEl.play().catch(function () {
+          // Wenn der Browser blockiert, ist das ok – Nutzer kann Play im Player drücken
+        });
+      });
+
+      btnPause.addEventListener("click", function () {
+        audioEl.pause();
+      });
+
+      // 5) Lokales Flag setzen, wenn Nutzer Play gedrückt hat (für spätere Autoplay-Logik)
+      audioEl.addEventListener("play", function () {
+        try {
+          localStorage.setItem("mira_autoplay_ok", "1");
+        } catch (e) {}
+      });
+    })();
+  </script>
+</body>
+</html>
