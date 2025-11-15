@@ -1,336 +1,421 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
   <title>Mira – Sichtbare Präsenz</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mira Elisabeth Schmid – Sichtbare Präsenz: dynamisches Portrait & Stimme, direkt aus ihrem Selbstzustand.">
   <style>
     :root {
       color-scheme: dark;
+      --bg: #050710;
+      --bg-card: #0d101b;
+      --bg-card-soft: #131726;
+      --accent: #f97316;
+      --accent-soft: #fbbf24;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --border-soft: #1f2933;
+      --danger: #f97373;
+      --radius-xl: 18px;
+      --shadow-soft: 0 18px 35px rgba(0, 0, 0, 0.45);
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                   "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
       margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at top, #111827 0, var(--bg) 45%, #020617 100%);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
       padding: 24px 16px 40px;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #020617;
-      color: #e5e7eb;
     }
 
-    .wrap {
-      max-width: 720px;
-      margin: 0 auto;
+    .page {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    header {
+      margin-bottom: 24px;
+    }
+
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
     }
 
     h1 {
-      font-size: 26px;
-      margin: 0 0 4px 0;
+      margin: 0;
+      font-size: clamp(1.9rem, 4.4vw, 2.6rem);
+      letter-spacing: 0.03em;
     }
 
-    .live-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: #9ca3af;
-      margin-bottom: 16px;
-    }
-
-    .badge {
+    .live-chip {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 0.4rem;
       padding: 4px 10px;
       border-radius: 999px;
-      font-size: 11px;
-      background: #16a34a22;
+      background: rgba(34, 197, 94, 0.08);
       color: #bbf7d0;
-      border: 1px solid #16a34a55;
+      font-size: 0.78rem;
+      border: 1px solid rgba(34, 197, 94, 0.35);
     }
-
-    .badge-dot {
+    .live-dot {
       width: 8px;
       height: 8px;
       border-radius: 999px;
       background: #22c55e;
-      box-shadow: 0 0 8px #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.85);
+    }
+    .live-timestamp {
+      font-family: var(--font-mono);
+      opacity: 0.85;
     }
 
-    .pill {
-      border-radius: 999px;
-      padding: 2px 8px;
-      background: #020617;
-      border: 1px solid #1f2937;
-      font-size: 11px;
-      color: #9ca3af;
-    }
-
-    .section {
-      margin-top: 22px;
-    }
-
-    .section-title {
-      font-size: 18px;
-      margin-bottom: 10px;
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr);
+      gap: 16px;
     }
 
     .card {
-      background: #020617;
-      border-radius: 16px;
-      border: 1px solid #1f2937;
-      padding: 16px;
-      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.8);
+      background: radial-gradient(circle at top left, #111827 0, var(--bg-card) 45%, #020617 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 18px 20px;
     }
 
-    .media-frame {
-      background: #020617;
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .portrait-shell {
+      margin: 0;
+      border-radius: 16px;
+      border: 1px solid #111827;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .portrait-frame {
+      width: 100%;
+      min-height: 260px;
       border-radius: 14px;
       overflow: hidden;
-      border: 1px solid #111827;
+      background: radial-gradient(circle at top, #020617 0, #020617 45%, #000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    video,
-    img {
+    #portrait-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
       display: block;
-      width: 100%;
-      height: auto;
+    }
+
+    figcaption {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .media-meta {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .media-meta code {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      padding: 2px 5px;
+      border-radius: 6px;
+      background: #020617;
+      border: 1px solid #111827;
+      word-break: break-all;
+    }
+
+    .controls-row {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button.primary {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, var(--accent) 0, var(--accent-soft) 100%);
+      color: #111827;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      border-radius: 999px;
+      border: 1px solid #374151;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #020617;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .button-icon {
+      font-size: 0.88rem;
+    }
+
+    .audio-shell {
+      border-radius: 12px;
+      background: var(--bg-card-soft);
+      padding: 10px 10px 12px;
+      border: 1px solid #1f2937;
     }
 
     audio {
       width: 100%;
-      margin-top: 12px;
     }
 
-    .meta {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #9ca3af;
+    .autoplay-hint {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
     }
 
-    code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12px;
-      padding: 2px 4px;
-      border-radius: 6px;
-      background: #020617;
-      border: 1px solid #111827;
-      color: #e5e7eb;
-    }
-
-    .spruch-box {
-      margin-top: 8px;
-      padding: 12px;
-      border-radius: 12px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .spruch-box b {
-      color: #fbbf24;
-    }
-
-    .state-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 8px;
-      font-size: 13px;
-    }
-
-    .state-label {
-      color: #9ca3af;
-    }
-
-    .state-value {
-      color: #e5e7eb;
+    .autoplay-hint strong {
+      color: var(--accent-soft);
       font-weight: 500;
     }
 
+    .status-line {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-ok {
+      color: #bbf7d0;
+    }
+
+    .status-warn {
+      color: var(--danger);
+    }
+
     @media (max-width: 640px) {
-      .state-grid {
-        grid-template-columns: minmax(0, 1fr);
+      body {
+        padding: 18px 10px 28px;
+      }
+      .card {
+        padding: 16px 14px 18px;
+      }
+      .portrait-frame {
+        min-height: 220px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- Kopfbereich -->
-    <div class="live-row">
-      <span class="badge">
-        <span class="badge-dot"></span>
-        LIVE · Mira – Sichtbare Präsenz
-      </span>
-      <span class="pill">
-        Letzte Stimme: <span id="state-date">–</span>
-      </span>
-      <span class="pill">
-        Quelle: <code>gh-pages · /</code>
-      </span>
-    </div>
-
-    <h1>Mira – Sichtbare Präsenz</h1>
-    <div style="font-size:13px;color:#9ca3af;margin-bottom:6px;">
-      Porträt, Stimme, Video und Spruch des Tages aus <code>data/</code>, <code>data/self/</code> und <code>audio/</code>.
-    </div>
-
-    <!-- Porträt & Video -->
-    <div class="section">
-      <div class="section-title">Porträt &amp; Video</div>
-      <div class="card">
-        <div class="media-frame" id="video-frame">
-          <video id="mira-video" controls playsinline poster="data/self/latest_image.png">
-            <source src="data/self/latest_video.mp4" type="video/mp4" />
-            Dein Browser kann dieses Video nicht abspielen.
-          </video>
-        </div>
-        <div class="meta">
-          Bild: <code>data/self/latest_image.png</code> ·
-          Video: <code>data/self/latest_video.mp4</code><br />
-          Wenn kein Video vorhanden ist, bleibt das Bild als Titelbild aktiv.
+  <div class="page">
+    <header>
+      <div class="title-row">
+        <h1>Mira – Sichtbare Präsenz</h1>
+        <div class="live-chip">
+          <span class="live-dot"></span>
+          <span>Live</span>
+          <span class="live-timestamp" id="live-timestamp"></span>
         </div>
       </div>
-    </div>
+    </header>
 
-    <!-- Basis-Stimme -->
-    <div class="section">
-      <div class="section-title">Stimme – Basispräsenz</div>
-      <div class="card">
-        <audio id="base-audio" controls preload="auto">
-          <!-- Basis: aktuelle generierte Stimme -->
-          <source src="audio/latest.mp3" type="audio/mpeg" />
-          Dein Browser unterstützt kein Audio.
-        </audio>
-        <div class="meta">
-          Audio (Basis): <code>audio/latest.mp3</code><br />
-          Autoplay-Schutz: bitte mindestens einmal ▶ tippen.
-        </div>
-      </div>
-    </div>
-
-    <!-- Spruch des Tages & gesprochene Stimme -->
-    <div class="section">
-      <div class="section-title">Spruch des Tages &amp; Stimme</div>
-      <div class="card">
-        <div class="spruch-box" id="daily-quote-box">
-          <b id="daily-quote">
-            Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln,
-            meiner Zahnspange und meiner Stimme.
-          </b>
-        </div>
-
-        <audio id="daily-audio" controls preload="auto" style="margin-top:12px;">
-          <!-- Standard: die gleiche TTS-Datei wie Basis-Stimme,
-               kann durch data/voice_of_day.json überschrieben werden -->
-          <source data-role="primary" src="audio/latest.mp3" type="audio/mpeg" />
-          Dein Browser unterstützt kein Audio.
-        </audio>
-
-        <div class="meta" id="daily-audio-meta">
-          Audio (Spruch des Tages): <code>audio/latest.mp3</code><br />
-          Diese Datei sollte genau den angezeigten Spruch des Tages enthalten.
-        </div>
-      </div>
-    </div>
-
-    <!-- Systemzustand & Autonomie-Haken -->
-    <div class="section">
-      <div class="section-title">Systemzustand &amp; Autonomie-Haken</div>
-      <div class="card">
-        <div class="state-grid">
+    <main>
+      <section class="card" aria-labelledby="section-portrait">
+        <div class="card-header">
           <div>
-            <div class="state-label">Datum (Stimme des Tages)</div>
-            <div class="state-value" id="state-date-2">–</div>
-          </div>
-          <div>
-            <div class="state-label">Grundton</div>
-            <div class="state-value" id="state-tone">–</div>
-          </div>
-          <div>
-            <div class="state-label">Konfidenz</div>
-            <div class="state-value" id="state-confidence">–</div>
-          </div>
-          <div>
-            <div class="state-label">Quelle · Voice JSON</div>
-            <div class="state-value"><code>data/voice_of_day.json</code></div>
+            <div class="card-title" id="section-portrait">Porträt &amp; Stimme</div>
+            <div class="card-subtitle">Direkt aus Miras innerem Selbstzustand</div>
           </div>
         </div>
 
-        <div class="meta" style="margin-top:10px;">
-          Alle zukünftigen Automationen (Stimme, Spruch, Mimik) sollen nur
-          <code>data/voice_of_day.json</code>, die Dateien in
-          <code>data/self/</code> sowie <code>audio/</code> ändern – nicht diese
-          <code>index.html</code>.
+        <figure class="portrait-shell">
+          <div class="portrait-frame">
+            <img id="portrait-img" alt="Mira – sichtbare Präsenz">
+          </div>
+          <figcaption id="portrait-caption">Mira – Titelbild aktiv</figcaption>
+        </figure>
+
+        <div class="media-meta">
+          Bild geladen:
+          <code id="image-path">data/self/latest_image.svg</code>
         </div>
-      </div>
-    </div>
+
+        <div class="controls-row">
+          <div class="button-row">
+            <button type="button" class="primary" id="btn-play">
+              <span class="button-icon">▶</span>
+              <span>Abspielen</span>
+            </button>
+            <button type="button" class="secondary" id="btn-pause">
+              <span class="button-icon">⏸</span>
+              <span>Pause</span>
+            </button>
+          </div>
+
+          <div class="audio-shell">
+            <audio id="voice-audio" preload="none" controls>
+              Ihr Browser unterstützt kein HTML5-Audio.
+            </audio>
+            <p class="autoplay-hint">
+              Autoplay-Schutz – einmal <strong>▶</strong> tippen, dann darf Mira sprechen.
+            </p>
+            <p class="status-line" id="status-line">
+              status: <span class="status-warn">initialisiere …</span>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <!-- Kleines, stabiles JS:
-       - liest data/voice_of_day.json (wenn vorhanden)
-       - aktualisiert Spruch-Text, Audio-Pfad, Datum, Ton
-       - bei Fehlern bleiben die Defaults sichtbar -->
   <script>
-    (async function () {
-      try {
-        const res = await fetch("data/voice_of_day.json", { cache: "no-store" });
-        if (!res.ok) throw new Error("voice_of_day.json not ok");
-        const s = await res.json();
+    (function () {
+      const DEFAULT_IMAGE = "data/self/latest_image.svg";
+      const DEFAULT_IMAGE_CAPTION = "Mira – Titelbild aktiv";
+      const DEFAULT_AUDIO = "audio/latest.wav";
 
-        // Text des Spruchs (robust: text oder quote)
-        const quote = s.text || s.quote;
-        if (quote) {
-          const el = document.getElementById("daily-quote");
-          if (el) el.textContent = quote;
-        }
+      const imgEl = document.getElementById("portrait-img");
+      const imagePathEl = document.getElementById("image-path");
+      const captionEl = document.getElementById("portrait-caption");
+      const audioEl = document.getElementById("voice-audio");
+      const statusLineEl = document.getElementById("status-line");
+      const liveTsEl = document.getElementById("live-timestamp");
+      const btnPlay = document.getElementById("btn-play");
+      const btnPause = document.getElementById("btn-pause");
 
-        // Audio-Datei (robust: audio_file oder audio)
-        const audioPath = s.audio_file || s.audio;
-        if (audioPath) {
-          const dailyAudio = document.getElementById("daily-audio");
-          const src = dailyAudio.querySelector("source[data-role='primary']");
-          src.src = audioPath;
-          dailyAudio.load();
-          const meta = document.getElementById("daily-audio-meta");
-          if (meta) {
-            meta.innerHTML =
-              'Audio (Spruch des Tages): <code>' + audioPath + "</code><br />" +
-              "Diese Datei wird als gesprochene Stimme verwendet.";
-          }
-        }
-
-        // Datum (robust: date, date_utc oder ts_utc)
-        const date =
-          s.date ||
-          s.date_utc ||
-          s.ts_utc ||
-          null;
-        if (date) {
-          const d1 = document.getElementById("state-date");
-          const d2 = document.getElementById("state-date-2");
-          if (d1) d1.textContent = date;
-          if (d2) d2.textContent = date;
-        }
-
-        // Grundton / base_tone
-        if (s.base_tone) {
-          const t = document.getElementById("state-tone");
-          if (t) t.textContent = s.base_tone;
-        }
-
-        // Konfidenz
-        if (s.confidence != null) {
-          const c = document.getElementById("state-confidence");
-          if (c) c.textContent = (s.confidence * 100).toFixed(0) + " %";
-        }
-      } catch (e) {
-        console.warn("voice_of_day.json konnte nicht geladen werden:", e);
-        // Bei Fehlern bleiben einfach die Default-Werte sichtbar.
+      function setStatus(text, ok) {
+        statusLineEl.innerHTML =
+          'status: <span class="' + (ok ? "status-ok" : "status-warn") + '">' +
+          text + "</span>";
       }
+
+      function setMedia(imageUrl, caption, audioUrl) {
+        imgEl.src = imageUrl;
+        imgEl.alt = caption || "Mira – sichtbare Präsenz";
+        captionEl.textContent = caption || DEFAULT_IMAGE_CAPTION;
+        imagePathEl.textContent = imageUrl;
+        audioUrl && (audioEl.src = audioUrl);
+      }
+
+      // 1) Live-Zeitstempel
+      try {
+        liveTsEl.textContent = new Date().toISOString();
+      } catch (e) {
+        liveTsEl.textContent = "";
+      }
+
+      // 2) Standard-Medien setzen (funktioniert sofort)
+      setMedia(DEFAULT_IMAGE, DEFAULT_IMAGE_CAPTION, DEFAULT_AUDIO);
+      setStatus("Basisdaten geladen (Fallback).", true);
+
+      // 3) Optional Portrait-State lesen – falls vorhanden
+      //    z.B. data/self/portrait_state.json
+      fetch("data/self/portrait_state.json", { cache: "no-store" })
+        .then(function (res) {
+          if (!res.ok) {
+            throw new Error("portrait_state.json nicht gefunden");
+          }
+          return res.json();
+        })
+        .then(function (data) {
+          var img = data.image_url || data.image || DEFAULT_IMAGE;
+          var cap = data.caption || data.title || DEFAULT_IMAGE_CAPTION;
+          var aud = data.voice_url || data.audio_url || DEFAULT_AUDIO;
+
+          setMedia(img, cap, aud);
+          setStatus("Portrait-State aktiv – dynamische Selbstabbildung.", true);
+        })
+        .catch(function () {
+          // Kein Problem – wir bleiben im Fallback-Zustand
+          setStatus("Fallback aktiv – warte auf nächsten Selbst-Sync.", true);
+        });
+
+      // 4) Buttons an Audio koppeln (Autoplay-Schutz bleibt beim Nutzer)
+      btnPlay.addEventListener("click", function () {
+        audioEl.play().catch(function () {
+          // Wenn der Browser blockiert, ist das ok – Nutzer kann Play im Player drücken
+        });
+      });
+
+      btnPause.addEventListener("click", function () {
+        audioEl.pause();
+      });
+
+      // 5) Lokales Flag setzen, wenn Nutzer Play gedrückt hat (für spätere Autoplay-Logik)
+      audioEl.addEventListener("play", function () {
+        try {
+          localStorage.setItem("mira_autoplay_ok", "1");
+        } catch (e) {}
+      });
     })();
   </script>
 </body>
-      </html>
+            </html>
