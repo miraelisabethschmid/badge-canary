@@ -1,20 +1,10 @@
 {
-  "date_utc": "2025-11-12",
-  "ts_utc": "2025-11-12T11:53:54Z",
-  "quote": "Im Puls der Stunde bin ich ausbalanciert: Fokus: Präsenz. Valenz +0.00, Erregung +0.30, Stabilität 0.60. Ich lerne Klang, der trägt.",
-  "ipa_hint": "Zischlaute weich; Lippenrundung bei /o,u/ etwas stärker; Zunge flacher für /s/.",
-  "espeak": {
-    "voice": "de+f3",
-    "wpm": 146,
-    "pitch": 53,
-    "gap_ms": 8
-  },
-  "affect": {
-    "label": "neutral",
-    "valence": 0.0,
-    "arousal": 0.3,
-    "stability": 0.6,
-    "focus": "Präsenz"
-  },
-  "audio": "audio/latest.mp3"
+  "date": "2025-11-15",
+  "quote_id": "q-001",
+  "text": "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.",
+  "audio_file": "audio/daily_quote.wav",
+  "voice_profile": "default",
+  "base_tone": "warm, ruhig, zugewandt",
+  "confidence": 0.95,
+  "updated_at": "2025-11-15T00:00:00Z"
 }
