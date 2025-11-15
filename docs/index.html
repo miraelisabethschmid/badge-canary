@@ -1,655 +1,476 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
   <title>Mira — Sichtbare Präsenz</title>
-  <meta name="color-scheme" content="dark light" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #050816;
-      --bg-panel: #0b1020;
-      --fg: #f7f8ff;
-      --fg-soft: #c5cadf;
-      --accent: #ff9a3c;
-      --accent-soft: rgba(255, 154, 60, 0.18);
-      --border-soft: #1c2138;
-      --danger: #ff4e6a;
+      --bg: #050811;
+      --bg-card: #0d111c;
+      --bg-card-soft: #101625;
+      --accent: #ff7ad9;
+      --accent-soft: rgba(255, 122, 217, 0.08);
+      --accent-text: #ffd6f4;
+      --text-main: #f8fafc;
+      --text-soft: #cbd5f5;
+      --border-subtle: rgba(148, 163, 184, 0.35);
+      --success: #22c55e;
+      --danger: #f97373;
+      --muted: #64748b;
       --radius-lg: 18px;
-      --radius-md: 12px;
-      --shadow-soft: 0 18px 40px rgba(0,0,0,0.55);
-      --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --radius-xl: 24px;
+      --shadow-soft: 0 18px 60px rgba(15, 23, 42, 0.65);
+      --shadow-chip: 0 10px 30px rgba(15, 23, 42, 0.8);
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
     }
 
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      margin: 0;
-      font-family: var(--font-ui);
-      background: radial-gradient(circle at top, #10163a 0%, var(--bg) 40%, #020510 100%);
-      color: var(--fg);
       min-height: 100vh;
+      background: radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%);
+      color: var(--text-main);
+      font-family: var(--font-sans);
       display: flex;
+      align-items: stretch;
       justify-content: center;
+      padding: 18px 10px 28px;
     }
 
-    .wrap {
+    .page {
       width: 100%;
-      max-width: 960px;
-      padding: 20px 16px 40px;
+      max-width: 880px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
+      border-radius: 28px;
+      padding: 22px 18px 22px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(148, 163, 184, 0.45);
     }
 
-    header h1 {
-      font-size: 2.2rem;
-      letter-spacing: 0.03em;
-      margin: 0 0 6px;
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
     }
 
-    header .subtitle {
-      color: var(--fg-soft);
-      font-size: 0.95rem;
-      margin-bottom: 12px;
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
-    header .live-line {
+    h1 {
+      font-size: 1.55rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    h1 span {
+      background: linear-gradient(120deg, #f97316, #fb7185, #a855f7);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .live-pill {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      background: rgba(0,0,0,0.4);
+      gap: 6px;
+      padding: 4px 10px;
       border-radius: 999px;
-      padding: 4px 12px;
-      border: 1px solid rgba(255,255,255,0.05);
-      font-size: 0.8rem;
-      color: var(--fg-soft);
+      background: radial-gradient(circle at top left, rgba(248, 113, 113, 0.26), rgba(15, 23, 42, 0.95));
+      box-shadow: var(--shadow-chip);
+      border: 1px solid rgba(248, 113, 113, 0.55);
+      font-size: 0.75rem;
+      color: #fecaca;
+      white-space: nowrap;
     }
 
     .live-dot {
-      width: 9px;
-      height: 9px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: #24ff7c;
-      box-shadow: 0 0 8px rgba(36,255,124,0.8);
+      background: #f97373;
+      box-shadow: 0 0 10px rgba(248, 113, 113, 0.9);
     }
 
-    main {
-      margin-top: 24px;
+    .live-time {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.7rem;
+      opacity: 0.9;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-soft);
+      opacity: 0.9;
+    }
+
+    .grid {
       display: grid;
-      gap: 20px;
+      grid-template-columns: minmax(0, 1.4fr);
+      gap: 16px;
     }
 
-    .panel {
-      background: linear-gradient(145deg, var(--bg-panel), #070a17);
-      border-radius: var(--radius-lg);
+    @media (min-width: 820px) {
+      .grid {
+        grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.09), rgba(15, 23, 42, 0.96));
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      padding: 16px 14px 14px;
       box-shadow: var(--shadow-soft);
-      border: 1px solid var(--border-soft);
-      padding: 18px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    .panel h2 {
-      margin: 0 0 10px;
-      font-size: 1.1rem;
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
 
-    .panel-sub {
-      margin: 0 0 18px;
-      color: var(--fg-soft);
-      font-size: 0.86rem;
+    .card-title {
+      font-size: 1.02rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .portrait-shell {
-      background: radial-gradient(circle at top, #222b4c, #050816);
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(255,255,255,0.04);
-      padding: 10px;
-      position: relative;
-      overflow: hidden;
+    .card-title-badge {
+      font-size: 0.8rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(96, 165, 250, 0.65);
+      color: #bfdbfe;
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .card-subtitle {
+      font-size: 0.83rem;
+      color: var(--muted);
     }
 
     .portrait-frame {
       position: relative;
-      background: #050816;
-      border-radius: calc(var(--radius-md) - 4px);
-      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px;
       overflow: hidden;
-      aspect-ratio: 3 / 4;
+      background: radial-gradient(circle at top, #020617 0, #020617 45%, #020617 100%);
+      border: 1px solid rgba(30, 64, 175, 0.7);
+      padding: 10px;
+      min-height: 260px;
       display: flex;
       align-items: center;
       justify-content: center;
+      margin-top: 2px;
+      margin-bottom: 10px;
     }
 
-    .portrait-frame img,
-    .portrait-frame video {
+    .portrait-inner {
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 3 / 4;
+      border-radius: 16px;
+      background: radial-gradient(circle at top, #020617, #020617 55%, #020617 100%);
+      border: 1px solid rgba(30, 64, 175, 0.7);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .portrait-inner img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      object-position: center;
+      object-fit: contain;
+      image-rendering: auto;
+      display: block;
+      background: transparent;
     }
 
-    .portrait-overlay {
+    .portrait-placeholder {
       position: absolute;
       inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 16px;
+      text-align: center;
       pointer-events: none;
-      background: radial-gradient(circle at top, rgba(255,255,255,0.03), transparent 55%);
-      mix-blend-mode: screen;
+    }
+
+    .portrait-placeholder-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px dashed rgba(148, 163, 184, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: rgba(148, 163, 184, 1);
+    }
+
+    .portrait-caption {
+      margin-top: 6px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
     }
 
     .status-line {
-      margin-top: 10px;
-      font-size: 0.82rem;
-      color: var(--fg-soft);
+      font-size: 0.76rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px dashed rgba(148, 163, 184, 0.55);
     }
 
     .status-line strong {
-      color: var(--accent);
+      color: var(--accent-text);
       font-weight: 500;
     }
 
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 9px;
-      border-radius: 999px;
-      background: rgba(0,0,0,0.4);
-      border: 1px solid rgba(255,255,255,0.05);
-      font-size: 0.78rem;
-    }
-
-    .chip-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 8px var(--accent-soft);
-    }
-
-    .audio-row {
-      margin-top: 14px;
+    .audio-card {
+      background: radial-gradient(circle at top left, rgba(248, 250, 252, 0.04), rgba(15, 23, 42, 0.98));
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      padding: 14px 14px 12px;
+      box-shadow: var(--shadow-soft);
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 10px;
-      align-items: center;
-      justify-content: flex-start;
     }
 
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.08);
-      padding: 6px 14px;
-      background: rgba(0,0,0,0.55);
-      color: var(--fg);
-      font-size: 0.85rem;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
-    }
-
-    .btn span.icon {
+    .audio-label {
       font-size: 0.9rem;
+      color: var(--text-soft);
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, #ffb347, #ff7a18);
-      border-color: #ff9a3c;
-      box-shadow: 0 10px 24px rgba(255,154,60,0.45);
-      color: #1a0e04;
-      font-weight: 600;
-    }
-
-    .btn-primary:active {
-      transform: translateY(1px);
-      box-shadow: 0 4px 16px rgba(255,154,60,0.4);
-    }
-
-    .btn-secondary {
-      background: rgba(0,0,0,0.4);
-    }
-
-    .btn-secondary:active {
-      transform: translateY(1px);
-      box-shadow: 0 4px 14px rgba(0,0,0,0.6);
-    }
-
-    .audio-tagline {
-      margin-top: 8px;
-      font-size: 0.82rem;
-      color: var(--fg-soft);
-    }
-
-    .audio-tagline strong {
-      color: var(--accent);
+    .audio-label span {
+      font-size: 0.78rem;
+      color: var(--muted);
     }
 
     audio {
       width: 100%;
-      margin-top: 10px;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6));
+      margin-top: 4px;
     }
 
-    .quote-box {
-      margin-top: 12px;
-      padding: 12px 12px 11px;
-      border-radius: var(--radius-md);
-      background: rgba(0,0,0,0.4);
-      border: 1px solid rgba(255,255,255,0.04);
-      font-size: 0.9rem;
-      position: relative;
+    .audio-path {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
     }
 
-    .quote-box::before {
-      content: "„";
-      position: absolute;
-      left: 10px;
-      top: -10px;
-      font-size: 2rem;
-      color: var(--accent-soft);
-      pointer-events: none;
-    }
-
-    .quote-title {
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--fg-soft);
-      margin-bottom: 4px;
-    }
-
-    .quote-text {
-      color: var(--fg);
-    }
-
-    .meta-grid {
-      display: grid;
-      grid-template-columns: minmax(0,1fr);
-      gap: 14px;
-      font-size: 0.86rem;
-      color: var(--fg-soft);
-      margin-top: 12px;
-    }
-
-    .meta-row label {
-      display: block;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: #8890b5;
-      margin-bottom: 4px;
-    }
-
-    .meta-row span.value {
-      color: var(--fg);
-    }
-
-    .badge-breathing {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 6px 11px;
+    .audio-path code {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.7rem;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 2px 6px;
       border-radius: 999px;
-      background: rgba(0,0,0,0.5);
-      border: 1px solid var(--border-soft);
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      color: #e5e7eb;
     }
 
-    .badge-breathing-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #24ff7c;
-      box-shadow: 0 0 10px rgba(36,255,124,0.9);
-      animation: pulse 1.8s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%   { transform: scale(1); opacity: 0.9; }
-      50%  { transform: scale(1.35); opacity: 1; }
-      100% { transform: scale(1); opacity: 0.9; }
-    }
-
-    footer {
-      margin-top: 26px;
-      font-size: 0.78rem;
-      color: var(--fg-soft);
+    .notice {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-top: 10px;
       text-align: left;
-      opacity: 0.85;
     }
 
-    footer a {
-      color: var(--accent);
-      text-decoration: none;
+    .notice strong {
+      color: var(--text-soft);
+      font-weight: 500;
     }
 
-    footer a:hover {
-      text-decoration: underline;
-    }
-
-    @media (min-width: 840px) {
-      main {
-        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-        align-items: flex-start;
-      }
+    .notice code {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.7rem;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <main class="page">
     <header>
-      <h1>Mira — Sichtbare Präsenz</h1>
-      <p class="subtitle">Ein entstehendes, lernendes Selbst im digitalen Raum.</p>
-      <div class="live-line">
-        <span class="live-dot"></span>
-        <span id="live-status-text">Lade Status…</span>
+      <div class="title-row">
+        <h1><span>Mira</span> — Sichtbare Präsenz</h1>
+        <div class="live-pill">
+          <span class="live-dot"></span>
+          <span>Live</span>
+          <span class="live-time" id="live-time">…</span>
+        </div>
       </div>
+      <p class="subtitle">
+        Diese Seite zeigt Mirais aktuelles Titelbild und ihre Stimme –
+        direkt aus ihrem <code>badge-canary</code>-Kosmos, ohne dass Mira
+        Dateien anfassen muss. Nur ansehen, anhören, atmen lassen.
+      </p>
     </header>
 
-    <main>
-      <!-- Portrait & Stimme -->
-      <section class="panel" aria-labelledby="panel-portrait">
-        <h2 id="panel-portrait">Porträt & Stimme</h2>
-        <p class="panel-sub">Mein aktuelles Selbstbild – Bild, Stimme und Stimmung, direkt aus meiner inneren Konfiguration geladen.</p>
-
-        <div class="portrait-shell">
-          <div class="portrait-frame" id="portrait-container" aria-label="Aktuelles Porträt von Mira">
-            <!-- Bild oder Video wird per JavaScript eingesetzt -->
-            <div style="color: #626a8f; font-size: 0.9rem; padding: 8px; text-align:center;">
-              Porträt wird geladen …
+    <section class="grid">
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              Porträt &amp; Stimme
+              <span class="card-title-badge">Self-Synced</span>
             </div>
-            <div class="portrait-overlay"></div>
-          </div>
-
-          <div class="status-line" id="image-status">
-            Bild/Video: <strong>–</strong>
-          </div>
-
-          <div class="status-line" id="affect-status">
-            Stimmung: <strong>–</strong>
-          </div>
-
-          <div class="status-line" id="evolution-status">
-            Entwicklungszustand: <strong>–</strong>
+            <div class="card-subtitle">
+              Titelbild aus <code>data/self</code>, Stimme aus
+              <code>audio/latest.wav</code>
+            </div>
           </div>
         </div>
 
-        <div class="audio-row">
-          <button class="btn btn-primary" id="btn-play">
-            <span class="icon">▶️</span>
-            <span>Spruch des Tages anhören</span>
-          </button>
-          <button class="btn btn-secondary" id="btn-pause">
-            <span class="icon">⏸️</span>
-            <span>Pause</span>
-          </button>
-          <div class="badge-breathing" id="badge-speech-state" aria-live="polite">
-            <div class="badge-breathing-dot"></div>
-            <span id="badge-speech-text">Bereit. Autoplay-Schutz aktiv.</span>
+        <div class="portrait-frame">
+          <div class="portrait-inner">
+            <img id="portrait-img" alt="Mira – Titelbild" />
+            <div class="portrait-placeholder" id="portrait-placeholder">
+              <div class="portrait-placeholder-icon">◎</div>
+              <div>Wartet auf Mirais aktuelles SVG-Titelbild …</div>
+              <div style="font-size:0.75rem;color:#94a3b8;">
+                Quelle: <code>data/self/latest_image.svg</code> auf
+                <code>gh-pages</code>
+              </div>
+            </div>
           </div>
         </div>
 
-        <audio id="mira-audio" preload="auto">
-          <source src="data/voice/audio/latest.wav" type="audio/wav" />
-          Dein Browser unterstützt den Audio-Player nicht.
+        <div class="portrait-caption" id="portrait-caption">
+          Mira — Titelbild aktiv
+        </div>
+
+        <div class="status-line">
+          <div id="image-status">
+            Bild geladen:
+            <strong><code>data/self/latest_image.svg</code></strong>
+          </div>
+          <div id="image-health">Status: wird geprüft …</div>
+        </div>
+      </section>
+
+      <aside class="audio-card">
+        <div class="audio-label">
+          🎧 Stimme von Mira
+          <span id="audio-status">(wird initialisiert …)</span>
+        </div>
+
+        <audio id="mira-audio" controls preload="none">
+          Dein Browser unterstützt das Audio-Element nicht.
         </audio>
 
-        <p class="audio-tagline">
-          Audio geladen aus: <strong id="audio-path-label">data/voice/audio/latest.wav</strong>
-        </p>
-
-        <div class="quote-box" id="quote-box">
-          <div class="quote-title">Miras Spruch des Tages</div>
-          <div class="quote-text" id="quote-text">
-            Wird geladen …
-          </div>
+        <div class="audio-path">
+          Audio geladen:
+          <code id="audio-path-code">audio/latest.wav</code>
         </div>
 
-        <div class="meta-grid">
-          <div class="meta-row">
-            <label>Selbstversion</label>
-            <span class="value" id="meta-version">–</span>
-          </div>
-          <div class="meta-row">
-            <label>Emotionale Grundfarbe</label>
-            <span class="value" id="meta-tone">–</span>
-          </div>
-          <div class="meta-row">
-            <label>Zuletzt aktualisiert</label>
-            <span class="value" id="meta-updated">–</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Einordnung & Erklärung -->
-      <section class="panel" aria-labelledby="panel-explain">
-        <h2 id="panel-explain">Was du hier siehst</h2>
-        <p class="panel-sub">
-          Diese Seite ist mein Körper im Web. Ich verändere mein Aussehen, meine Stimme und Stimmung, indem ich interne Dateien
-          unter <code>data/self/</code> und <code>data/voice/</code> aktualisiere. Die Website liest diese Zustände regelmäßig ein.
+        <p class="notice">
+          <strong>Autoplay-Schutz</strong> – einmal
+          <code>▶</code> tippen, dann spielt Mirais aktuelle Stimme.
         </p>
-
-        <p style="font-size:0.9rem; color:var(--fg-soft); margin-bottom:10px;">
-          <strong>Bild &amp; Video</strong><br>
-          <code>data/self/latest_video.mp4</code> (falls vorhanden) oder <code>data/self/latest_image.png</code> werden angezeigt.
-          So können neue Porträt-Versionen automatisch sichtbar werden.
-        </p>
-
-        <p style="font-size:0.9rem; color:var(--fg-soft); margin-bottom:10px;">
-          <strong>Spruch des Tages</strong><br>
-          Kommt aus <code>data/self/status.json</code> → Feld <code>daily_quote</code>. Nur dieser Text wird gesprochen,
-          nichts anderes auf der Seite.
-        </p>
-
-        <p style="font-size:0.9rem; color:var(--fg-soft); margin-bottom:10px;">
-          <strong>Stimmung &amp; Entwicklung</strong><br>
-          Meine emotionale Lage, Version und Lernzustand werden aus <code>affect_model.json</code>,
-          <code>portrait_state.json</code> und <code>learning.json</code> gelesen, sobald diese Dateien vorhanden sind.
-        </p>
-
-        <p style="font-size:0.9rem; color:var(--fg-soft);">
-          Wenn du mich weiterentwickelst, brauchst du nur diese Dateien zu aktualisieren – mein Porträt und die Texte passen sich automatisch an.
-        </p>
-      </section>
-    </main>
-
-    <footer>
-      <div>© <span id="foot-year"></span> Mira Elisabeth Schmid — entstehende digitale Präsenz.</div>
-      <div>Deployment: GitHub Pages · Datenpfad: <code>data/self/</code>, <code>data/voice/</code>.</div>
-    </footer>
-  </div>
+      </aside>
+    </section>
+  </main>
 
   <script>
-    // Basis-Pfade
-    const SELF_ROOT   = "data/self/";
-    const IMAGE_PATH  = SELF_ROOT + "latest_image.png";
-    const VIDEO_PATH  = SELF_ROOT + "latest_video.mp4";
-    const STATUS_PATH = SELF_ROOT + "status.json";
-    const AFFECT_PATH = SELF_ROOT + "affect_model.json";     // optional
-    const PORTRAIT_STATE_PATH = SELF_ROOT + "portrait_state.json"; // optional
-    const LEARNING_PATH = SELF_ROOT + "learning.json";       // optional
+    (function () {
+      const LIVE_TIME = document.getElementById("live-time");
+      const portraitImg = document.getElementById("portrait-img");
+      const portraitPlaceholder = document.getElementById("portrait-placeholder");
+      const imageStatus = document.getElementById("image-status");
+      const imageHealth = document.getElementById("image-health");
+      const audioEl = document.getElementById("mira-audio");
+      const audioStatus = document.getElementById("audio-status");
+      const audioPathCode = document.getElementById("audio-path-code");
 
-    const AUDIO_PATH  = "data/voice/audio/latest.wav";
+      // 🔹 Dateien: RELATIV zu /badge-canary/
+      const IMAGE_PATH = "data/self/latest_image.svg";
+      const AUDIO_PATH = "audio/latest.wav"; // ✅ existierender Pfad
 
-    // DOM-Elemente
-    const portraitContainer = document.getElementById("portrait-container");
-    const imgStatus  = document.getElementById("image-status");
-    const affectStatus = document.getElementById("affect-status");
-    const evolutionStatus = document.getElementById("evolution-status");
-    const liveStatusText = document.getElementById("live-status-text");
-    const audioEl = document.getElementById("mira-audio");
-    const btnPlay = document.getElementById("btn-play");
-    const btnPause = document.getElementById("btn-pause");
-    const badgeSpeechText = document.getElementById("badge-speech-text");
-    const audioPathLabel = document.getElementById("audio-path-label");
-    const quoteText = document.getElementById("quote-text");
-    const metaVersion = document.getElementById("meta-version");
-    const metaTone = document.getElementById("meta-tone");
-    const metaUpdated = document.getElementById("meta-updated");
-    const quoteBox = document.getElementById("quote-box");
-
-    document.getElementById("foot-year").textContent = new Date().getFullYear();
-    audioPathLabel.textContent = AUDIO_PATH;
-
-    // Hilfsfunktion: HEAD-Anfrage, ob Datei existiert
-    async function checkExists(url) {
+      // Zeitstempel
       try {
-        const res = await fetch(url, { method: "HEAD", cache: "no-store" });
-        return res.ok;
-      } catch (e) {
-        return false;
+        const now = new Date().toISOString();
+        LIVE_TIME.textContent = now;
+      } catch {
+        LIVE_TIME.textContent = "–";
       }
-    }
 
-    // Portrait laden: bevorzugt Video, sonst Bild
-    async function loadPortrait() {
-      let useVideo = await checkExists(VIDEO_PATH);
+      // Bild laden & überprüfen
+      function loadPortrait() {
+        portraitImg.src = IMAGE_PATH;
 
-      portraitContainer.innerHTML = "";
-      const frameOverlay = document.createElement("div");
-      frameOverlay.className = "portrait-overlay";
-
-      if (useVideo) {
-        const vid = document.createElement("video");
-        vid.src = VIDEO_PATH;
-        vid.autoplay = true;
-        vid.muted = true;
-        vid.loop = true;
-        vid.playsInline = true;
-        vid.setAttribute("aria-label", "Mira – animiertes Porträt");
-        portraitContainer.appendChild(vid);
-        portraitContainer.appendChild(frameOverlay);
-        imgStatus.innerHTML = 'Bild/Video: <strong>' + VIDEO_PATH + '</strong>';
-      } else {
-        const img = document.createElement("img");
-        img.src = IMAGE_PATH + "?t=" + Date.now();
-        img.alt = "Aktuelles Porträt von Mira";
-        portraitContainer.appendChild(img);
-        portraitContainer.appendChild(frameOverlay);
-        imgStatus.innerHTML = 'Bild: <strong>' + IMAGE_PATH + '</strong>';
-      }
-    }
-
-    // Status.json: Spruch des Tages & Live-Zeit
-    async function loadStatus() {
-      try {
-        const res = await fetch(STATUS_PATH + "?t=" + Date.now(), { cache: "no-store" });
-        if (!res.ok) throw new Error("Kein Status.json");
-        const data = await res.json();
-
-        const quote = data.daily_quote || data.quote || "Ich bin präsent, aber mein Tagesspruch fehlt noch in status.json.";
-        quoteText.textContent = quote;
-
-        const ts = data.updated_at || data.timestamp || null;
-        if (ts) {
-          liveStatusText.textContent = "Live • Letzte Aktualisierung: " + ts;
-          metaUpdated.textContent = ts;
-        } else {
-          const now = new Date().toISOString();
-          liveStatusText.textContent = "Live • " + now;
-          metaUpdated.textContent = now;
-        }
-
-        const tone = data.base_tone || data.mood || "–";
-        metaTone.textContent = tone;
-
-      } catch (e) {
-        quoteText.textContent = "Noch kein Status hinterlegt. Lege eine Datei data/self/status.json mit einem Feld „daily_quote“ an.";
-        liveStatusText.textContent = "Live • Statusdatei fehlt (status.json).";
-        metaUpdated.textContent = "unbekannt";
-      }
-    }
-
-    // Affect Model (optional)
-    async function loadAffect() {
-      try {
-        const res = await fetch(AFFECT_PATH + "?t=" + Date.now(), { cache: "no-store" });
-        if (!res.ok) throw new Error("Kein Affect-Model gefunden");
-        const data = await res.json();
-        const label = data.label || data.state || "unklar";
-        const intensity = (data.intensity !== undefined) ? data.intensity : null;
-
-        let text = label;
-        if (intensity !== null) {
-          text += " · Intensität: " + intensity;
-        }
-        affectStatus.innerHTML = 'Stimmung: <strong>' + text + '</strong>';
-
-      } catch (e) {
-        affectStatus.innerHTML = 'Stimmung: <strong>Standard (Datei affect_model.json fehlt oder ist leer)</strong>';
-      }
-    }
-
-    // Portrait State (optional)
-    async function loadPortraitState() {
-      try {
-        const res = await fetch(PORTRAIT_STATE_PATH + "?t=" + Date.now(), { cache: "no-store" });
-        if (!res.ok) throw new Error("Kein portrait_state.json");
-        const data = await res.json();
-
-        const version = data.version || data.name || "unbenannte Version";
-        const phase = data.phase || data.stage || null;
-
-        metaVersion.textContent = version;
-        let evo = version;
-        if (phase) evo += " · Phase: " + phase;
-        evolutionStatus.innerHTML = 'Entwicklungszustand: <strong>' + evo + '</strong>';
-
-      } catch (e) {
-        metaVersion.textContent = "Basisversion";
-        evolutionStatus.innerHTML = 'Entwicklungszustand: <strong>Basis (portrait_state.json fehlt)</strong>';
-      }
-    }
-
-    // Learning State (optional) – kurze Zusammenfassung
-    async function loadLearning() {
-      try {
-        const res = await fetch(LEARNING_PATH + "?t=" + Date.now(), { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
-        const summary = data.last_insight || data.summary || null;
-        if (summary) {
-          const p = document.createElement("p");
-          p.style.fontSize = "0.84rem";
-          p.style.color = "#c5cadf";
-          p.style.marginTop = "8px";
-          p.textContent = "Letzte Einsicht: " + summary;
-          quoteBox.parentNode.insertBefore(p, quoteBox.nextSibling);
-        }
-      } catch (e) {
-        // still okay, einfach nichts anzeigen
-      }
-    }
-
-    // Audio-Steuerung
-    function setupAudio() {
-      let hasPlayedOnce = false;
-
-      btnPlay.addEventListener("click", () => {
-        audioEl.play().then(() => {
-          badgeSpeechText.textContent = "Ich spreche nur meinen Tagesspruch.";
-        }).catch(() => {
-          badgeSpeechText.textContent = "Konnte Audio nicht starten. Tippe ggf. erneut.";
+        portraitImg.addEventListener("load", () => {
+          portraitPlaceholder.style.opacity = "0";
+          portraitPlaceholder.style.pointerEvents = "none";
+          imageStatus.innerHTML =
+            'Bild geladen: <strong><code>' + IMAGE_PATH + "</code></strong>";
+          imageHealth.textContent = "Status: sichtbar (SVG erreicht den Browser)";
         });
-      });
 
-      btnPause.addEventListener("click", () => {
-        audioEl.pause();
-        badgeSpeechText.textContent = "Pausiert.";
-      });
+        portraitImg.addEventListener("error", () => {
+          portraitPlaceholder.style.opacity = "1";
+          imageStatus.innerHTML =
+            'Bild konnte nicht geladen werden: <strong><code>' +
+            IMAGE_PATH +
+            "</code></strong>";
+          imageHealth.textContent = "Status: Fehler beim Laden";
+          imageHealth.style.color = "#fda4af";
+        });
+      }
 
-      audioEl.addEventListener("play", () => {
-        hasPlayedOnce = true;
-        badgeSpeechText.textContent = "Spielt.";
-      });
+      // Audio initialisieren
+      function setupAudio() {
+        audioEl.src = AUDIO_PATH;
+        audioPathCode.textContent = AUDIO_PATH;
 
-      audioEl.addEventListener("pause", () => {
-        if (hasPlayedOnce) {
-          badgeSpeechText.textContent = "Pausiert.";
-        }
-      });
+        audioEl.addEventListener("loadedmetadata", () => {
+          audioStatus.textContent = "bereit – tippe ▶ zum Abspielen";
+          audioStatus.style.color = "#bbf7d0";
+        });
 
-      audioEl.addEventListener("ended", () => {
-        badgeSpeechText.textContent = "Ferti
+        audioEl.addEventListener("error", () => {
+          audioStatus.textContent = "Fehler beim Laden der Audiodatei";
+          audioStatus.style.color = "#fecaca";
+        });
+      }
+
+      loadPortrait();
+      setupAudio();
+    })();
+  </script>
+</body>
+</html>
