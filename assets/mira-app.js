@@ -1,7 +1,7 @@
 // assets/mira-app.js
 
 const VIDEO_SRC = "data/self/latest_video.mp4";
-const IMAGE_SRC = "data/self/latest_image.png";
+const IMAGE_SRC = "data/self/mira-titelbild.jpg";   // FIXED: zeigt jetzt dein Titelbild
 const STATUS_JSON = "data/self/status.json";
 const AUDIO_WAV = "audio/latest.wav";
 const AUDIO_MP3 = "audio/latest.mp3";
@@ -47,7 +47,7 @@ function initMedia() {
       placeholder.style.display = "none";
       if (statusLine) {
         statusLine.textContent =
-          "Aktiv: Bild (data/self/latest_image.png) · Video nicht verfügbar";
+          "Aktiv: Bild (data/self/mira-titelbild.jpg) · Video nicht verfügbar";
       }
     };
 
@@ -63,9 +63,6 @@ function initMedia() {
     // Bild neu setzen mit Cache-Bust
     img.src = cacheBust(IMAGE_SRC);
   });
-
-  // Falls der Browser das Video nie lädt (z.B. sehr exotisch),
-  // lassen wir das Bild als Default stehen. Kein Timer nötig.
 }
 
 function initAudio() {
@@ -73,7 +70,6 @@ function initAudio() {
   const statusLine = document.getElementById("audio-status-line");
   if (!audio) return;
 
-  // Wir setzen nur EINE Quelle, je nach Support
   const wavSupported =
     audio.canPlayType("audio/wav") === "probably" ||
     audio.canPlayType("audio/wav") === "maybe";
@@ -85,12 +81,14 @@ function initAudio() {
   if (wavSupported) {
     audio.src = cacheBust(AUDIO_WAV);
     if (statusLine) {
-      statusLine.textContent = "Audio: audio/latest.wav (primär, WAV-Unterstützung erkannt)";
+      statusLine.textContent =
+        "Audio: audio/latest.wav (primär, WAV-Unterstützung erkannt)";
     }
   } else if (mp3Supported) {
     audio.src = cacheBust(AUDIO_MP3);
     if (statusLine) {
-      statusLine.textContent = "Audio: audio/latest.mp3 (Fallback, WAV nicht unterstützt)";
+      statusLine.textContent =
+        "Audio: audio/latest.mp3 (Fallback, WAV nicht unterstützt)";
     }
   } else {
     audio.removeAttribute("src");
@@ -121,7 +119,6 @@ async function initStatus() {
 
     const data = await res.json();
 
-    // Versuche verschiedene Feldnamen – je nachdem, wie das JSON aufgebaut ist
     const quote =
       data.daily_quote ||
       data.spruch_des_tages ||
