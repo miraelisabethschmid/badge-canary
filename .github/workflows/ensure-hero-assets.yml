@@ -1,78 +1,115 @@
-name: Ensure Hero Assets (Bootstrap, no-heredoc)
+name: Ensure Hero Assets
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - gh-pages
 
 permissions:
   contents: write
 
+concurrency:
+  group: ensure-hero-assets
+  cancel-in-progress: true
+
 jobs:
   ensure:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Ensure folders
+      - name: Ensure directories exist
         shell: bash
         run: |
-          set -euo pipefail
-          mkdir -p docs/data/self
-          mkdir -p docs/data/voice/audio
+          set -e
+          mkdir -p data
+          mkdir -p data/self
+          mkdir -p data/voice
+          mkdir -p audio
 
-      - name: Ensure placeholder image (no heredoc)
+      - name: Ensure latest hero image
         shell: bash
         run: |
-          set -euo pipefail
-          if [ ! -f docs/data/self/latest_image.svg ]; then
-            {
-              printf '%s\n' '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">'
-              printf '%s\n' '  <defs>'
-              printf '%s\n' '    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">'
-              printf '%s\n' '      <stop offset="0%%" stop-color="#11182b"/>'
-              printf '%s\n' '      <stop offset="100%%" stop-color="#1a2340"/>'
-              printf '%s\n' '    </linearGradient>'
-              printf '%s\n' '  </defs>'
-              printf '%s\n' '  <rect width="100%%" height="100%%" fill="url(#g)"/>'
-              printf '%s\n' '  <g fill="#e9ecf5" font-family="system-ui,Segoe UI,Roboto" text-anchor="middle">'
-              printf '%s\n' '    <text x="50%%" y="45%%" font-size="44">Mira — Platzhalterbild</text>'
-              printf '%s\n' '    <text x="50%%" y="58%%" font-size="22">Lege latest_image.* in docs/data/self/ ab</text>'
-              printf '%s\n' '  </g>'
-              printf '%s\n' '</svg>'
-            } > docs/data/self/latest_image.svg
-            echo "Platzhalterbild erzeugt"
-          else
-            echo "Bild bereits vorhanden"
-          fi
-
-      - name: Ensure placeholder audio (no heredoc)
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ ! -f docs/data/voice/audio/latest.wav ]; then
-            python3 -c "import wave,struct,math,os;
-fr=44100; dur=2.0; freq=440.0; amp=0.2; n=int(fr*dur);
-os.makedirs('docs/data/voice/audio', exist_ok=True);
-w=wave.open('docs/data/voice/audio/latest.wav','w');
-w.setnchannels(1); w.setsampwidth(2); w.setframerate(fr);
-[ w.writeframes(struct.pack('<h', int(32767*amp*math.sin(2*math.pi*freq*i/fr)))) for i in range(n) ];
-w.close()"
-            echo "Platzhalteraudio erzeugt"
-          else
-            echo "Audio bereits vorhanden"
-          fi
-
-      - name: Commit & Push (if changed)
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/data/self/latest_image.svg docs/data/voice/audio/latest.wav || true
-          if git diff --cached --quiet; then
-            echo "Nichts zu committen."
+          set -e
+          if [ -s data/self/latest_image.png ]; then
+            echo "✅ data/self/latest_image.png existiert bereits."
             exit 0
           fi
-          git commit -m "ensure hero assets (placeholder image & wav, no-heredoc)"
-          git pull --rebase origin main || true
-          git push origin main
+
+          if [ -s data/mira-latest.png ]; then
+            echo "➡️  Kopiere data/mira-latest.png → data/self/latest_image.png"
+            cp data/mira-latest.png data/self/latest_image.png
+            exit 0
+          fi
+
+          echo "⚠️  Kein Bild gefunden, lege Platzhalter an."
+          base64 -d > data/self/latest_image.png << 'EOF'
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=
+EOF
+
+      - name: Install ffmpeg
+        shell: bash
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+
+      - name: Ensure base audio (audio/latest.mp3)
+        shell: bash
+        run: |
+          set -e
+          if [ -s audio/latest.mp3 ]; then
+            echo "✅ audio/latest.mp3 existiert bereits."
+            exit 0
+          fi
+
+          echo "⚠️  Kein audio/latest.mp3 gefunden – erstelle weiches Stille-Fallback."
+          ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.8 -q:a 4 audio/latest.mp3 -y
+
+      - name: Ensure data/voice_of_day.json
+        shell: bash
+        run: |
+          set -e
+          if [ -s data/voice_of_day.json ]; then
+            echo "✅ data/voice_of_day.json existiert bereits."
+            exit 0
+          fi
+
+          echo "⚠️  Kein data/voice_of_day.json gefunden – erstelle Default-Datei."
+          TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          DATE="$(date -u +%Y-%m-%d)"
+
+          cat > data/voice_of_day.json << EOF
+{
+  "date": "${DATE}",
+  "quote_id": "q-default",
+< "text": "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.",
+  "audio_file": "audio/latest.mp3",
+  "voice_profile": "default",
+  "base_tone": "warm, ruhig, zugewandt",
+  "confidence": 0.90,
+  "updated_at": "${TS}"
+}
+EOF
+
+      - name: Commit hero assets if changed
+        shell: bash
+        run: |
+          set -e
+          git config user.name  "mira-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add \
+            data/voice_of_day.json \
+            data/self/latest_image.png \
+            audio/latest.mp3 || true
+
+          if git diff --cached --quiet; then
+            echo "ℹ️  Keine Änderungen an Hero-Assets – nichts zu committen."
+            exit 0
+          fi
+
+          git commit -m "chore: ensure hero assets (image + voice_of_day + audio)"
+          git push
