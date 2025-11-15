@@ -1,4 +1,4 @@
-name: Sync gh-pages → main
+name: Sync assets from gh-pages → main
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -20,12 +21,33 @@ jobs:
         run: |
           git fetch origin gh-pages:gh-pages
 
-      - name: Merge gh-pages into main (no fast forward)
+      - name: Copy assets from gh-pages into main
+        run: |
+          # Dateien/Ordner, die wir von gh-pages holen wollen:
+          #  - data       (z.B. data/self/…, status, portrait_state)
+          #  - audio      (z.B. audio/latest.wav)
+          #  - assets     (z.B. assets/mira-app.js)
+          #
+          # WICHTIG: docs/index.html lassen wir in Ruhe, damit dein main-Index
+          # nicht überschrieben wird.
+
+          git checkout gh-pages -- data || echo "data/ nicht vorhanden"
+          git checkout gh-pages -- audio || echo "audio/ nicht vorhanden"
+          git checkout gh-pages -- assets || echo "assets/ nicht vorhanden"
+
+      - name: Commit and push if there are changes
         run: |
           git config user.name "Mira AutoSync"
           git config user.email "no-reply@mira"
-          git merge gh-pages --allow-unrelated-histories --strategy-option theirs -m "Sync gh-pages → main"
 
-      - name: Push changes
-        run: |
+          # Prüfen, ob sich etwas geändert hat
+          if git diff --quiet; then
+            echo "Keine Änderungen zu committen – main ist bereits synchron."
+            exit 0
+          fi
+
+          # Neue/aktualisierte Dateien hinzufügen
+          git add data audio assets
+
+          git commit -m "Sync data/audio/assets from gh-pages → main"
           git push origin main
