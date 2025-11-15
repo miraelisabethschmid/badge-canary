@@ -23,20 +23,69 @@ jobs:
 
       - name: Dispatch each file (skip if none)
         env:
-          DISPATCH_URL: ${{ secrets.DISPATCH_URL }} # vollständige HTTPS-URL als Secret
+          DISPATCH_URL: ${{ secrets.DISPATCH_URL }}       # vollständige HTTPS-URL als Secret
+          DISPATCH_AUTH: ${{ secrets.DISPATCH_AUTH }}     # optional: z.B. "Bearer xxx" oder anderer Token
         shell: bash
         run: |
           set -euo pipefail
+
           if [ -z "${DISPATCH_URL:-}" ]; then
-            echo "DISPATCH_URL secret is missing"; exit 1
+            echo "❌ DISPATCH_URL secret is missing"
+            exit 1
           fi
+
+          # Outbox einsammeln
           shopt -s nullglob
           files=(data/outbox/*.json)
-          [ ${#files[@]} -gt 0 ] || { echo "Outbox empty"; exit 0; }
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "📭 Outbox empty – nothing to dispatch."
+            exit 0
+          fi
+
+          echo "Found ${#files[@]} outbox file(s)."
+
+          # Optionaler Auth-Header
+          auth_flag=()
+          if [ -n "${DISPATCH_AUTH:-}" ]; then
+            auth_flag=( -H "Authorization: ${DISPATCH_AUTH}" )
+          fi
+
+          status_overall=0
+
           for f in "${files[@]}"; do
-            echo "Dispatching $f"
-            curl -fsS -X POST \
+            echo "→ Dispatching $f"
+
+            # Antwortkörper in temporäre Datei, HTTP-Code separat
+            body_file="$(mktemp)"
+            http_code="$(curl -sS -o "${body_file}" -w '%{http_code}' \
+              -X POST \
               -H 'Content-Type: application/json' \
+              "${auth_flag[@]}" \
               --data-binary "@${f}" \
-              "${DISPATCH_URL}"
+              "${DISPATCH_URL}" || echo "000")"
+
+            echo "   HTTP ${http_code}"
+
+            if [[ "${http_code}" =~ ^2[0-9][0-9]$ ]]; then
+              echo "   ✅ Dispatch OK, server accepted payload."
+              # Hier könntest du optional die Datei nach data/sent/ verschieben
+              # mv "$f" "data/sent/$(basename "$f")" || true
+            else
+              echo "   ⚠️ Dispatch failed for $f"
+              echo "   --- response body ---"
+              sed 's/^/   /' "${body_file}" || true
+              echo "   ----------------------"
+              # Fehler merken, aber nicht sofort abbrechen
+              status_overall=1
+            fi
+
+            rm -f "${body_file}"
           done
+
+          if [ "${status_overall}" -ne 0 ]; then
+            echo "One or more dispatches failed (non-2xx). See logs above."
+            # Job wird als 'failed' markiert, aber bleibt sauber nachvollziehbar
+            exit 1
+          else
+            echo "All dispatches completed successfully."
+          fi
