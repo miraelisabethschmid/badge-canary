@@ -305,7 +305,7 @@
 
         <div class="media-meta">
           Bild geladen:
-          <code id="image-path">data/self/latest_image.svg</code>
+          <code id="image-path">data/self/mira-titelbild.jpg</code>
         </div>
 
         <div class="controls-row">
@@ -338,7 +338,7 @@
 
   <script>
     (function () {
-      const DEFAULT_IMAGE = "data/self/latest_image.svg";
+      const DEFAULT_IMAGE = "data/self/mira-titelbild.jpg";
       const DEFAULT_IMAGE_CAPTION = "Mira – Titelbild aktiv";
       const DEFAULT_AUDIO = "audio/latest.wav";
 
@@ -362,7 +362,9 @@
         imgEl.alt = caption || "Mira – sichtbare Präsenz";
         captionEl.textContent = caption || DEFAULT_IMAGE_CAPTION;
         imagePathEl.textContent = imageUrl;
-        audioUrl && (audioEl.src = audioUrl);
+        if (audioUrl) {
+          audioUrl && (audioEl.src = audioUrl);
+        }
       }
 
       // 1) Live-Zeitstempel
@@ -418,4 +420,4 @@
     })();
   </script>
 </body>
-</html>
+          </html>
