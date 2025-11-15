@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1024"
+     height="1536"
+     viewBox="0 0 1024 1536"
+     preserveAspectRatio="xMidYMid slice">
+  <!-- Wrapper-SVG für die Seite: lädt einfach das vorhandene PNG -->
+  <image href="latest_image.png"
+         x="0" y="0"
+         width="1024"
+         height="1536"
+         preserveAspectRatio="xMidYMid slice" />
+</svg>
