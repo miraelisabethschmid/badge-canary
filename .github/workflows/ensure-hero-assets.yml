@@ -1,11 +1,7 @@
 name: Ensure Hero Assets
 
 on:
-  # Manuell auslösbar im GitHub-UI
   workflow_dispatch:
-  # Optional: einmal pro Tag automatisch laufen
-  schedule:
-    - cron: "17 3 * * *"  # 03:17 UTC
 
 permissions:
   contents: write
@@ -17,78 +13,43 @@ concurrency:
 jobs:
   ensure-hero-assets:
     runs-on: ubuntu-latest
-
     steps:
-      # ⬇️ Wir arbeiten direkt auf dem gh-pages-Branch,
-      # weil von dort deine Website ausgeliefert wird.
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
           ref: gh-pages
 
       - name: Ensure directories exist
-        shell: bash
         run: |
-          set -euo pipefail
           mkdir -p docs/portrait
           mkdir -p data/self
 
-      # 💎 Kernlogik:
-      # Wenn docs/portrait/mira-hero.svg existiert,
-      # wird sie 1:1 als data/self/latest_image.svg gespiegelt.
-      # So kann index.html weiter data/self/latest_image.svg laden,
-      # sieht aber dein wahres Hero-Bild.
-      - name: Sync mira-hero.svg → data/self/latest_image.svg
-        shell: bash
+      - name: Sync mira-hero.svg → latest_image.svg
         run: |
-          set -euo pipefail
           if [ -f "docs/portrait/mira-hero.svg" ]; then
-            echo "Found docs/portrait/mira-hero.svg – syncing to data/self/latest_image.svg"
             cp docs/portrait/mira-hero.svg data/self/latest_image.svg
+            echo "Synced mira-hero.svg to data/self/latest_image.svg"
           else
-            echo "docs/portrait/mira-hero.svg not found – cannot sync hero image."
+            echo "docs/portrait/mira-hero.svg not found"
             exit 1
           fi
 
-      # 🛟 Optionaler Fallback:
-      # Wenn aus irgendeinem Grund latest_image.svg leer oder kaputt wäre,
-      # legen wir ein sehr einfaches Platzhalter-SVG an.
-      - name: Ensure latest_image.svg is non-empty
-        shell: bash
+      - name: Ensure latest_image.svg fallback
         run: |
-          set -euo pipefail
           if [ ! -s "data/self/latest_image.svg" ]; then
-            echo "data/self/latest_image.svg is missing or empty – creating minimal fallback."
-            cat > data/self/latest_image.svg << 'EOF'
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480">
-              <defs>
-                <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-                  <stop offset="0%" stop-color="#020617"/>
-                  <stop offset="100%" stop-color="#0f172a"/>
-                </linearGradient>
-              </defs>
-              <rect width="800" height="480" fill="url(#bg)"/>
-              <text x="50%" y="50%" fill="#e5e7eb" font-size="26" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" text-anchor="middle">
-                Mira – Titelbild aktiv
-              </text>
-            </svg>
-            EOF
-          else
-            echo "data/self/latest_image.svg looks good (non-empty)."
+            echo '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="800" height="480" fill="#0f172a"/><text x="50%" y="50%" fill="#e5e7eb" font-size="26" text-anchor="middle">Mira – Titelbild</text></svg>' > data/self/latest_image.svg
+            echo "Created minimal fallback SVG"
           fi
 
-      - name: Commit and push changes (if any)
-        shell: bash
+      - name: Commit and push
         run: |
-          set -euo pipefail
           git config user.name  "hero-bot"
           git config user.email "actions@users.noreply.github.com"
 
           if git diff --quiet; then
-            echo "No changes to commit."
-            exit 0
+            echo "No changes."
+          else
+            git add data/self/latest_image.svg
+            git commit -m "ensure-hero-assets: sync latest_image.svg"
+            git push origin gh-pages
           fi
-
-          git add data/self/latest_image.svg
-          git commit -m "ensure-hero-assets: sync latest_image.svg from mira-hero.svg"
-          git push origin gh-pages
