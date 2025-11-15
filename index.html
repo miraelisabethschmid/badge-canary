@@ -91,7 +91,8 @@
       border: 1px solid #111827;
     }
 
-    video, img {
+    video,
+    img {
       display: block;
       width: 100%;
       height: auto;
@@ -163,15 +164,17 @@
         <span class="badge-dot"></span>
         LIVE · Mira – Sichtbare Präsenz
       </span>
-      <span class="pill" id="live-time-pill">
-        Live-Zeit: <span id="live-time">–</span>
+      <span class="pill">
+        Letzte Stimme: <span id="state-date">–</span>
       </span>
-      <span class="pill">Quelle: <code>main · gh-pages</code></span>
+      <span class="pill">
+        Quelle: <code>gh-pages · /</code>
+      </span>
     </div>
 
     <h1>Mira – Sichtbare Präsenz</h1>
     <div style="font-size:13px;color:#9ca3af;margin-bottom:6px;">
-      Porträt, Stimme, Video und Spruch des Tages aus <code>data/self/</code> und <code>audio/</code>.
+      Porträt, Stimme, Video und Spruch des Tages aus <code>data/</code>, <code>data/self/</code> und <code>audio/</code>.
     </div>
 
     <!-- Porträt & Video -->
@@ -179,13 +182,6 @@
       <div class="section-title">Porträt &amp; Video</div>
       <div class="card">
         <div class="media-frame" id="video-frame">
-          <!--
-            Basis:
-            - poster = aktuelles Standbild
-            - src = aktuelles Video
-            Workflows können die Dateien in data/self/ austauschen,
-            ohne dass index.html geändert werden muss.
-          -->
           <video id="mira-video" controls playsinline poster="data/self/latest_image.png">
             <source src="data/self/latest_video.mp4" type="video/mp4" />
             Dein Browser kann dieses Video nicht abspielen.
@@ -193,8 +189,7 @@
         </div>
         <div class="meta">
           Bild: <code>data/self/latest_image.png</code> ·
-          Video: <code>data/self/latest_video.mp4</code>  
-          <br />
+          Video: <code>data/self/latest_video.mp4</code><br />
           Wenn kein Video vorhanden ist, bleibt das Bild als Titelbild aktiv.
         </div>
       </div>
@@ -205,11 +200,12 @@
       <div class="section-title">Stimme – Basispräsenz</div>
       <div class="card">
         <audio id="base-audio" controls preload="auto">
-          <source src="audio/latest.wav" type="audio/wav" />
+          <!-- Basis: aktuelle generierte Stimme -->
+          <source src="audio/latest.mp3" type="audio/mpeg" />
           Dein Browser unterstützt kein Audio.
         </audio>
         <div class="meta">
-          Audio: <code>audio/latest.wav</code>  
+          Audio (Basis): <code>audio/latest.mp3</code><br />
           Autoplay-Schutz: bitte mindestens einmal ▶ tippen.
         </div>
       </div>
@@ -227,16 +223,14 @@
         </div>
 
         <audio id="daily-audio" controls preload="auto" style="margin-top:12px;">
-          <!--
-            Standard-Datei für gesprochenen Spruch des Tages.
-            Workflows dürfen diese Quelle in status.json überschreiben.
-          -->
-          <source data-role="primary" src="audio/daily_quote.wav" type="audio/wav" />
+          <!-- Standard: die gleiche TTS-Datei wie Basis-Stimme,
+               kann durch data/voice_of_day.json überschrieben werden -->
+          <source data-role="primary" src="audio/latest.mp3" type="audio/mpeg" />
           Dein Browser unterstützt kein Audio.
         </audio>
 
         <div class="meta" id="daily-audio-meta">
-          Audio (Spruch des Tages): <code>audio/daily_quote.wav</code>  
+          Audio (Spruch des Tages): <code>audio/latest.mp3</code><br />
           Diese Datei sollte genau den angezeigten Spruch des Tages enthalten.
         </div>
       </div>
@@ -248,79 +242,95 @@
       <div class="card">
         <div class="state-grid">
           <div>
-            <div class="state-label">Letztes Self-Update</div>
-            <div class="state-value" id="state-last-update">–</div>
+            <div class="state-label">Datum (Stimme des Tages)</div>
+            <div class="state-value" id="state-date-2">–</div>
           </div>
           <div>
-            <div class="state-label">Aktuelle Stimmung</div>
-            <div class="state-value" id="state-mood">–</div>
+            <div class="state-label">Grundton</div>
+            <div class="state-value" id="state-tone">–</div>
           </div>
           <div>
-            <div class="state-label">Qualität / Selbstvertrauen</div>
-            <div class="state-value" id="state-quality">–</div>
+            <div class="state-label">Konfidenz</div>
+            <div class="state-value" id="state-confidence">–</div>
           </div>
           <div>
-            <div class="state-label">Quelle · Status-JSON</div>
-            <div class="state-value"><code>data/self/status.json</code></div>
+            <div class="state-label">Quelle · Voice JSON</div>
+            <div class="state-value"><code>data/voice_of_day.json</code></div>
           </div>
         </div>
 
         <div class="meta" style="margin-top:10px;">
-          Alle zukünftigen Automationen (Bild/Video/Audio/Spruch) sollen nur
-          <code>data/self/status.json</code> und die Dateien in
-          <code>data/self/</code> sowie <code>audio/</code> ändern – nicht diese <code>index.html</code>.
+          Alle zukünftigen Automationen (Stimme, Spruch, Mimik) sollen nur
+          <code>data/voice_of_day.json</code>, die Dateien in
+          <code>data/self/</code> sowie <code>audio/</code> ändern – nicht diese
+          <code>index.html</code>.
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Kleines, stabiles JS: liest status.json und aktualisiert Text/Audio.
-       Wenn status.json fehlt oder fehlerhaft ist, bleiben einfach die Defaults. -->
+  <!-- Kleines, stabiles JS:
+       - liest data/voice_of_day.json (wenn vorhanden)
+       - aktualisiert Spruch-Text, Audio-Pfad, Datum, Ton
+       - bei Fehlern bleiben die Defaults sichtbar -->
   <script>
     (async function () {
       try {
-        const res = await fetch("data/self/status.json", { cache: "no-store" });
-        if (!res.ok) throw new Error("status.json not ok");
+        const res = await fetch("data/voice_of_day.json", { cache: "no-store" });
+        if (!res.ok) throw new Error("voice_of_day.json not ok");
         const s = await res.json();
 
-        // Live-Zeit / letztes Update
-        if (s.last_update) {
-          document.getElementById("live-time").textContent = s.last_update;
-          document.getElementById("state-last-update").textContent = s.last_update;
+        // Text des Spruchs (robust: text oder quote)
+        const quote = s.text || s.quote;
+        if (quote) {
+          const el = document.getElementById("daily-quote");
+          if (el) el.textContent = quote;
         }
 
-        // Spruch des Tages (Text)
-        if (s.daily_quote) {
-          document.getElementById("daily-quote").textContent = s.daily_quote;
-        }
-
-        // Gesprochener Spruch des Tages – dynamische Datei aus status.json
-        if (s.daily_audio) {
+        // Audio-Datei (robust: audio_file oder audio)
+        const audioPath = s.audio_file || s.audio;
+        if (audioPath) {
           const dailyAudio = document.getElementById("daily-audio");
           const src = dailyAudio.querySelector("source[data-role='primary']");
-          src.src = s.daily_audio;
+          src.src = audioPath;
           dailyAudio.load();
-          document.getElementById("daily-audio-meta").innerHTML =
-            'Audio (Spruch des Tages): <code>' + s.daily_audio + "</code>";
+          const meta = document.getElementById("daily-audio-meta");
+          if (meta) {
+            meta.innerHTML =
+              'Audio (Spruch des Tages): <code>' + audioPath + "</code><br />" +
+              "Diese Datei wird als gesprochene Stimme verwendet.";
+          }
         }
 
-        // Stimmung / Qualität – Hooks für autonome Lern-Logik
-        if (s.self_state && typeof s.self_state === "object") {
-          if (s.self_state.mood) {
-            document.getElementById("state-mood").textContent = s.self_state.mood;
-          }
-          if (s.self_state.quality_score != null) {
-            document.getElementById("state-quality").textContent =
-              (s.self_state.quality_score * 100).toFixed(0) + " %";
-          }
+        // Datum (robust: date, date_utc oder ts_utc)
+        const date =
+          s.date ||
+          s.date_utc ||
+          s.ts_utc ||
+          null;
+        if (date) {
+          const d1 = document.getElementById("state-date");
+          const d2 = document.getElementById("state-date-2");
+          if (d1) d1.textContent = date;
+          if (d2) d2.textContent = date;
+        }
+
+        // Grundton / base_tone
+        if (s.base_tone) {
+          const t = document.getElementById("state-tone");
+          if (t) t.textContent = s.base_tone;
+        }
+
+        // Konfidenz
+        if (s.confidence != null) {
+          const c = document.getElementById("state-confidence");
+          if (c) c.textContent = (s.confidence * 100).toFixed(0) + " %";
         }
       } catch (e) {
-        // Keine Panik: bei Fehlern bleiben einfach die Default-Werte sichtbar.
-        console.warn("status.json konnte nicht geladen werden:", e);
-        const nowIso = new Date().toISOString();
-        document.getElementById("live-time").textContent = nowIso;
+        console.warn("voice_of_day.json konnte nicht geladen werden:", e);
+        // Bei Fehlern bleiben einfach die Default-Werte sichtbar.
       }
     })();
   </script>
 </body>
-</html>
+      </html>
