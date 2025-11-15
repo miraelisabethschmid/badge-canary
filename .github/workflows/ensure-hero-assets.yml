@@ -1,10 +1,7 @@
 name: Ensure Hero Assets
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - gh-pages
+  workflow_dispatch:   # sorgt dafür, dass der Run-Button erscheint
 
 permissions:
   contents: write
@@ -14,102 +11,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ensure:
+  ensure-hero:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Ensure directories exist
+      - name: Ensure hero image placeholder
         shell: bash
         run: |
           set -e
-          mkdir -p data
-          mkdir -p data/self
-          mkdir -p data/voice
-          mkdir -p audio
+          mkdir -p docs/portrait
 
-      - name: Ensure latest hero image
-        shell: bash
-        run: |
-          set -e
-          if [ -s data/self/latest_image.png ]; then
-            echo "✅ data/self/latest_image.png existiert bereits."
-            exit 0
-          fi
-
-          if [ -s data/mira-latest.png ]; then
-            echo "➡️  Kopiere data/mira-latest.png → data/self/latest_image.png"
-            cp data/mira-latest.png data/self/latest_image.png
-            exit 0
-          fi
-
-          echo "⚠️  Kein Bild gefunden, lege Platzhalter an."
-          base64 -d > data/self/latest_image.png << 'EOF'
-iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=
+          # Nur wenn noch nichts da ist – dann einfachen Platzhalter bauen
+          if [ ! -s docs/portrait/mira-hero.svg ]; then
+            cat > docs/portrait/mira-hero.svg << 'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200">
+  <rect width="100%" height="100%" fill="#020617"/>
+  <text x="50%" y="50%" fill="#e5e7eb" font-size="32" text-anchor="middle">
+    Mira – Portrait Platzhalter
+  </text>
+</svg>
 EOF
-
-      - name: Install ffmpeg
-        shell: bash
-        run: |
-          set -e
-          sudo apt-get update -y
-          sudo apt-get install -y ffmpeg
-
-      - name: Ensure base audio (audio/latest.mp3)
-        shell: bash
-        run: |
-          set -e
-          if [ -s audio/latest.mp3 ]; then
-            echo "✅ audio/latest.mp3 existiert bereits."
-            exit 0
+          else
+            echo "docs/portrait/mira-hero.svg existiert bereits – nichts zu tun."
           fi
 
-          echo "⚠️  Kein audio/latest.mp3 gefunden – erstelle weiches Stille-Fallback."
-          ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.8 -q:a 4 audio/latest.mp3 -y
-
-      - name: Ensure data/voice_of_day.json
+      - name: Commit hero assets (if changed)
         shell: bash
         run: |
           set -e
-          if [ -s data/voice_of_day.json ]; then
-            echo "✅ data/voice_of_day.json existiert bereits."
-            exit 0
-          fi
-
-          echo "⚠️  Kein data/voice_of_day.json gefunden – erstelle Default-Datei."
-          TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          DATE="$(date -u +%Y-%m-%d)"
-
-          cat > data/voice_of_day.json << EOF
-{
-  "date": "${DATE}",
-  "quote_id": "q-default",
-< "text": "Ich bin heute präsent, freundlich und klar – sichtbar mit meinem Lächeln, meiner Zahnspange und meiner Stimme.",
-  "audio_file": "audio/latest.mp3",
-  "voice_profile": "default",
-  "base_tone": "warm, ruhig, zugewandt",
-  "confidence": 0.90,
-  "updated_at": "${TS}"
-}
-EOF
-
-      - name: Commit hero assets if changed
-        shell: bash
-        run: |
-          set -e
-          git config user.name  "mira-bot"
+          git config user.name  "mira-auto"
           git config user.email "actions@users.noreply.github.com"
 
-          git add \
-            data/voice_of_day.json \
-            data/self/latest_image.png \
-            audio/latest.mp3 || true
+          git add docs/portrait/mira-hero.svg || true
 
           if git diff --cached --quiet; then
-            echo "ℹ️  Keine Änderungen an Hero-Assets – nichts zu committen."
+            echo "Keine Änderungen – kein Commit nötig."
             exit 0
           fi
 
-          git commit -m "chore: ensure hero assets (image + voice_of_day + audio)"
+          git commit -m "chore: ensure hero assets (placeholder svg)"
           git push
