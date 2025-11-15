@@ -1,12 +1,9 @@
-name: Deploy Pages (root)
+name: Deploy Pages
 
 on:
-  # Automatisch bei Änderungen auf gh-pages
   push:
     branches:
       - gh-pages
-
-  # Manuell auslösbar im Actions-Tab
   workflow_dispatch:
 
 permissions:
@@ -16,7 +13,7 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -26,16 +23,19 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout gh-pages branch
         uses: actions/checkout@v4
+        with:
+          ref: gh-pages
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
-      - name: Upload site artifact (complete repo root)
+      - name: Upload full repository root
         uses: actions/upload-pages-artifact@v3
         with:
-          # WICHTIG: komplette Wurzel des Repos, nicht nur docs/
           path: .
 
       - name: Deploy to GitHub Pages
