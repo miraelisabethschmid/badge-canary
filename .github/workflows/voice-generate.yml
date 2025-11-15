@@ -43,6 +43,22 @@ jobs:
             ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.8 -q:a 4 audio/latest.mp3 -y
           fi
 
+      - name: Create daily_quote.wav for UI
+        shell: bash
+        run: |
+          set -e
+          mkdir -p audio
+          if [ -s audio/latest.mp3 ]; then
+            # sauberes WAV aus dem erzeugten MP3
+            ffmpeg -y -loglevel error -i audio/latest.mp3 -ar 44100 -ac 1 audio/daily_quote.wav
+          elif [ -s audio/latest.wav ]; then
+            # Fallback: falls es nur ein WAV gibt, einfach spiegeln
+            cp audio/latest.wav audio/daily_quote.wav
+          else
+            # letzter Fallback: kurze Stille, damit der Player nie 0:00 zeigt
+            ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.8 -q:a 9 audio/daily_quote.wav -y
+          fi
+
       - name: Touch voice meta (cache-busting)
         shell: bash
         run: |
@@ -54,7 +70,7 @@ jobs:
         run: |
           git config user.name  "voice-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add audio/latest.mp3 data/voice_of_day.json data/voice/meta.json data/voice/history.log
+          git add audio/latest.mp3 audio/daily_quote.wav data/voice_of_day.json data/voice/meta.json data/voice/history.log
           if git diff --cached --quiet; then
             echo "No changes."
             exit 0
