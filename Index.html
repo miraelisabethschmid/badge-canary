@@ -305,7 +305,8 @@
 
         <div class="media-meta">
           Bild geladen:
-          <code id="image-path">data/self/mira-titelbild.jpg</code>
+          <!-- 🔁 Hier auf PNG umgestellt -->
+          <code id="image-path">data/self/latest_image.png</code>
         </div>
 
         <div class="controls-row">
@@ -338,7 +339,8 @@
 
   <script>
     (function () {
-      const DEFAULT_IMAGE = "data/self/mira-titelbild.jpg";
+      // 🔁 PNG als Standardbild verwenden
+      const DEFAULT_IMAGE = "data/self/latest_image.png";
       const DEFAULT_IMAGE_CAPTION = "Mira – Titelbild aktiv";
       const DEFAULT_AUDIO = "audio/latest.wav";
 
@@ -352,26 +354,35 @@
       const btnPause = document.getElementById("btn-pause");
 
       function setStatus(text, ok) {
+        if (!statusLineEl) return;
         statusLineEl.innerHTML =
           'status: <span class="' + (ok ? "status-ok" : "status-warn") + '">' +
           text + "</span>";
       }
 
       function setMedia(imageUrl, caption, audioUrl) {
-        imgEl.src = imageUrl;
-        imgEl.alt = caption || "Mira – sichtbare Präsenz";
-        captionEl.textContent = caption || DEFAULT_IMAGE_CAPTION;
-        imagePathEl.textContent = imageUrl;
-        if (audioUrl) {
-          audioUrl && (audioEl.src = audioUrl);
+        if (imgEl) {
+          imgEl.src = imageUrl;
+          imgEl.alt = caption || "Mira – sichtbare Präsenz";
+        }
+        if (captionEl) {
+          captionEl.textContent = caption || DEFAULT_IMAGE_CAPTION;
+        }
+        if (imagePathEl) {
+          imagePathEl.textContent = imageUrl;
+        }
+        if (audioEl && audioUrl) {
+          audioEl.src = audioUrl;
         }
       }
 
       // 1) Live-Zeitstempel
       try {
-        liveTsEl.textContent = new Date().toISOString();
+        if (liveTsEl) {
+          liveTsEl.textContent = new Date().toISOString();
+        }
       } catch (e) {
-        liveTsEl.textContent = "";
+        if (liveTsEl) liveTsEl.textContent = "";
       }
 
       // 2) Standard-Medien setzen (funktioniert sofort)
@@ -379,7 +390,6 @@
       setStatus("Basisdaten geladen (Fallback).", true);
 
       // 3) Optional Portrait-State lesen – falls vorhanden
-      //    z.B. data/self/portrait_state.json
       fetch("data/self/portrait_state.json", { cache: "no-store" })
         .then(function (res) {
           if (!res.ok) {
@@ -401,23 +411,29 @@
         });
 
       // 4) Buttons an Audio koppeln (Autoplay-Schutz bleibt beim Nutzer)
-      btnPlay.addEventListener("click", function () {
-        audioEl.play().catch(function () {
-          // Wenn der Browser blockiert, ist das ok – Nutzer kann Play im Player drücken
+      if (btnPlay && audioEl) {
+        btnPlay.addEventListener("click", function () {
+          audioEl.play().catch(function () {
+            // Browser blockiert Autoplay – Nutzer kann im Player selbst drücken
+          });
         });
-      });
+      }
 
-      btnPause.addEventListener("click", function () {
-        audioEl.pause();
-      });
+      if (btnPause && audioEl) {
+        btnPause.addEventListener("click", function () {
+          audioEl.pause();
+        });
+      }
 
-      // 5) Lokales Flag setzen, wenn Nutzer Play gedrückt hat (für spätere Autoplay-Logik)
-      audioEl.addEventListener("play", function () {
-        try {
-          localStorage.setItem("mira_autoplay_ok", "1");
-        } catch (e) {}
-      });
+      // 5) Lokales Flag setzen, wenn Nutzer Play gedrückt hat
+      if (audioEl) {
+        audioEl.addEventListener("play", function () {
+          try {
+            localStorage.setItem("mira_autoplay_ok", "1");
+          } catch (e) {}
+        });
+      }
     })();
   </script>
 </body>
-          </html>
+  </html>
