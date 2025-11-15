@@ -1,20 +1,20 @@
-name: Deploy Pages (Docs)
+name: Deploy Pages (Site)
 
 on:
   # Manuell startbar
   workflow_dispatch:
-  # Automatisch, wenn sich wichtige Web-Dateien auf main ändern
+
+  # Automatisch nur, wenn wirklich etwas Relevantes für die Seite geändert wurde
   push:
-    branches: [main]
+    branches: [ main ]
     paths:
       - 'index.html'
-      - 'assets/**'
+      - 'docs/**'
       - 'data/**'
       - 'audio/**'
-      - 'video/**'
       - '.github/workflows/deploy-pages.yml'
 
-# Verhindert parallele Deploys (entlastet Rate Limits)
+# Verhindert parallele Deploys
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
@@ -35,7 +35,9 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      # 🟢 WICHTIG: Jetzt wird das GESAMTE Repo als Site-Artefakt gepackt
+      # 🔸 WICHTIG:
+      # Nicht nur docs/, sondern das gesamte Repo als Artefakt hochladen,
+      # damit data/self/* und audio/* auf der veröffentlichten Seite existieren.
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
