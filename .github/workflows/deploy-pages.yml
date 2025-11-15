@@ -3,11 +3,15 @@ name: Deploy Pages (Docs)
 on:
   # Manuell startbar
   workflow_dispatch:
-  # Automatisch nur bei Änderungen in /docs oder an diesem Workflow
+  # Automatisch, wenn sich wichtige Web-Dateien auf main ändern
   push:
     branches: [main]
     paths:
-      - 'docs/**'
+      - 'index.html'
+      - 'assets/**'
+      - 'data/**'
+      - 'audio/**'
+      - 'video/**'
       - '.github/workflows/deploy-pages.yml'
 
 # Verhindert parallele Deploys (entlastet Rate Limits)
@@ -31,11 +35,11 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      # Packt den Ordner /docs als Artefakt für Pages
+      # 🟢 WICHTIG: Jetzt wird das GESAMTE Repo als Site-Artefakt gepackt
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: .
 
   deploy:
     needs: build
