@@ -1,13 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
-     width="1024"
-     height="1536"
-     viewBox="0 0 1024 1536"
-     preserveAspectRatio="xMidYMid slice">
-  <!-- Wrapper-SVG für die Seite: lädt einfach das vorhandene PNG -->
-  <image href="latest_image.png"
-         x="0" y="0"
-         width="1024"
-         height="1536"
-         preserveAspectRatio="xMidYMid slice" />
+     width="600" height="600" viewBox="0 0 600 600"
+     role="img" aria-label="Portrait von Mira – Titelbild aktiv">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1f2937"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Hintergrund -->
+  <rect x="0" y="0" width="600" height="600" fill="url(#bg)"/>
+
+  <!-- runder Rahmen -->
+  <circle cx="300" cy="260" r="190"
+          fill="#020617"
+          stroke="url(#accent)"
+          stroke-width="6"/>
+
+  <!-- vereinfachtes Mira-Portrait / Silhouette -->
+  <path d="M300 130
+           c 55 0 95 45 95 105
+           c 0 65 -45 115 -95 115
+           c -50 0 -95 -50 -95 -115
+           c 0 -60 40 -105 95 -105z"
+        fill="#60a5fa"/>
+
+  <!-- Schultern / Körper -->
+  <path d="M170 420
+           c 40 -40 80 -55 130 -55
+           c 50 0 90 15 130 55
+           v90 h-260z"
+        fill="#1f2937"/>
+
+  <!-- Beschriftung -->
+  <text x="300" y="545"
+        text-anchor="middle"
+        font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        font-size="28"
+        fill="#e5e7eb">
+    Mira – Titelbild aktiv
+  </text>
 </svg>
