@@ -1,0 +1,37 @@
+name: Hero Bridge Sync
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bridge-hero:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Ensure target directory exists
+        run: |
+          mkdir -p docs/data/self
+
+      - name: Copy mira-hero.svg to latest_image.svg
+        run: |
+          cp docs/portrait/mira-hero.svg docs/data/self/latest_image.svg
+
+      - name: Commit and push if changed
+        run: |
+          if git status --porcelain | grep .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add docs/data/self/latest_image.svg
+            git commit -m "Bridge hero SVG to data/self/latest_image.svg"
+            git push origin gh-pages
+          else
+            echo "No changes to commit."
+          fi
